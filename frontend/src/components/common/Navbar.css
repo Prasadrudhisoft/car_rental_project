@@ -1,0 +1,931 @@
+/* ═══════════════════════════════════════════════
+   Navbar.css — Top bar, Upstream-style
+   ═══════════════════════════════════════════════ */
+
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 52px;
+    z-index: 200;
+    background-color: #002b36;
+
+    background-image:
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://w3.org id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"),
+        radial-gradient(circle at 20% 30%, #004d40 0%, transparent 70%),
+        linear-gradient(135deg, #002b36 0%, #00332e 100%);
+
+    background-blend-mode: overlay, normal, normal;
+    display: flex;
+    align-items: center;
+    padding: 0 20px 0 20px;
+    gap: 12px;
+}
+
+/* Brand — shown on all pages (redirects based on auth status) */
+.navbar__brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 8px;
+    text-decoration: none;
+}
+
+.navbar__brand-icon {
+    width: 38px;
+    height: 38px;
+    background: var(--c-teal);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #fff;
+    font-weight: 700;
+}
+
+.navbar__brand-text {
+    font-size: 24px;
+    font-weight: 700;
+    font-family: 'Syne', sans-serif;
+    ;
+    color: white;
+    letter-spacing: -0.3px;
+}
+
+/* Scope selector */
+.navbar__scope {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--c-surface2);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-full);
+    padding: 5px 12px 5px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--c-text2);
+    cursor: pointer;
+    transition: border-color 0.18s;
+}
+
+.navbar__scope:hover {
+    border-color: var(--c-teal);
+}
+
+.navbar__scope-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--c-muted);
+}
+
+/* Search */
+.navbar__search {
+    flex: 1;
+    max-width: 360px;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.navbar__search-input {
+    width: 100%;
+    height: 34px;
+    background: var(--c-surface2);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-full);
+    padding: 0 14px 0 36px;
+    font-size: 13px;
+    color: var(--c-text);
+    outline: none;
+    transition: border-color 0.18s, box-shadow 0.18s;
+    font-family: var(--font-body);
+}
+
+.navbar__search-input::placeholder {
+    color: var(--c-muted);
+}
+
+.navbar__search-input:focus {
+    border-color: var(--c-teal);
+    box-shadow: 0 0 0 3px rgba(13, 184, 158, 0.12);
+}
+
+.navbar__search-icon {
+    position: absolute;
+    left: 11px;
+    color: var(--c-muted);
+    font-size: 14px;
+    pointer-events: none;
+}
+
+/* Right side actions */
+.navbar__right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.navbar__icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--r-md);
+    border: 1px solid var(--c-border);
+    background: var(--c-surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--c-text2);
+    position: relative;
+    transition: border-color 0.18s, background 0.18s;
+    cursor: pointer;
+}
+
+.navbar__icon-btn:hover {
+    border-color: var(--c-teal);
+    background: var(--c-teal-light);
+    color: var(--c-teal);
+}
+
+/* .navbar__notif-dot {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--c-red);
+    border: 2px solid var(--c-surface);
+} */
+
+/* ── Task 2: Booking button ── */
+.navbar__booking-btn {
+    display: flex;
+    width: 150px;
+    align-items: center;
+    gap: 6px;
+    background: var(--c-teal, #0DB89E);
+    color: #fff;
+    justify-content: center;
+    border: none;
+    padding: 7px 14px;
+    border-radius: var(--r-full, 999px);
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s, transform 0.15s;
+    font-family: 'Syne', sans-serif;
+    ;
+    letter-spacing: 2px;
+    white-space: nowrap;
+    margin-right: 15px;
+}
+
+.navbar__booking-btn:hover {
+    background: #0A9E87;
+    transform: translateY(-1px);
+}
+
+/* ── Task 4: Dashboard button ── */
+.navbar__dashboard-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 6px 13px;
+    border-radius: var(--r-full, 999px);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s, border-color 0.18s, color 0.18s;
+    font-family: var(--font-body);
+    white-space: nowrap;
+}
+
+.navbar__dashboard-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.35);
+    color: #fff;
+}
+
+/* User */
+.navbar__user {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 4px 10px 4px 4px;
+    border-radius: var(--r-full);
+    border: 1px solid var(--c-border);
+    background: var(--c-surface2);
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.18s;
+    user-select: none;
+}
+
+.navbar__user:hover {
+    border-color: var(--c-teal);
+}
+
+/* Task 3: Active/open state for dropdown */
+.navbar__user--open {
+    border-color: var(--c-teal);
+}
+
+.navbar__avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--c-teal) 0%, #0A9E87 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.navbar__avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.navbar__user-info {
+    line-height: 1.2;
+}
+
+.navbar__user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--c-text);
+    white-space: nowrap;
+}
+
+.navbar__user-role {
+    font-size: 11px;
+    color: var(--c-muted);
+    white-space: nowrap;
+}
+
+.navbar__user-chevron {
+    font-size: 10px;
+    color: var(--c-muted);
+    transition: transform 0.18s;
+}
+
+.navbar__user--open .navbar__user-chevron {
+    transform: rotate(180deg);
+}
+
+/* ── Task 3: Dropdown — click-based, no hover needed ── */
+.navbar__dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-lg);
+    padding: 6px;
+    min-width: 180px;
+    box-shadow: var(--shadow-lg);
+    /* Always visible when rendered (parent controls visibility via conditional render) */
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0) scale(1);
+    z-index: 300;
+    animation: navbar-dropdown-in 0.15s ease;
+}
+
+@keyframes navbar-dropdown-in {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.navbar__dropdown a,
+.navbar__dropdown button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: var(--r-md);
+    font-size: 13px;
+    color: var(--c-text2);
+    background: none;
+    border: none;
+    text-align: left;
+    transition: background 0.14s, color 0.14s;
+    cursor: pointer;
+}
+
+.navbar__dropdown a:hover,
+.navbar__dropdown button:hover {
+    background: var(--c-surface2);
+    color: var(--c-text);
+}
+
+.navbar__dropdown hr {
+    border: none;
+    border-top: 1px solid var(--c-border);
+    margin: 4px 0;
+}
+
+/* Breadcrumb */
+.navbar__breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--c-muted);
+}
+
+.navbar__breadcrumb a {
+    color: var(--c-muted);
+    transition: color 0.15s;
+}
+
+.navbar__breadcrumb a:hover {
+    color: var(--c-teal);
+}
+
+.navbar__breadcrumb-sep {
+    font-size: 12px;
+}
+
+.navbar__breadcrumb-current {
+    color: var(--c-text);
+    font-weight: 500;
+}
+
+/* ── Task 2: Booking widget overlay ── */
+.navbar__booking-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 1500;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 70px;
+    animation: booking-overlay-in 0.2s ease;
+}
+
+@keyframes booking-overlay-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.navbar__booking-panel {
+    background: transparent;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 680px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    animation: booking-panel-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes booking-panel-in {
+    from {
+        opacity: 0;
+        transform: translateY(-12px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.navbar__booking-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.navbar__booking-close {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    transition: background 0.15s;
+}
+
+.navbar__booking-close:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Sidebar ── */
+.sidebar {
+    position: fixed;
+    overflow: hidden;
+    top: 0;
+    left: 0;
+    width: var(--sidebar-w);
+    height: 100vh;
+    background-color: #002b36;
+
+    background-image:
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://w3.org id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"),
+        radial-gradient(circle at 20% 30%, #004d40 0%, transparent 70%),
+        linear-gradient(135deg, #002b36 0%, #00332e 100%);
+
+    background-blend-mode: overlay, normal, normal;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0 20px 0;
+    z-index: 300;
+}
+
+/* Brand */
+.sidebar__brand {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #fff;
+    font-weight: 800;
+    margin-bottom: 20px;
+    text-decoration: none;
+    transition: background 0.18s, border-color 0.18s;
+}
+
+.sidebar__brand:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.9);
+}
+
+/* Nav container */
+.sidebar__nav {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    align-items: center;
+    flex: 1;
+}
+
+/* Items */
+.sidebar__item {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.75);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.sidebar__item svg {
+    width: 24px;
+    height: 24px;
+    display: block;
+}
+
+.sidebar__item:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.sidebar__item--active {
+    background: #ffffff;
+    color: var(--c-teal);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar__item--active:hover {
+    background: #ffffff;
+    color: var(--c-teal);
+}
+
+/* Tooltip */
+.sidebar__item::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: #111;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 400;
+}
+
+.sidebar__item:hover::after {
+    opacity: 1;
+}
+
+/* Bottom section */
+.sidebar__bottom {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Avatar */
+.sidebar__avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    transition: all 0.2s ease;
+}
+
+.sidebar__avatar:hover {
+    border-color: #ffffff;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Page shell ── */
+.page-shell {
+    margin-left: var(--sidebar-w);
+    padding-top: 52px;
+    min-height: 100vh;
+    background: var(--c-bg);
+}
+
+/* ── Hamburger button (mobile only) ── */
+.sidebar__hamburger {
+    display: none;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 400;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #002b36;
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.18s;
+}
+
+.sidebar__hamburger:hover {
+    background: #004d40;
+}
+
+/* The three-line icon using box-shadow trick */
+.sidebar__hamburger-icon,
+.sidebar__hamburger-icon::before,
+.sidebar__hamburger-icon::after {
+    display: block;
+    width: 18px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 2px;
+    transition: transform 0.22s var(--ease), opacity 0.18s;
+    position: relative;
+}
+
+.sidebar__hamburger-icon::before,
+.sidebar__hamburger-icon::after {
+    content: '';
+    position: absolute;
+    left: 0;
+}
+
+.sidebar__hamburger-icon::before {
+    top: -5px;
+}
+
+.sidebar__hamburger-icon::after {
+    top: 5px;
+}
+
+/* Animated X state */
+.sidebar__hamburger-icon.open {
+    background: transparent;
+}
+
+.sidebar__hamburger-icon.open::before {
+    transform: rotate(45deg);
+    top: 0;
+}
+
+.sidebar__hamburger-icon.open::after {
+    transform: rotate(-45deg);
+    top: 0;
+}
+
+/* Dim overlay */
+.sidebar__overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(3px);
+    z-index: 290;
+    animation: cd-bg-in 0.2s ease;
+}
+
+/* Mobile drawer slide-in */
+@media (max-width: 768px) {
+    .sidebar__hamburger {
+        display: flex;
+    }
+
+    .sidebar__overlay {
+        display: block;
+    }
+
+    /* Override the existing display:none on sidebar */
+    .sidebar {
+        display: flex !important;
+        transform: translateX(-100%);
+        transition: transform 0.28s var(--ease);
+        width: 200px;
+        align-items: flex-start;
+        padding: 20px 12px;
+    }
+
+    .sidebar--open {
+        transform: translateX(0);
+    }
+
+    /* Make nav items full-width with labels */
+    .sidebar__nav {
+        width: 100%;
+        align-items: flex-start;
+    }
+
+    .sidebar__item {
+        width: 100%;
+        justify-content: flex-start;
+        gap: 12px;
+        padding: 0 10px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* Show label via data-tip on mobile */
+    .sidebar__item::after {
+        position: static;
+        transform: none;
+        background: none;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 13px;
+        font-weight: 600;
+        padding: 0;
+        border-radius: 0;
+        opacity: 1;
+        pointer-events: none;
+    }
+
+    .sidebar__item--active::after {
+        color: var(--c-teal);
+    }
+
+    .sidebar__brand {
+        margin-bottom: 24px;
+        align-self: center;
+    }
+
+    .sidebar__bottom {
+        width: 100%;
+        align-items: flex-start;
+        padding: 0 4px;
+    }
+
+    .sidebar__avatar {
+        width: 100%;
+        border-radius: 10px;
+        justify-content: flex-start;
+        padding: 0 10px;
+        gap: 10px;
+        height: 40px;
+        font-size: 13px;
+    }
+
+    /* Tooltip not needed on mobile */
+    .sidebar__item:hover::after {
+        opacity: 1;
+    }
+
+    /* Adjust page shell */
+    .page-shell {
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        display: none;
+    }
+
+    .navbar {
+        left: 0;
+    }
+
+    .page-shell {
+        margin-left: 0;
+    }
+
+    .navbar__booking-btn span:last-child {
+        display: none;
+    }
+
+    .navbar__dashboard-btn span:last-child {
+        display: none;
+    }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ① NAVBAR PATCHES  (append to Navbar.css)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* ── Small laptop: tighten navbar padding ── */
+@media (max-width: 1280px) {
+    .navbar {
+        padding: 0 14px;
+        gap: 8px;
+    }
+
+    .navbar__booking-btn {
+        width: auto;
+        padding: 7px 12px;
+        font-size: 14px;
+        letter-spacing: 1px;
+        margin-right: 8px;
+    }
+
+    .navbar__user-info {
+        display: none;
+        /* avatar only on tighter screens */
+    }
+
+    .navbar__user {
+        padding: 4px 8px 4px 4px;
+        gap: 6px;
+    }
+}
+
+/* ── Tablet landscape ── */
+@media (max-width: 1024px) {
+    .navbar__booking-btn {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+}
+
+/* ── Tablet portrait (≤ 768px) — already partially handled;
+      extend sidebar open state and booking overlay ── */
+@media (max-width: 768px) {
+
+    /* Keep navbar behind sidebar button */
+    .navbar {
+        left: 0;
+        padding: 0 12px 0 56px;
+        /* leave room for hamburger */
+        height: 52px;
+    }
+
+    .navbar__brand-text {
+        font-size: 18px;
+    }
+
+    .navbar__booking-btn {
+        width: auto;
+        padding: 6px 10px;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+        margin-right: 6px;
+    }
+
+    /* Booking widget: full-width panel on mobile */
+    .navbar__booking-overlay {
+        padding-top: 60px;
+        padding-left: 8px;
+        padding-right: 8px;
+        align-items: flex-start;
+    }
+
+    .navbar__booking-panel {
+        max-width: 100%;
+        border-radius: 12px;
+    }
+
+    /* Sidebar drawer: ensure it appears above content */
+    .sidebar {
+        display: flex !important;
+        /* override the 768 display:none rule */
+        width: 220px;
+        z-index: 350;
+    }
+}
+
+/* ── Large phone (≤ 480px) ── */
+@media (max-width: 480px) {
+    .navbar {
+        padding: 0 8px 0 52px;
+        height: 48px;
+    }
+
+    .navbar__brand-text {
+        font-size: 16px;
+    }
+
+    /* Hide booking button text; show just the emoji */
+    .navbar__booking-btn {
+        width: 38px;
+        padding: 6px;
+        font-size: 16px;
+        letter-spacing: 0;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    /* "🚗 Booking" — keep only emoji by clip trick */
+    .navbar__booking-btn::after {
+        content: '';
+        display: none;
+    }
+
+    .navbar__avatar {
+        width: 26px;
+        height: 26px;
+        font-size: 10px;
+    }
+
+    .navbar__user {
+        padding: 3px 6px 3px 3px;
+        gap: 4px;
+    }
+
+    .navbar__user-chevron {
+        display: none;
+    }
+
+    /* Hamburger: adjust top for shorter navbar */
+    .sidebar__hamburger {
+        top: 8px;
+        left: 8px;
+        width: 32px;
+        height: 32px;
+    }
+}

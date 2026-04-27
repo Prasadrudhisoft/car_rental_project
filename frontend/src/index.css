@@ -1,0 +1,198 @@
+/* ── Global Design Tokens ─────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+
+:root {
+  /* Colors */
+  --clr-bg: #0a0a0f;
+  --clr-surface: #13131a;
+  --clr-surface2: #1c1c28;
+  --clr-border: #2a2a3a;
+  --clr-accent: #e8a020;
+  --clr-accent2: #f5c842;
+  --clr-text: #f0ece4;
+  --clr-muted: #8a8a9a;
+  --clr-success: #2ecc71;
+  --clr-danger: #e74c3c;
+  --clr-info: #3498db;
+  --clr-warning: #f39c12;
+
+  /* Typography */
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 32px;
+
+  /* Shadows */
+  --shadow-glow: 0 0 40px rgba(232, 160, 32, 0.15);
+  --shadow-card: 0 4px 32px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 64px rgba(0, 0, 0, 0.7);
+
+  /* Transitions */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--clr-bg);
+  color: var(--clr-text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  line-height: 1.2;
+}
+
+a {
+  color: var(--clr-accent);
+  text-decoration: none;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input,
+select,
+textarea {
+  font-family: var(--font-body);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--clr-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--clr-border);
+  border-radius: 3px;
+}
+
+/* Leaflet map override */
+.leaflet-container {
+  background: var(--clr-surface) !important;
+  border-radius: var(--radius-md);
+}
+
+/* Utility classes */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+/* ═══════════════════════════════════════════════
+   Design Tokens — Upstream-inspired light theme
+   ═══════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  /* ── Palette ── */
+  --c-bg:          #F4F6F8;
+  --c-surface:     #FFFFFF;
+  --c-surface2:    #F8FAFB;
+  --c-border:      #E8EDF2;
+  --c-border2:     #D5DEE8;
+
+  --c-text:        #111827;
+  --c-text2:       #4B5563;
+  --c-muted:       #9CA3AF;
+
+  --c-teal:        #0DB89E;
+  --c-teal-light:  #E6F7F5;
+  --c-teal-mid:    #B2EDE6;
+  --c-teal-dark:   #0A9E87;
+
+  --c-amber:       #F59E0B;
+  --c-amber-light: #FEF3C7;
+  --c-green:       #10B981;
+  --c-green-light: #D1FAE5;
+  --c-blue:        #3B82F6;
+  --c-blue-light:  #DBEAFE;
+  --c-red:         #EF4444;
+  --c-red-light:   #FEE2E2;
+  --c-purple:      #8B5CF6;
+  --c-purple-light:#EDE9FE;
+  --c-orange:      #F97316;
+  --c-orange-light:#FFEDD5;
+
+  /* ── Sidebar ── */
+  --sidebar-w:     56px;
+  --sidebar-bg:    #0F1F2E;
+  --sidebar-active:#0DB89E;
+  --sidebar-icon:  #5E7A92;
+  --sidebar-hover: #1A2E40;
+
+  /* ── Typography ── */
+  --font-body:     'DM Sans', sans-serif;
+  --font-mono:     'DM Mono', monospace;
+
+  /* ── Radii ── */
+  --r-sm:   4px;
+  --r-md:   8px;
+  --r-lg:   12px;
+  --r-xl:   16px;
+  --r-2xl:  20px;
+  --r-full: 999px;
+
+  /* ── Shadows ── */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg:  0 10px 30px rgba(0,0,0,0.10), 0 4px 8px rgba(0,0,0,0.04);
+  --shadow-pop: 0 20px 60px rgba(0,0,0,0.15);
+
+  /* ── Transitions ── */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font-body);
+  background: var(--c-bg);
+  color: var(--c-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: inherit; cursor: pointer; }
+a { text-decoration: none; color: inherit; }

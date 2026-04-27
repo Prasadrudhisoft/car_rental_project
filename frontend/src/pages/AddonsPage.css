@@ -1,0 +1,524 @@
+/* ═══════════════════════════════════════════════
+   AddonsPage.css — Add-ons & pricing step
+   ═══════════════════════════════════════════════ */
+
+.addons-page {
+    min-height: 100vh;
+    background: var(--wz-bg);
+}
+
+/* Two-column layout */
+.addons-page__layout {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 24px;
+    align-items: start;
+}
+
+.addons-page__left {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ── Vehicle recap card ── */
+.addons-recap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--wz-surf);
+    border: 1px solid var(--wz-bdr);
+    border-radius: var(--wz-r-xl);
+    padding: 18px 22px;
+    box-shadow: var(--wz-sh-sm);
+    flex-wrap: wrap;
+}
+
+.addons-recap__icon {
+    font-size: 46px;
+    flex-shrink: 0;
+}
+
+.addons-recap__details {
+    flex: 1;
+    min-width: 160px;
+}
+
+.addons-recap__details h2 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--wz-txt);
+    margin-bottom: 3px;
+}
+
+.addons-recap__meta {
+    font-size: 12px;
+    color: var(--wz-muted);
+    text-transform: capitalize;
+    margin-bottom: 3px;
+}
+
+.addons-recap__vendor {
+    font-size: 12px;
+    color: var(--wz-txt2);
+}
+
+.addons-recap__rate {
+    color: var(--wz-teal);
+    font-weight: 700;
+}
+
+.addons-recap__change {
+    background: var(--wz-surf2);
+    border: 1px solid var(--wz-bdr2);
+    color: var(--wz-muted);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: var(--wz-r-f);
+    cursor: pointer;
+    transition: border-color 0.18s, color 0.18s;
+    flex-shrink: 0;
+    font-family: 'DM Sans', sans-serif;
+}
+
+.addons-recap__change:hover {
+    border-color: var(--wz-teal);
+    color: var(--wz-teal);
+}
+
+/* ── Trip recap strip ── */
+.addons-trip-recap {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0;
+    background: var(--wz-surf);
+    border: 1px solid var(--wz-bdr);
+    border-radius: var(--wz-r-xl);
+    overflow: hidden;
+    box-shadow: var(--wz-sh-sm);
+}
+
+.addons-trip-recap__item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 18px;
+    border-right: 1px solid var(--wz-bdr);
+}
+
+.addons-trip-recap__item:last-child {
+    border-right: none;
+}
+
+.addons-trip-recap__item span {
+    font-size: 10px;
+    color: var(--wz-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+}
+
+.addons-trip-recap__item strong {
+    font-size: 13px;
+    color: var(--wz-txt);
+    font-weight: 600;
+}
+
+/* ── Add-ons section ── */
+.addons-section {
+    background: var(--wz-surf);
+    border: 1px solid var(--wz-bdr);
+    border-radius: var(--wz-r-xl);
+    padding: 22px 24px;
+    box-shadow: var(--wz-sh-sm);
+}
+
+.addons-section h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--wz-txt);
+    margin-bottom: 4px;
+}
+
+.addons-section__subtitle {
+    font-size: 13px;
+    color: var(--wz-muted);
+    margin-bottom: 16px;
+    line-height: 1.5;
+}
+
+.addons-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Individual add-on card */
+.addon-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--wz-surf2);
+    border: 1.5px solid var(--wz-bdr);
+    border-radius: var(--wz-r-lg);
+    padding: 13px 16px;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: border-color 0.2s, background 0.2s, transform 0.15s, box-shadow 0.15s;
+    font-family: 'DM Sans', sans-serif;
+}
+
+.addon-card:hover {
+    border-color: rgba(232, 160, 32, .4);
+    background: rgba(232, 160, 32, .03);
+    transform: translateX(3px);
+}
+
+.addon-card.selected {
+    border-color: var(--wz-teal);
+    background: var(--wz-teal-l);
+    box-shadow: 0 0 0 1px var(--wz-teal);
+}
+
+.addon-card__icon {
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.addon-card__info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.addon-card__info strong {
+    font-size: 14px;
+    color: var(--wz-txt);
+    font-weight: 600;
+}
+
+.addon-card__info span {
+    font-size: 12px;
+    color: var(--wz-muted);
+}
+
+.addon-card__api-price {
+    font-size: 12px;
+    color: var(--wz-teal);
+    font-weight: 700;
+    margin-top: 1px;
+}
+
+.addon-card__check {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--wz-bdr2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+    color: var(--wz-muted);
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.addon-card.selected .addon-card__check {
+    background: var(--wz-teal);
+    border-color: var(--wz-teal);
+    color: #fff;
+}
+
+/* ── Promo section ── */
+.promo-section {
+    background: var(--wz-surf);
+    border: 1px solid var(--wz-bdr);
+    border-radius: var(--wz-r-xl);
+    padding: 20px 24px;
+    box-shadow: var(--wz-sh-sm);
+}
+
+.promo-section h3 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--wz-txt);
+}
+
+.promo-section__row {
+    display: flex;
+    gap: 10px;
+}
+
+.promo-section__row input {
+    flex: 1;
+    background: var(--wz-surf2);
+    border: 1.5px solid var(--wz-bdr2);
+    border-radius: var(--wz-r-md);
+    color: var(--wz-txt);
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.promo-section__row input:focus {
+    border-color: var(--wz-teal);
+    box-shadow: 0 0 0 3px var(--wz-teal-l);
+}
+
+.promo-section__row input:disabled {
+    opacity: 0.6;
+}
+
+.promo-section__row button {
+    background: var(--wz-surf2);
+    border: 1.5px solid var(--wz-bdr2);
+    color: var(--wz-txt);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 20px;
+    border-radius: var(--wz-r-md);
+    cursor: pointer;
+    transition: border-color 0.18s, color 0.18s, background 0.18s;
+    white-space: nowrap;
+    font-family: 'DM Sans', sans-serif;
+}
+
+.promo-section__row button:hover:not(:disabled) {
+    border-color: var(--wz-teal);
+    color: var(--wz-teal);
+    background: var(--wz-teal-l);
+}
+
+.promo-section__row button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.promo-msg {
+    font-size: 13px;
+    margin-top: 8px;
+    font-weight: 500;
+}
+
+.promo-msg--success {
+    color: #059669;
+}
+
+.promo-msg--error {
+    color: var(--wz-red);
+}
+
+/* ── Price summary sidebar (sticky) ── */
+.addons-page__summary {}
+
+.price-summary {
+    background: var(--wz-surf);
+    border: 1px solid var(--wz-bdr);
+    border-radius: var(--wz-r-xl);
+    padding: 22px 24px;
+    position: sticky;
+    top: 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    box-shadow: var(--wz-sh-sm);
+}
+
+.price-summary h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--wz-txt);
+}
+
+.price-summary__error {
+    background: var(--wz-red-l);
+    border: 1px solid #FCA5A5;
+    color: #B91C1C;
+    padding: 10px 13px;
+    border-radius: var(--wz-r-md);
+    font-size: 13px;
+}
+
+.price-summary__breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.price-summary__loading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--wz-muted);
+    font-size: 13px;
+    padding: 12px 0;
+}
+
+.price-summary__line {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13.5px;
+    gap: 8px;
+}
+
+.price-summary__line span:first-child {
+    color: var(--wz-muted);
+}
+
+.price-summary__line span:last-child {
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--wz-txt);
+}
+
+.price-summary__line--sub {
+    margin-top: -4px;
+}
+
+.price-summary__line--sub span:first-child {
+    font-size: 11px;
+    padding-left: 8px;
+}
+
+.price-summary__line--sub span:last-child {
+    display: none;
+}
+
+.price-summary__line--discount span {
+    color: #059669 !important;
+}
+
+.price-summary__line--total {
+    border-top: 1.5px solid var(--wz-bdr);
+    padding-top: 12px;
+    margin-top: 4px;
+}
+
+.price-summary__line--total span {
+    font-size: 18px !important;
+    font-weight: 800 !important;
+}
+
+.price-summary__line--total span:last-child {
+    color: var(--wz-teal) !important;
+}
+
+.price-summary__deposit {
+    background: var(--wz-blue-l);
+    border: 1px solid #93C5FD;
+    border-radius: var(--wz-r-md);
+    padding: 10px 13px;
+    font-size: 12px;
+    color: var(--wz-blue);
+    line-height: 1.5;
+}
+
+.price-summary__deposit small {
+    color: var(--wz-muted);
+    display: block;
+    margin-top: 3px;
+}
+
+.price-summary__hours {
+    font-size: 12px;
+    color: var(--wz-muted);
+    background: var(--wz-surf2);
+    padding: 8px 12px;
+    border-radius: var(--wz-r-md);
+    border: 1px solid var(--wz-bdr);
+}
+
+.price-summary__login-prompt {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--wz-amber-l);
+    border: 1px dashed #FCD34D;
+    border-radius: var(--wz-r-lg);
+    padding: 13px;
+}
+
+.price-summary__login-prompt span {
+    font-size: 22px;
+}
+
+.price-summary__login-prompt p {
+    font-size: 13px;
+    color: #B45309;
+    font-weight: 500;
+}
+
+.price-summary__cta {
+    /* Inherits .wz-cta — also locally defined for override */
+    background: linear-gradient(135deg, #002b36, var(--wz-teal));
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 14px 20px;
+    border-radius: var(--wz-r-f);
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.18s;
+    box-shadow: 0 4px 16px rgba(13, 184, 158, .25);
+}
+
+.price-summary__cta:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px rgba(13, 184, 158, .35);
+}
+
+.price-summary__cta:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.price-summary__reassurance {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.price-summary__reassurance span {
+    font-size: 11.5px;
+    color: #059669;
+}
+
+/* ── Responsive ── */
+@media (max-width: 960px) {
+    .addons-page__layout {
+        grid-template-columns: 1fr;
+    }
+
+    .price-summary {
+        position: static;
+    }
+}
+
+@media (max-width: 640px) {
+    .addons-trip-recap {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .addons-trip-recap__item {
+        border-bottom: 1px solid var(--wz-bdr);
+        border-right: none;
+    }
+
+    .addons-trip-recap__item:nth-child(odd) {
+        border-right: 1px solid var(--wz-bdr);
+    }
+}
