@@ -26,7 +26,7 @@ const STATUS_CLR = {
     COMPLETED: { bg: '#F3F4F6', color: '#6B7280', border: '#D1D5DB' },
     CANCELLED: { bg: '#FEE2E2', color: '#EF4444', border: '#FCA5A5' },
 };
-
+    
 // ─────────────────────────────────────────────
 // SMALL REUSABLE COMPONENTS
 // ─────────────────────────────────────────────
@@ -87,6 +87,112 @@ const StarRating = ({ value, onChange, readonly }) => (
     </div>
 );
 
+
+const PhotoLightbox = ({ photos, initialIndex, onClose }) => {
+    const [current, setCurrent] = useState(initialIndex || 0);
+
+    useEffect(() => {
+        const handleKey = (e) => {
+            if (e.key === 'Escape') onClose();
+            if (e.key === 'ArrowRight') setCurrent(c => Math.min(c + 1, photos.length - 1));
+            if (e.key === 'ArrowLeft') setCurrent(c => Math.max(c - 1, 0));
+        };
+        window.addEventListener('keydown', handleKey);
+        return () => window.removeEventListener('keydown', handleKey);
+    }, [photos.length, onClose]);
+
+    return (
+        <div
+            onClick={onClose}
+            style={{
+                position: 'fixed', inset: 0, zIndex: 9999,
+                background: 'rgba(0,0,0,0.88)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexDirection: 'column', gap: 16,
+            }}
+        >
+            <button
+                onClick={onClose}
+                style={{
+                    position: 'absolute', top: 20, right: 24,
+                    background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)',
+                    color: '#fff', borderRadius: 8, padding: '6px 14px',
+                    fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                }}
+            >
+                ✕ Close
+            </button>
+
+            <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <button
+                    onClick={() => setCurrent(c => Math.max(c - 1, 0))}
+                    disabled={current === 0}
+                    style={{
+                        background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)',
+                        color: '#fff', borderRadius: 8, padding: '10px 16px',
+                        fontSize: 18, cursor: current === 0 ? 'not-allowed' : 'pointer',
+                        opacity: current === 0 ? 0.3 : 1,
+                    }}
+                >‹</button>
+
+                <div style={{ textAlign: 'center' }}>
+                    <img
+                        src={photos[current].image}
+                        alt={photos[current].angle || 'inspection'}
+                        style={{
+                            maxWidth: 'min(80vw, 900px)', maxHeight: '70vh',
+                            objectFit: 'contain', borderRadius: 12,
+                            boxShadow: '0 20px 60px rgba(0,0,0,0.5)', display: 'block',
+                        }}
+                    />
+                    {photos[current].angle && (
+                        <div style={{
+                            marginTop: 10, fontSize: 12, color: 'rgba(255,255,255,0.6)',
+                            textTransform: 'capitalize', letterSpacing: '0.5px',
+                        }}>
+                            {photos[current].angle} · {current + 1} / {photos.length}
+                        </div>
+                    )}
+                </div>
+
+                <button
+                    onClick={() => setCurrent(c => Math.min(c + 1, photos.length - 1))}
+                    disabled={current === photos.length - 1}
+                    style={{
+                        background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)',
+                        color: '#fff', borderRadius: 8, padding: '10px 16px',
+                        fontSize: 18, cursor: current === photos.length - 1 ? 'not-allowed' : 'pointer',
+                        opacity: current === photos.length - 1 ? 0.3 : 1,
+                    }}
+                >›</button>
+            </div>
+
+            {photos.length > 1 && (
+                <div
+                    onClick={e => e.stopPropagation()}
+                    style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', maxWidth: '80vw' }}
+                >
+                    {photos.map((ph, idx) => (
+                        <img
+                            key={ph.id}
+                            src={ph.image}
+                            alt={ph.angle}
+                            onClick={() => setCurrent(idx)}
+                            style={{
+                                width: 54, height: 42, objectFit: 'cover', borderRadius: 6,
+                                cursor: 'pointer',
+                                border: idx === current ? '2px solid #0DB89E' : '2px solid rgba(255,255,255,0.2)',
+                                opacity: idx === current ? 1 : 0.6,
+                                transition: 'opacity 0.15s, border-color 0.15s',
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
 // ─────────────────────────────────────────────
 // FILTER DROPDOWN
 // ─────────────────────────────────────────────
@@ -115,9 +221,7 @@ function FilterDropdown({ label, value, options, onChange }) {
                 {isActive && (
                     <span className="cd-filter-dropdown__chip">{selected?.label}</span>
                 )}
-                <span className={`cd-filter-dropdown__chevron${open ? ' flipped' : ''}`}>
-                    ▾
-                </span>
+                <span className={`cd-filter-dropdown__chevron${open ? ' flipped' : ''}`}>▾</span>
             </button>
 
             {open && (
@@ -129,10 +233,7 @@ function FilterDropdown({ label, value, options, onChange }) {
                             onClick={() => { onChange(opt.value); setOpen(false); }}
                         >
                             {opt.color && (
-                                <span
-                                    className="cd-filter-dropdown__dot"
-                                    style={{ background: opt.color }}
-                                />
+                                <span className="cd-filter-dropdown__dot" style={{ background: opt.color }} />
                             )}
                             <span>{opt.label}</span>
                             {value === opt.value && (
@@ -146,18 +247,14 @@ function FilterDropdown({ label, value, options, onChange }) {
     );
 }
 
-// Helper to check if booking has due payment
 const hasDuePayment = (detail) => {
     if (!detail?.pricing_snapshot) return false;
     const snap = detail.pricing_snapshot;
-    const advancePaid = snap.advance_paid || false;
-    const remainingPaid = snap.remaining_paid || false;
-    const fullPaid = snap.full_payment_paid || false;
-    return advancePaid && !remainingPaid && !fullPaid;
+    return (snap.advance_paid || false) && !(snap.remaining_paid || false) && !(snap.full_payment_paid || false);
 };
 
 // ─────────────────────────────────────────────
-// PAYMENT MODAL (dummy flow)
+// PAYMENT MODAL
 // ─────────────────────────────────────────────
 function PaymentModal({ booking, detail, onClose, onSuccess, showToast }) {
     const [method, setMethod] = useState('online');
@@ -172,7 +269,6 @@ function PaymentModal({ booking, detail, onClose, onSuccess, showToast }) {
     const advancePaid = pricing.advance_paid || false;
     const remainingPaid = pricing.remaining_paid || false;
     const fullPaid = pricing.full_payment_paid || false;
-
     const canPayRemaining = advancePaid && !remainingPaid && !fullPaid;
     const payableNow = canPayRemaining ? remaining : advanceAmt;
 
@@ -245,7 +341,6 @@ function PaymentModal({ booking, detail, onClose, onSuccess, showToast }) {
                             </strong>
                         </div>
                     </div>
-
                     <div style={{ marginTop: 16 }}>
                         <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--cd-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
                             Payment Method
@@ -261,10 +356,7 @@ function PaymentModal({ booking, detail, onClose, onSuccess, showToast }) {
                                     onClick={() => setMethod(val)}
                                 >
                                     <span className={`payment-icon ${val}`}></span>
-                                    <div>
-                                        <strong>{label}</strong>
-                                        <small>{sub}</small>
-                                    </div>
+                                    <div><strong>{label}</strong><small>{sub}</small></div>
                                 </button>
                             ))}
                         </div>
@@ -272,11 +364,7 @@ function PaymentModal({ booking, detail, onClose, onSuccess, showToast }) {
                 </div>
                 <div className="cd-modal__foot">
                     <button className="cd-btn cd-btn--ghost" onClick={onClose}>Cancel</button>
-                    <button
-                        className="cd-btn cd-btn--primary"
-                        onClick={handlePay}
-                        disabled={loading}
-                    >
+                    <button className="cd-btn cd-btn--primary" onClick={handlePay} disabled={loading}>
                         {loading ? 'Processing…' : `Pay ₹${payableNow.toLocaleString('en-IN')} Now`}
                     </button>
                 </div>
@@ -326,10 +414,7 @@ function InvoiceModal({ invoice, booking, onClose }) {
                     </div>
                     <div className="cd-invoice-lines">
                         {lines.filter(([, v]) => v && v !== '₹0').map(([l, v]) => (
-                            <div
-                                key={l}
-                                className={`cd-invoice-line${l === 'Grand Total' ? ' cd-invoice-line--total' : ''}`}
-                            >
+                            <div key={l} className={`cd-invoice-line${l === 'Grand Total' ? ' cd-invoice-line--total' : ''}`}>
                                 <span>{l}</span><strong>{v}</strong>
                             </div>
                         ))}
@@ -351,21 +436,86 @@ function InspectionPanel({ bookingId, inspectionType, existingInspection, canCre
     const isCustomer = role === 'customer';
     const label = isPickup ? 'Pickup' : 'Drop-off';
 
-    const [form, setForm] = useState({
-        odometer_reading: '',
-        fuel_level: 'full',
-        notes: '',
-    });
+    const [form, setForm] = useState({ odometer_reading: '', fuel_level: 'full', notes: '' });
     const [saving, setSaving] = useState(false);
     const [photoFile, setPhotoFile] = useState(null);
-    const [photoUploading, setPhotoUploading] = useState(false);
     const [otpCode, setOtpCode] = useState('');
     const [otpBusy, setOtpBusy] = useState(false);
     const [expanded, setExpanded] = useState(false);
     const [vendorOtpDisplay, setVendorOtpDisplay] = useState(null);
 
-    // STATE 1: Locked (read-only)
+    const [lightboxIndex, setLightboxIndex] = useState(null);
+
+    // ── Helper: clickable thumbnail ───────────────────────────────
+    // Renders a photo thumbnail that opens the lightbox on click.
+    // Used in every state that shows photos.
+    const renderPhotos = (photos, size = { w: 70, h: 54 }) => {
+        if (!photos || photos.length === 0) return null;
+        return (
+            <>
+                {lightboxIndex !== null && (
+                    <PhotoLightbox
+                        photos={photos}
+                        initialIndex={lightboxIndex}
+                        onClose={() => setLightboxIndex(null)}
+                    />
+                )}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                    {photos.map((ph, idx) => (
+                        <div
+                            key={ph.id}
+                            onClick={() => setLightboxIndex(idx)}
+                            title="Click to enlarge"
+                            style={{
+                                position: 'relative', cursor: 'pointer',
+                                borderRadius: 6, overflow: 'hidden',
+                                width: size.w, height: size.h, flexShrink: 0,
+                            }}
+                        >
+                            <img
+                                src={ph.image}
+                                alt={ph.angle || 'inspection'}
+                                style={{
+                                    width: '100%', height: '100%',
+                                    objectFit: 'cover', display: 'block',
+                                    border: '1px solid var(--cd-bdr)',
+                                    borderRadius: 6,
+                                }}
+                            />
+                            {/* Hover zoom hint overlay */}
+                            <div style={{
+                                position: 'absolute', inset: 0,
+                                background: 'rgba(0,0,0,0.32)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                borderRadius: 6, opacity: 0,
+                                transition: 'opacity 0.15s',
+                            }}
+                                className="cd-photo-hover"
+                            >
+                                <span style={{ color: '#fff', fontSize: 18 }}>⤢</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </>
+        );
+    };
+
+    // ── STATE 1: Locked (read-only) ───────────────────────────────
     if (existingInspection?.is_locked) {
+        const photos = existingInspection.photos || [];
+        // FIX 2: only include damage row when damage was actually reported
+        const infoRows = [
+            ['Odometer', `${existingInspection.odometer_reading} km`],
+            ['Fuel Level', existingInspection.fuel_level],
+            ['Customer Signed', existingInspection.customer_signed ? 'Yes' : 'Pending'],
+            ['Vendor Signed', existingInspection.vendor_signed ? 'Yes' : 'Pending'],
+            ...(existingInspection.notes ? [['Notes', existingInspection.notes]] : []),
+            ...(existingInspection.damage_reported
+                ? [['Damage', existingInspection.damage_notes || 'Reported']]
+                : []),
+        ];
+
         return (
             <div style={{ border: '1px solid var(--cd-bdr)', borderRadius: 10, overflow: 'hidden' }}>
                 <div
@@ -383,39 +533,26 @@ function InspectionPanel({ bookingId, inspectionType, existingInspection, canCre
                 </div>
                 {expanded && (
                     <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {[
-                            ['Odometer', `${existingInspection.odometer_reading} km`],
-                            ['Fuel Level', existingInspection.fuel_level],
-                            ['Customer Signed', existingInspection.customer_signed ? 'Yes' : 'Pending'],
-                            ['Vendor Signed', existingInspection.vendor_signed ? 'Yes' : 'Pending'],
-                            ...(existingInspection.notes ? [['Notes', existingInspection.notes]] : []),
-                            ...(existingInspection.damage_reported ? [['Damage', `${existingInspection.damage_notes || 'Reported'}`]] : []),
-                        ].map(([l, v]) => (
+                        {infoRows.map(([l, v]) => (
                             <div key={l} className="cd-info-row" style={{ fontSize: 13 }}>
                                 <span className="cd-info-row__lbl">{l}</span>
                                 <strong>{v}</strong>
                             </div>
                         ))}
-                        {(existingInspection.photos || []).length > 0 && (
-                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-                                {existingInspection.photos.map(ph => (
-                                    <img key={ph.id} src={ph.image} alt="insp" style={{ width: 70, height: 54, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--cd-bdr)' }} />
-                                ))}
-                            </div>
-                        )}
+                        {/* FIX 1: clickable photos with lightbox */}
+                        {renderPhotos(photos)}
                     </div>
                 )}
             </div>
         );
     }
 
-    // STATE 2a: PICKUP — inspection submitted, waiting for vendor OTP
+    // ── STATE 2a: PICKUP — submitted, waiting for vendor OTP ──────
     if (isPickup && isCustomer && existingInspection && !existingInspection.is_locked) {
+        const photos = existingInspection.photos || [];
+
         const handleVerifyOtp = async () => {
-            if (otpCode.length !== 6) {
-                showToast('Enter 6-digit OTP.', 'error');
-                return;
-            }
+            if (otpCode.length !== 6) { showToast('Enter 6-digit OTP.', 'error'); return; }
             setOtpBusy(true);
             try {
                 await signInspection(bookingId, 'pickup', 'verify', otpCode);
@@ -448,11 +585,9 @@ function InspectionPanel({ bookingId, inspectionType, existingInspection, canCre
                         <div style={{ background: '#DBEAFE', border: '1px solid #93C5FD', borderRadius: 8, padding: '10px 12px', fontSize: 13 }}>
                             <strong>Enter OTP from Vendor</strong>
                             <p style={{ marginTop: 4, fontSize: 12, color: '#1D4ED8' }}>
-                                Your pickup inspection has been submitted. The vendor has reviewed it and generated a 6-digit OTP.
-                                Ask the vendor for the OTP and enter it below to start your trip.
+                                Your pickup inspection has been submitted. Ask the vendor for the OTP and enter it below to start your trip.
                             </p>
                         </div>
-
                         <div style={{ background: '#F8FAFB', border: '1px solid var(--cd-bdr)', borderRadius: 8, padding: '10px 12px' }}>
                             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 13 }}>
                                 <span>Odometer: <strong>{existingInspection.odometer_reading} km</strong></span>
@@ -460,7 +595,7 @@ function InspectionPanel({ bookingId, inspectionType, existingInspection, canCre
                                 {existingInspection.notes && <span>Notes: <strong>{existingInspection.notes}</strong></span>}
                             </div>
                         </div>
-
+                        {/* Photos are not shown here — pickup photos were uploaded by customer at form submission */}
                         <div>
                             <p style={{ fontSize: 12, color: 'var(--cd-muted)', marginBottom: 8, fontWeight: 600 }}>
                                 Enter 6-digit OTP provided by vendor:
@@ -493,8 +628,10 @@ function InspectionPanel({ bookingId, inspectionType, existingInspection, canCre
         );
     }
 
-    // STATE 2b: DROP-OFF — vendor submitted, customer reviews & generates OTP
+    // ── STATE 2b: DROP-OFF — vendor submitted, customer reviews & generates OTP ──
     if (!isPickup && isCustomer && existingInspection && !existingInspection.is_locked) {
+        const photos = existingInspection.photos || [];
+
         const handleGenerateOtp = async () => {
             setOtpBusy(true);
             try {
@@ -527,30 +664,24 @@ function InspectionPanel({ bookingId, inspectionType, existingInspection, canCre
                         <div style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 8, padding: '10px 12px', fontSize: 13 }}>
                             <strong>Review Drop-off Inspection</strong>
                             <p style={{ marginTop: 4, fontSize: 12, color: '#92400E' }}>
-                                The vendor has recorded the vehicle condition at return. Review the details below carefully.
-                                If everything is correct, generate an OTP and share it with the vendor.
+                                The vendor has recorded the vehicle condition at return. Review the details carefully before generating the OTP.
                             </p>
                         </div>
-
                         <div style={{ background: '#F8FAFB', border: '1px solid var(--cd-bdr)', borderRadius: 8, padding: '10px 12px' }}>
                             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 13 }}>
                                 <span>Odometer: <strong>{existingInspection.odometer_reading} km</strong></span>
                                 <span>Fuel: <strong>{existingInspection.fuel_level}</strong></span>
+                                {/* FIX 2: only show damage when actually reported */}
                                 {existingInspection.damage_reported && (
-                                    <span style={{ color: '#EF4444' }}>Damage: <strong>{existingInspection.damage_notes} (₹{existingInspection.damage_amount})</strong></span>
+                                    <span style={{ color: '#EF4444' }}>
+                                        Damage: <strong>{existingInspection.damage_notes} (₹{existingInspection.damage_amount})</strong>
+                                    </span>
                                 )}
                                 {existingInspection.notes && <span>Notes: <strong>{existingInspection.notes}</strong></span>}
                             </div>
                         </div>
-
-                        {(existingInspection.photos || []).length > 0 && (
-                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                                {existingInspection.photos.map(ph => (
-                                    <img key={ph.id} src={ph.image} alt="insp" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--cd-bdr)' }} />
-                                ))}
-                            </div>
-                        )}
-
+                        {/* FIX 1: clickable photos with lightbox */}
+                        {renderPhotos(photos, { w: 80, h: 60 })}
                         {!vendorOtpDisplay ? (
                             <button className="cd-btn cd-btn--primary" onClick={handleGenerateOtp} disabled={otpBusy}>
                                 {otpBusy ? 'Generating…' : 'Generate OTP for Vendor'}
@@ -566,12 +697,7 @@ function InspectionPanel({ bookingId, inspectionType, existingInspection, canCre
                                 <p style={{ fontSize: 11, color: '#059669', marginTop: 10 }}>
                                     Once the vendor enters this OTP, drop-off will be completed and booking closed.
                                 </p>
-                                <button
-                                    className="cd-btn cd-btn--ghost cd-btn--sm"
-                                    style={{ marginTop: 10 }}
-                                    onClick={handleGenerateOtp}
-                                    disabled={otpBusy}
-                                >
+                                <button className="cd-btn cd-btn--ghost cd-btn--sm" style={{ marginTop: 10 }} onClick={handleGenerateOtp} disabled={otpBusy}>
                                     Generate New OTP
                                 </button>
                             </div>
@@ -582,7 +708,7 @@ function InspectionPanel({ bookingId, inspectionType, existingInspection, canCre
         );
     }
 
-    // STATE 3: Not yet available
+    // ── STATE 3: Not yet available ────────────────────────────────
     if (!canCreate) {
         return (
             <div style={{ border: '1px dashed var(--cd-bdr)', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: 'var(--cd-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -596,7 +722,7 @@ function InspectionPanel({ bookingId, inspectionType, existingInspection, canCre
         );
     }
 
-    // STATE 4: Drop-off not creatable by customer
+    // ── STATE 4: Drop-off not creatable by customer ───────────────
     if (!isPickup) {
         return (
             <div style={{ border: '1px dashed var(--cd-bdr)', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: 'var(--cd-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -606,7 +732,7 @@ function InspectionPanel({ bookingId, inspectionType, existingInspection, canCre
         );
     }
 
-    // STATE 5: Customer fills pickup inspection form
+    // ── STATE 5: Customer fills pickup inspection form ────────────
     const handleSave = async () => {
         if (!form.odometer_reading) { showToast('Odometer reading is required.', 'error'); return; }
         setSaving(true);
@@ -616,7 +742,25 @@ function InspectionPanel({ bookingId, inspectionType, existingInspection, canCre
             fd.append('fuel_level', form.fuel_level);
             fd.append('notes', form.notes);
             fd.append('checklist', JSON.stringify({ exterior: true, interior: true, tyres: true, documents: true }));
-            await createInspection(bookingId, 'pickup', fd);
+
+            // createInspection returns { inspection_id, status }
+            const { data: inspData } = await createInspection(bookingId, 'pickup', fd);
+
+            // FIX 1 (photo upload): if user selected a photo, upload it now using the
+            // inspection_id returned by the create endpoint. Previously photoFile was
+            // captured in state but uploadInspectionPhoto was never called.
+            if (photoFile && inspData?.inspection_id) {
+                const pfd = new FormData();
+                pfd.append('image', photoFile);
+                pfd.append('angle', 'other');
+                try {
+                    await uploadInspectionPhoto(inspData.inspection_id, pfd);
+                } catch {
+                    // Photo upload failure is non-fatal — inspection is already saved
+                    showToast('Inspection saved, but photo upload failed. You can retry later.', 'error');
+                }
+            }
+
             showToast('Pickup inspection submitted! Waiting for vendor to generate OTP.');
             onRefresh();
         } catch (e) {
@@ -646,7 +790,6 @@ function InspectionPanel({ bookingId, inspectionType, existingInspection, canCre
                     <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#1D4ED8' }}>
                         <strong>How it works:</strong> Fill in the vehicle condition at pickup. After you submit, the vendor will review it and generate an OTP for you to enter.
                     </div>
-
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                         <div className="cd-form-field">
                             <label>Odometer Reading (km) *</label>
@@ -671,7 +814,6 @@ function InspectionPanel({ bookingId, inspectionType, existingInspection, canCre
                             </select>
                         </div>
                     </div>
-
                     <div className="cd-form-field">
                         <label>Notes (optional)</label>
                         <textarea
@@ -681,14 +823,17 @@ function InspectionPanel({ bookingId, inspectionType, existingInspection, canCre
                             placeholder="Any observations about the vehicle condition…"
                         />
                     </div>
-
                     <div className="cd-form-field">
                         <label>Upload Photo (optional)</label>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                             <input type="file" accept="image/*" onChange={e => setPhotoFile(e.target.files[0])} />
+                            {photoFile && (
+                                <span style={{ fontSize: 11, color: 'var(--cd-acc)', fontWeight: 600 }}>
+                                    ✓ {photoFile.name}
+                                </span>
+                            )}
                         </div>
                     </div>
-
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center', paddingTop: 4, borderTop: '1px solid var(--cd-bdr)' }}>
                         <button className="cd-btn cd-btn--primary" onClick={handleSave} disabled={saving}>
                             {saving ? 'Saving…' : 'Submit Pickup Inspection'}
@@ -717,11 +862,7 @@ function BookingDetailPanel({ booking, detail, loading: detailLoading, onRefresh
     const [cancelLoading, setCancelLoading] = useState(false);
 
     if (detailLoading) {
-        return (
-            <div className="cd-detail-loading">
-                <div className="cd-spinner" /> Loading details…
-            </div>
-        );
+        return <div className="cd-detail-loading"><div className="cd-spinner" /> Loading details…</div>;
     }
     if (!detail) return null;
 
@@ -741,10 +882,7 @@ function BookingDetailPanel({ booking, detail, loading: detailLoading, onRefresh
     const canSign = booking.status === 'CONFIRMED' && !detail.agreement_signed;
     const canPayNow = !fullPaid && advancePaid && !remainingPaid;
     const canCancel = ['PENDING', 'CONFIRMED'].includes(booking.status);
-
-    const canCreatePickupInsp = ['CONFIRMED'].includes(booking.status) &&
-        detail.agreement_signed &&
-        !pickupInsp;
+    const canCreatePickupInsp = ['CONFIRMED'].includes(booking.status) && detail.agreement_signed && !pickupInsp;
 
     const handleCancel = async () => {
         setCancelLoading(true);
@@ -758,17 +896,12 @@ function BookingDetailPanel({ booking, detail, loading: detailLoading, onRefresh
         } finally { setCancelLoading(false); }
     };
 
-    const getVehicleIcon = (segment) => {
-        return <span className={`vehicle-icon ${segment || 'default'}`}></span>;
-    };
+    const getVehicleIcon = (segment) => <span className={`vehicle-icon ${segment || 'default'}`}></span>;
 
     return (
         <>
-            {/* Vehicle recap */}
             <div className="cd-detail-vehicle-card">
-                <div className="cd-detail-vehicle-icon">
-                    {getVehicleIcon(v.segment)}
-                </div>
+                <div className="cd-detail-vehicle-icon">{getVehicleIcon(v.segment)}</div>
                 <div className="cd-detail-vehicle-info">
                     <h4>{v.year} {v.make} {v.model}</h4>
                     <div className="cd-detail-vehicle-meta">
@@ -796,7 +929,6 @@ function BookingDetailPanel({ booking, detail, loading: detailLoading, onRefresh
                 </div>
             </div>
 
-            {/* Two-col detail grid */}
             <div className="cd-detail-grid">
                 <div className="cd-info-group">
                     <div className="cd-info-group__title">Trip Details</div>
@@ -819,9 +951,7 @@ function BookingDetailPanel({ booking, detail, loading: detailLoading, onRefresh
                     <InfoRow label="Security Deposit" value={`₹${deposit.toLocaleString('en-IN')} (${detail.deposit_released ? 'Released' : detail.deposit_held ? 'Held' : 'Pending'})`} />
                     {detail.invoice && (
                         <div style={{ marginTop: 8 }}>
-                            <button className="cd-btn cd-btn--outline cd-btn--sm" onClick={() => setShowInvoice(true)}>
-                                View Invoice
-                            </button>
+                            <button className="cd-btn cd-btn--outline cd-btn--sm" onClick={() => setShowInvoice(true)}>View Invoice</button>
                         </div>
                     )}
                 </div>
@@ -833,10 +963,10 @@ function BookingDetailPanel({ booking, detail, loading: detailLoading, onRefresh
                         <InfoRow label="Signed On" value={new Date(detail.agreement_signed_at).toLocaleString('en-IN')} />
                     )}
                     {detail.agreement_signed && (
-                    <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => setShowViewModal(true)}>
-                        View Signed Agreement
-                    </button>
-                )}
+                        <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => setShowViewModal(true)}>
+                            View Signed Agreement
+                        </button>
+                    )}
                 </div>
 
                 <div className="cd-info-group">
@@ -855,7 +985,6 @@ function BookingDetailPanel({ booking, detail, loading: detailLoading, onRefresh
                 <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--cd-muted)' }}>
                     Inspections
                 </div>
-
                 {booking.status === 'CONFIRMED' && !detail.agreement_signed && (
                     <div style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#92400E' }}>
                         Please sign the rental agreement first before completing the pickup inspection.
@@ -868,7 +997,7 @@ function BookingDetailPanel({ booking, detail, loading: detailLoading, onRefresh
                 )}
                 {booking.status === 'CONFIRMED' && pickupInsp && !pickupInsp.is_locked && (
                     <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#92400E' }}>
-                        Pickup inspection submitted. Waiting for vendor to generate OTP. Ask the vendor to check their dashboard.
+                        Pickup inspection submitted. Waiting for vendor to generate OTP.
                     </div>
                 )}
                 {booking.status === 'ACTIVE' && !returnInsp && (
@@ -911,7 +1040,6 @@ function BookingDetailPanel({ booking, detail, loading: detailLoading, onRefresh
                         </button>
                     </div>
                 )}
-
                 {canPayNow && (
                     <div className="cd-action-block">
                         <p className="cd-action-label">Outstanding Balance</p>
@@ -920,7 +1048,6 @@ function BookingDetailPanel({ booking, detail, loading: detailLoading, onRefresh
                         </button>
                     </div>
                 )}
-
                 {canCancel && !cancelConfirm && (
                     <button className="cd-btn cd-btn--danger-outline cd-btn--sm" style={{ marginLeft: 'auto' }} onClick={() => setCancelConfirm(true)}>
                         Cancel Booking
@@ -937,7 +1064,6 @@ function BookingDetailPanel({ booking, detail, loading: detailLoading, onRefresh
                 )}
             </div>
 
-            {/* Modals */}
             {showSignModal && (
                 <AgreementSignModal
                     booking={booking}
@@ -956,34 +1082,23 @@ function BookingDetailPanel({ booking, detail, loading: detailLoading, onRefresh
                     onClose={() => setShowSignModal(false)}
                 />
             )}
-
             {showViewModal && (
                 <AgreementViewModal
                     booking={booking}
-                    acceptance={
-                        latestAcceptance || {
-                            agreement_version_id: detail.agreement_version_id || null,
-                            version_tag: detail.agreement_version_tag || null,
-                            accepted_at: detail.agreement_signed_at,
-                            otp_verified: true,
-                            booking_ref: booking.booking_ref,
-                            user_email: null,
-                        }
-                    }
+                    acceptance={latestAcceptance || {
+                        agreement_version_id: detail.agreement_version_id || null,
+                        version_tag: detail.agreement_version_tag || null,
+                        accepted_at: detail.agreement_signed_at,
+                        otp_verified: true,
+                        booking_ref: booking.booking_ref,
+                        user_email: null,
+                    }}
                     onClose={() => setShowViewModal(false)}
                 />
             )}
-
             {showPayment && (
-                <PaymentModal
-                    booking={booking}
-                    detail={detail}
-                    onClose={() => setShowPayment(false)}
-                    onSuccess={onRefresh}
-                    showToast={showToast}
-                />
+                <PaymentModal booking={booking} detail={detail} onClose={() => setShowPayment(false)} onSuccess={onRefresh} showToast={showToast} />
             )}
-
             {showInvoice && detail.invoice && (
                 <InvoiceModal invoice={detail.invoice} booking={booking} onClose={() => setShowInvoice(false)} />
             )}
@@ -1013,9 +1128,7 @@ function BookingHistoryTab({ bookings }) {
         );
     }
 
-    const getVehicleIcon = (segment) => {
-        return <span className={`vehicle-icon ${segment || 'default'}`}></span>;
-    };
+    const getVehicleIcon = (segment) => <span className={`vehicle-icon ${segment || 'default'}`}></span>;
 
     return (
         <div className="cd-history">
@@ -1038,9 +1151,7 @@ function BookingHistoryTab({ bookings }) {
                     <div className="cd-history__items">
                         {byYear[year].map(b => (
                             <div key={b.id} className="cd-history__item">
-                                <div className="cd-history__item-icon">
-                                    {getVehicleIcon(b.vehicle?.segment)}
-                                </div>
+                                <div className="cd-history__item-icon">{getVehicleIcon(b.vehicle?.segment)}</div>
                                 <div className="cd-history__item-body">
                                     <div className="cd-history__item-title">
                                         {b.vehicle?.year} {b.vehicle?.make} {b.vehicle?.model || b.vehicle_display || 'Vehicle'}
@@ -1093,40 +1204,39 @@ export default function CustomerDashboard() {
 
     const showToast = useCallback((msg, type = 'success') => setToast({ msg, type }), []);
 
-    // Snow animation
-    useEffect(() => {
-        const banner = document.querySelector('.cd__hero-banner');
-        if (!banner || banner.querySelector('.snow-canvas')) return;
-        const canvas = document.createElement('canvas');
-        canvas.className = 'snow-canvas';
-        canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;';
-        banner.prepend(canvas);
-        const ctx = canvas.getContext('2d');
-        let flakes = [], raf;
-        const resize = () => { canvas.width = banner.offsetWidth; canvas.height = banner.offsetHeight; };
-        const init = () => {
-            flakes = Array.from({ length: 80 }, () => ({
-                x: Math.random() * canvas.width, y: Math.random() * canvas.height,
-                r: Math.random() * 3 + 1, speed: Math.random() * 0.8 + 0.3,
-                drift: (Math.random() - 0.5) * 0.4, opacity: Math.random() * 0.5 + 0.1,
-            }));
-        };
-        const draw = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (const f of flakes) {
-                ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(255,255,255,${f.opacity})`; ctx.fill();
-                f.y += f.speed; f.x += f.drift;
-                if (f.y > canvas.height + f.r) { f.y = -f.r; f.x = Math.random() * canvas.width; }
-                if (f.x > canvas.width + f.r) f.x = -f.r;
-                if (f.x < -f.r) f.x = canvas.width + f.r;
-            }
-            raf = requestAnimationFrame(draw);
-        };
-        resize(); init(); draw();
-        window.addEventListener('resize', () => { resize(); init(); });
-        return () => { cancelAnimationFrame(raf); canvas.remove(); };
-    }, []);
+    // useEffect(() => {
+    //     const banner = document.querySelector('.cd__hero-banner');
+    //     if (!banner || banner.querySelector('.snow-canvas')) return;
+    //     const canvas = document.createElement('canvas');
+    //     canvas.className = 'snow-canvas';
+    //     canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;';
+    //     banner.prepend(canvas);
+    //     const ctx = canvas.getContext('2d');
+    //     let flakes = [], raf;
+    //     const resize = () => { canvas.width = banner.offsetWidth; canvas.height = banner.offsetHeight; };
+    //     const init = () => {
+    //         flakes = Array.from({ length: 80 }, () => ({
+    //             x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+    //             r: Math.random() * 3 + 1, speed: Math.random() * 0.8 + 0.3,
+    //             drift: (Math.random() - 0.5) * 0.4, opacity: Math.random() * 0.5 + 0.1,
+    //         }));
+    //     };
+    //     const draw = () => {
+    //         ctx.clearRect(0, 0, canvas.width, canvas.height);
+    //         for (const f of flakes) {
+    //             ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+    //             ctx.fillStyle = `rgba(255,255,255,${f.opacity})`; ctx.fill();
+    //             f.y += f.speed; f.x += f.drift;
+    //             if (f.y > canvas.height + f.r) { f.y = -f.r; f.x = Math.random() * canvas.width; }
+    //             if (f.x > canvas.width + f.r) f.x = -f.r;
+    //             if (f.x < -f.r) f.x = canvas.width + f.r;
+    //         }
+    //         raf = requestAnimationFrame(draw);
+    //     };
+    //     resize(); init(); draw();
+    //     window.addEventListener('resize', () => { resize(); init(); });
+    //     return () => { cancelAnimationFrame(raf); canvas.remove(); };
+    // }, []);
 
     const loadTab = useCallback(async (t) => {
         setLoading(true); setError('');
@@ -1168,10 +1278,7 @@ export default function CustomerDashboard() {
     }, []);
 
     const handleExpandBooking = async (bookingId) => {
-        if (expandedBookingId === bookingId) {
-            setExpandedBookingId(null);
-            return;
-        }
+        if (expandedBookingId === bookingId) { setExpandedBookingId(null); return; }
         setExpandedBookingId(bookingId);
         if (!bookingDetails[bookingId]) {
             setDetailLoading(true);
@@ -1180,9 +1287,7 @@ export default function CustomerDashboard() {
                 setBookingDetails(prev => ({ ...prev, [bookingId]: data }));
             } catch (e) {
                 showToast('Could not load booking details.', 'error');
-            } finally {
-                setDetailLoading(false);
-            }
+            } finally { setDetailLoading(false); }
         }
     };
 
@@ -1194,9 +1299,7 @@ export default function CustomerDashboard() {
             ]);
             setBookingDetails(prev => ({ ...prev, [bookingId]: detailRes.data }));
             setBookings(listRes.data.results || listRes.data);
-        } catch (e) {
-            showToast('Could not refresh booking.', 'error');
-        }
+        } catch (e) { showToast('Could not refresh booking.', 'error'); }
     }, [statusFilter, showToast]);
 
     const handleProfileSave = async () => {
@@ -1246,15 +1349,9 @@ export default function CustomerDashboard() {
     const totalSpend = bookings
         .filter(b => !['CANCELLED', 'PENDING'].includes(b.status))
         .reduce((s, b) => s + parseFloat(b.total_amount || 0), 0);
+    const hasAnyDuePayment = bookings.some(b => bookingDetails[b.id] && hasDuePayment(bookingDetails[b.id]));
 
-    const hasAnyDuePayment = bookings.some(b => {
-        const detail = bookingDetails[b.id];
-        return detail && hasDuePayment(detail);
-    });
-
-    const getVehicleIcon = (segment) => {
-        return <span className={`vehicle-icon ${segment || 'default'}`}></span>;
-    };
+    const getVehicleIcon = (segment) => <span className={`vehicle-icon ${segment || 'default'}`}></span>;
 
     return (
         <div className="cd">
@@ -1265,7 +1362,6 @@ export default function CustomerDashboard() {
             <div className="cd__shell">
                 <div className="cd__inner">
 
-                    {/* Hero */}
                     <div className="cd__hero">
                         <div className="cd__hero-banner" />
                         <div className="cd__hero-body">
@@ -1274,9 +1370,7 @@ export default function CustomerDashboard() {
                                     {(user?.full_name || user?.email || 'U')[0].toUpperCase()}
                                 </div>
                                 <div className="cd__hero-info">
-                                    <div className="cd__hero-name">
-                                        Welcome back, {user?.full_name?.split(' ')[0] || 'there'}
-                                    </div>
+                                    <div className="cd__hero-name">Welcome back, {user?.full_name?.split(' ')[0] || 'there'}</div>
                                     <div className="cd__hero-sub">{user?.email}</div>
                                 </div>
                             </div>
@@ -1296,7 +1390,6 @@ export default function CustomerDashboard() {
                         </div>
                     </div>
 
-                    {/* Due Payment Banner */}
                     {hasAnyDuePayment && (
                         <div className="payment-due-banner">
                             <div className="payment-due-banner__info">
@@ -1309,15 +1402,10 @@ export default function CustomerDashboard() {
                             <button
                                 className="payment-due-banner__button"
                                 onClick={() => {
-                                    const dueBooking = bookings.find(b => {
-                                        const detail = bookingDetails[b.id];
-                                        return detail && hasDuePayment(detail);
-                                    });
+                                    const dueBooking = bookings.find(b => bookingDetails[b.id] && hasDuePayment(bookingDetails[b.id]));
                                     if (dueBooking) handleExpandBooking(dueBooking.id);
                                 }}
-                            >
-                                Pay Now
-                            </button>
+                            >Pay Now</button>
                         </div>
                     )}
 
@@ -1326,7 +1414,6 @@ export default function CustomerDashboard() {
                     )}
                     {error && <div className="cd-error">{error}</div>}
 
-                    {/* BOOKINGS */}
                     {!loading && tab === 'bookings' && (
                         <div className="cd-section">
                             <div className="cd-filter-bar cd-filter-bar--dropdown">
@@ -1336,20 +1423,16 @@ export default function CustomerDashboard() {
                                     value={statusFilter}
                                     onChange={setStatusFilter}
                                     options={[
-                                        { value: '',          label: 'All Bookings' },
-                                        { value: 'PENDING',   label: 'Pending',   color: '#D97706' },
+                                        { value: '', label: 'All Bookings' },
+                                        { value: 'PENDING', label: 'Pending', color: '#D97706' },
                                         { value: 'CONFIRMED', label: 'Confirmed', color: '#1D4ED8' },
-                                        { value: 'ACTIVE',    label: 'Active',    color: '#059669' },
+                                        { value: 'ACTIVE', label: 'Active', color: '#059669' },
                                         { value: 'COMPLETED', label: 'Completed', color: '#6B7280' },
                                         { value: 'CANCELLED', label: 'Cancelled', color: '#EF4444' },
                                     ]}
                                 />
                                 {statusFilter && (
-                                    <button
-                                        className="cd-filter-clear"
-                                        onClick={() => setStatusFilter('')}
-                                        title="Clear filter"
-                                    >
+                                    <button className="cd-filter-clear" onClick={() => setStatusFilter('')} title="Clear filter">
                                         ✕ Clear
                                     </button>
                                 )}
@@ -1369,16 +1452,11 @@ export default function CustomerDashboard() {
                                         const hasDue = detail && hasDuePayment(detail);
                                         return (
                                             <div key={b.id} className="cd-booking-card">
-                                                <div
-                                                    className="cd-booking-card__head"
-                                                    onClick={() => handleExpandBooking(b.id)}
-                                                >
+                                                <div className="cd-booking-card__head" onClick={() => handleExpandBooking(b.id)}>
                                                     <div className="cd-booking-card__ref">
                                                         <span className="cd-booking-ref">{b.booking_ref}</span>
                                                         <StatusBadge status={b.status} />
-                                                        {hasDue && (
-                                                            <span className="booking-card__due-badge">Due Payment</span>
-                                                        )}
+                                                        {hasDue && <span className="booking-card__due-badge">Due Payment</span>}
                                                     </div>
                                                     <div className="cd-booking-card__meta">
                                                         <span>{b.vehicle_display || `${b.vehicle?.year || ''} ${b.vehicle?.make || ''} ${b.vehicle?.model || ''}`}</span>
@@ -1390,7 +1468,6 @@ export default function CustomerDashboard() {
                                                         <span className="cd-expand-icon">{isExpanded ? '▲' : '▼'}</span>
                                                     </div>
                                                 </div>
-
                                                 {isExpanded && (
                                                     <div className="cd-booking-card__body">
                                                         <BookingDetailPanel
@@ -1411,21 +1488,14 @@ export default function CustomerDashboard() {
                         </div>
                     )}
 
-                    {/* HISTORY */}
                     {!loading && tab === 'history' && (
-                        <div className="cd-section">
-                            <BookingHistoryTab bookings={allBookings} />
-                        </div>
+                        <div className="cd-section"><BookingHistoryTab bookings={allBookings} /></div>
                     )}
 
-                    {/* AGREEMENTS */}
-                    {tab === 'agreements' && (
-                        <div className="cd-section">
-                            <AgreementHistoryTab />
-                        </div>
-                    )}
+                    {/* {tab === 'agreements' && (
+                        <div className="cd-section"><AgreementHistoryTab /></div>
+                    )} */}
 
-                    {/* REVIEWS */}
                     {!loading && tab === 'reviews' && (
                         <div className="cd-section">
                             {pendingReviews.length === 0 ? (
@@ -1474,7 +1544,6 @@ export default function CustomerDashboard() {
                         </div>
                     )}
 
-                    {/* LOYALTY */}
                     {!loading && tab === 'loyalty' && loyalty && (
                         <div className="cd-section">
                             <div className="cd-loyalty-layout">
@@ -1516,15 +1585,12 @@ export default function CustomerDashboard() {
                         </div>
                     )}
 
-                    {/* PROFILE */}
                     {!loading && tab === 'profile' && profile && (
                         <div className="cd-section">
                             <div className="cd-profile-layout">
                                 <div className="cd-card">
                                     <div className="cd-card__head">
-                                        <div>
-                                            <h3 className="cd-card__title">Personal Information</h3>
-                                        </div>
+                                        <div><h3 className="cd-card__title">Personal Information</h3></div>
                                         <button className="cd-btn cd-btn--outline cd-btn--sm" onClick={() => setProfileEdit(!profileEdit)}>
                                             {profileEdit ? 'Cancel' : 'Edit'}
                                         </button>

@@ -141,6 +141,9 @@ export const vahanCheck = (vehicleId) =>
   api.post(`/vehicles/admin/${vehicleId}/vahan-check/`);
 export const flagQRTamper = (vehicleId) =>
   api.post(`/vehicles/admin/${vehicleId}/flag-qr/`);
+export const setVehicleStatus = (vehicleId, status, note = '') =>
+  api.post(`/vehicles/admin/${vehicleId}/set-status/`, { status, note });
+ 
 
 // ── Pricing ───────────────────────────────────────────────────────────────
 export const calculatePrice = (data) =>

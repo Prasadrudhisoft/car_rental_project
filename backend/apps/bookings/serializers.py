@@ -66,9 +66,39 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     pickup_location_detail = LocationSerializer(source='pickup_location', read_only=True)
     return_location_detail = LocationSerializer(source='return_location', read_only=True)
  
+    # ── Customer identity fields ──────────────────────────────────────────
+    customer_name  = serializers.CharField(
+        source='customer.full_name', read_only=True, default='')
+    customer_email = serializers.CharField(
+        source='customer.email', read_only=True, default='')
+    customer_phone = serializers.CharField(
+        source='customer.phone', read_only=True, default='')
+ 
+    # ── Vendor identity fields (NEW) ──────────────────────────────────────
+    vendor_name = serializers.SerializerMethodField()
+ 
+    # ── Vehicle identity fields (NEW) ─────────────────────────────────────
+    # vehicle_display already gives "2023 Maruti Swift" — add plate + segment
+    # separately so the frontend can show them individually if needed.
+    vehicle_plate   = serializers.SerializerMethodField()
+    vehicle_segment = serializers.SerializerMethodField()
+ 
     class Meta:
         model  = Booking
         fields = '__all__'
  
     def get_vehicle_display(self, obj):
         return f'{obj.vehicle.year} {obj.vehicle.make} {obj.vehicle.model}'
+ 
+    def get_vendor_name(self, obj):
+        """Return the vendor's business name for display in admin booking list."""
+        try:
+            return obj.vendor.vendor_profile.business_name
+        except Exception:
+            return obj.vendor.full_name or obj.vendor.email or ''
+ 
+    def get_vehicle_plate(self, obj):
+        return obj.vehicle.plate_number if obj.vehicle else ''
+ 
+    def get_vehicle_segment(self, obj):
+        return obj.vehicle.segment if obj.vehicle else ''

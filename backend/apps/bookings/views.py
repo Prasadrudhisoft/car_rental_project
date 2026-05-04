@@ -748,8 +748,14 @@ class InspectionCreateView(APIView):
                 pass
  
         if insp_type == 'RETURN':
-            record.damage_reported = request.data.get("damage_reported", False)
-            record.damage_notes    = request.data.get("damage_notes", "")
+            damage_reported = request.data.get("damage_reported", False)
+
+            if isinstance(damage_reported, str):
+                damage_reported = damage_reported.strip().lower() in ["true", "1", "yes"]
+
+            record.damage_reported = bool(damage_reported)
+            record.damage_notes = request.data.get("damage_notes", "")
+
             if record.damage_reported and request.data.get("damage_amount"):
                 record.damage_amount = Decimal(str(request.data["damage_amount"]))
  
