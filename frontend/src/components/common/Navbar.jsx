@@ -116,15 +116,14 @@ const SIDEBAR_ITEMS = {
         { id: 'overview', icon: ICONS.overview, tip: 'Overview' },
         { id: 'bookings', icon: ICONS.bookings, tip: 'Bookings' },
         { id: 'fleet', icon: ICONS.vehicles, tip: 'Fleet' },
-        { id: 'inspections', icon: ICONS.inspections, tip: 'Inspections' },
         { id: 'handovers', icon: ICONS.handovers, tip: 'Handovers' },
         { id: 'network', icon: ICONS.network, tip: 'Network' },
         { id: 'profile', icon: ICONS.profile, tip: 'Profile & KYC' },
     ],
     customer: [
         { id: 'bookings', icon: ICONS.calendarIcon, tip: 'My Bookings' },
-        { id: 'history', icon: ICONS.historyIcon, tip: 'Trip History' },
-        { id: 'agreements', icon: ICONS.agreements, tip: 'Agreements' },
+        // { id: 'history', icon: ICONS.historyIcon, tip: 'Trip History' },
+        // { id: 'agreements', icon: ICONS.agreements, tip: 'Agreements' },
         { id: 'reviews', icon: ICONS.starIcon, tip: 'Reviews' },
         { id: 'loyalty', icon: ICONS.loyaltyIcon, tip: 'Loyalty Rewards' },
         { id: 'profile', icon: ICONS.profile, tip: 'Profile & KYC' },
@@ -139,50 +138,50 @@ export function Sidebar({ activeTab, onTabChange }) {
     const items = SIDEBAR_ITEMS[role] || [];
     const [mobileOpen, setMobileOpen] = useState(false);
 
-    useEffect(() => {
-        const sidebar = document.querySelector('.sidebar');
-        if (!sidebar || sidebar.querySelector('.snow-canvas')) return;
-        const canvas = document.createElement('canvas');
-        canvas.className = 'snow-canvas';
-        canvas.style.cssText =
-            'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;';
-        sidebar.prepend(canvas);
-        const ctx = canvas.getContext('2d');
-        const COUNT = 40;
-        let flakes = [], raf;
-        const resize = () => {
-            canvas.width = sidebar.offsetWidth;
-            canvas.height = sidebar.offsetHeight;
-        };
-        const init = () => {
-            flakes = Array.from({ length: COUNT }, () => ({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                r: Math.random() * 2 + 0.5,
-                speed: Math.random() * 0.6 + 0.2,
-                drift: (Math.random() - 0.5) * 0.3,
-                opacity: Math.random() * 0.4 + 0.08,
-            }));
-        };
-        const draw = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (const f of flakes) {
-                ctx.beginPath();
-                ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(255,255,255,${f.opacity})`;
-                ctx.fill();
-                f.y += f.speed;
-                f.x += f.drift;
-                if (f.y > canvas.height + f.r) { f.y = -f.r; f.x = Math.random() * canvas.width; }
-                if (f.x > canvas.width + f.r) f.x = -f.r;
-                if (f.x < -f.r) f.x = canvas.width + f.r;
-            }
-            raf = requestAnimationFrame(draw);
-        };
-        resize(); init(); draw();
-        window.addEventListener('resize', () => { resize(); init(); });
-        return () => { cancelAnimationFrame(raf); canvas.remove(); };
-    }, []);
+    // useEffect(() => {
+    //     const sidebar = document.querySelector('.sidebar');
+    //     if (!sidebar || sidebar.querySelector('.snow-canvas')) return;
+    //     const canvas = document.createElement('canvas');
+    //     canvas.className = 'snow-canvas';
+    //     canvas.style.cssText =
+    //         'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;';
+    //     sidebar.prepend(canvas);
+    //     const ctx = canvas.getContext('2d');
+    //     const COUNT = 40;
+    //     let flakes = [], raf;
+    //     const resize = () => {
+    //         canvas.width = sidebar.offsetWidth;
+    //         canvas.height = sidebar.offsetHeight;
+    //     };
+    //     const init = () => {
+    //         flakes = Array.from({ length: COUNT }, () => ({
+    //             x: Math.random() * canvas.width,
+    //             y: Math.random() * canvas.height,
+    //             r: Math.random() * 2 + 0.5,
+    //             speed: Math.random() * 0.6 + 0.2,
+    //             drift: (Math.random() - 0.5) * 0.3,
+    //             opacity: Math.random() * 0.4 + 0.08,
+    //         }));
+    //     };
+    //     const draw = () => {
+    //         ctx.clearRect(0, 0, canvas.width, canvas.height);
+    //         for (const f of flakes) {
+    //             ctx.beginPath();
+    //             ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+    //             ctx.fillStyle = `rgba(255,255,255,${f.opacity})`;
+    //             ctx.fill();
+    //             f.y += f.speed;
+    //             f.x += f.drift;
+    //             if (f.y > canvas.height + f.r) { f.y = -f.r; f.x = Math.random() * canvas.width; }
+    //             if (f.x > canvas.width + f.r) f.x = -f.r;
+    //             if (f.x < -f.r) f.x = canvas.width + f.r;
+    //         }
+    //         raf = requestAnimationFrame(draw);
+    //     };
+    //     resize(); init(); draw();
+    //     window.addEventListener('resize', () => { resize(); init(); });
+    //     return () => { cancelAnimationFrame(raf); canvas.remove(); };
+    // }, []);
 
     const handleLogout = async () => {
         await logout();
@@ -191,6 +190,7 @@ export function Sidebar({ activeTab, onTabChange }) {
 
     const initials = (user?.full_name || user?.email || 'U')
         .split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const fullNameCaps = (user?.full_name || user?.email || 'USER').toUpperCase();
 
     return (
         <>
@@ -246,7 +246,8 @@ export function Sidebar({ activeTab, onTabChange }) {
                         title={`${user?.full_name || 'Profile'} — Sign out`}
                         onClick={handleLogout}
                     >
-                        {initials}
+                        <span className="avatar-initials">{initials}</span>
+                        <span className="avatar-full">{fullNameCaps} LOGOUT</span>
                     </div>
                 </div>
             </aside>
@@ -389,7 +390,7 @@ export default function Navbar({ onLoginClick, breadcrumb, hideLogo = false }) {
                                 🚗 Booking
                             </button>
 
-                            <div
+                            {/* <div
                                 className={`navbar__user${dropdownOpen ? ' navbar__user--open' : ''}`}
                                 ref={dropdownRef}
                                 onClick={() => setDropdownOpen(v => !v)}
@@ -414,7 +415,7 @@ export default function Navbar({ onLoginClick, breadcrumb, hideLogo = false }) {
                                         </button>
                                     </div>
                                 )}
-                            </div>
+                            </div> */}
                         </>
                     ) : (
                         <button

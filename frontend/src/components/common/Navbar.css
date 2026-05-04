@@ -929,3 +929,9 @@
         height: 32px;
     }
 }
+.avatar-full { display: none; }
+
+@media (max-width: 768px) {
+  .avatar-initials { display: none; }
+  .avatar-full { display: inline; letter-spacing: 1px; word-spacing: 0.3em;}
+}
