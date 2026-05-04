@@ -8,7 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
  
 from .models import CustomerProfile, VendorProfile, SavedAddress
 from .serializers import (CustomerRegisterSerializer, VendorRegisterSerializer,
-                           UserMeSerializer, VendorProfileSerializer,
+                           UserMeSerializer, VendorProfileFullSerializer,
                            SavedAddressSerializer)
  
 User = get_user_model()
@@ -93,12 +93,18 @@ class SavedAddressViewSet(viewsets.ModelViewSet):
  
 # ── Admin — Vendor Approval ───────────────────────────────────────────────
 class AdminVendorListView(generics.ListAPIView):
-    """GET /api/users/admin/vendors/ — list all vendor profiles with optional filters"""
-    serializer_class   = VendorProfileSerializer
+    """
+    GET /api/users/admin/vendors/
+ 
+    BUG FIX: was using VendorProfileSerializer which omits kyc_document,
+    aadhaar_number, pan_number, bank details, and full address fields.
+    Admin could not see any of these in the vendor list response.
+    """
+    serializer_class   = VendorProfileFullSerializer   # ← THE FIX
     permission_classes = [IsAdminRole]
  
     def get_queryset(self):
-        qs = VendorProfile.objects.select_related('user').all()
+        qs = VendorProfile.objects.select_related('user', 'city').all()
         status_filter = self.request.query_params.get('status')
         search        = self.request.query_params.get('search')
         if status_filter:
@@ -129,17 +135,42 @@ class AdminVendorActionView(APIView):
  
  
 class AdminUserListView(generics.ListAPIView):
-    """GET /api/users/admin/users/ — list all users (admin dashboard)"""
-    serializer_class   = UserMeSerializer
+    """
+    GET /api/users/admin/users/
+    Lists users filterable by role.
+ 
+    When role=customer (the default for the admin Users tab):
+        Uses AdminCustomerSerializer — includes profile + booking stats.
+    Otherwise:
+        Uses UserMeSerializer (admins/vendors don't have CustomerProfile).
+    """
     permission_classes = [IsAdminRole]
+ 
+    def get_serializer_class(self):
+        role = self.request.query_params.get('role', '')
+        if role == 'customer':
+            from .serializers import AdminCustomerSerializer
+            return AdminCustomerSerializer
+        return UserMeSerializer
  
     def get_queryset(self):
         qs     = User.objects.all()
         role   = self.request.query_params.get('role')
         search = self.request.query_params.get('search')
-        if role:   qs = qs.filter(role=role)
-        if search: qs = qs.filter(full_name__icontains=search)
+ 
+        if role:
+            qs = qs.filter(role=role)
+        if search:
+            qs = qs.filter(full_name__icontains=search)
+ 
+        # Prefetch profile for efficient access when role=customer
+        if role == 'customer':
+            qs = qs.select_related('customer_profile').prefetch_related(
+                'bookings_as_customer'
+            )
+ 
         return qs
+ 
 
 
 class CustomerProfileView(APIView):
@@ -166,12 +197,20 @@ class CustomerProfileView(APIView):
 class VendorKYCUploadView(APIView):
     """
     PATCH /api/users/vendor/kyc/
-    Vendor submits their KYC documents after initial registration.
-    Uses multipart/form-data (because a file is uploaded).
+    Vendor submits KYC details including a document upload.
+ 
+    BUG FIX: parser_classes was absent. DRF's default parsers are
+    JSONParser + FormParser — neither populates request.FILES.
+    Without MultiPartParser the uploaded file was silently discarded
+    on every single request, so kyc_document was never written to disk.
     """
     permission_classes = [IsVendorRole]
+    parser_classes     = [__import__("rest_framework.parsers", fromlist=["MultiPartParser"]).MultiPartParser,
+                          __import__("rest_framework.parsers", fromlist=["FormParser"]).FormParser,
+                          __import__("rest_framework.parsers", fromlist=["JSONParser"]).JSONParser]
  
     def patch(self, request):
+        from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
         from .serializers import VendorKYCSerializer
         vendor = request.user.vendor_profile
         s = VendorKYCSerializer(vendor, data=request.data, partial=True)
@@ -184,12 +223,18 @@ class VendorKYCUploadView(APIView):
  
 class VendorProfileDetailView(APIView):
     """
-    GET /api/users/vendor/profile/  — return vendor's own profile
+    GET /api/users/vendor/profile/
+ 
+    BUG FIX: was using VendorProfileSerializer which does not include
+    'kyc_document' in its fields list. The file was stored on disk but
+    the URL was never returned, so the frontend always showed "Missing".
     """
     permission_classes = [IsVendorRole]
  
     def get(self, request):
-        return Response(VendorProfileSerializer(request.user.vendor_profile).data)
+        from .serializers import VendorProfileFullSerializer
+        return Response(VendorProfileFullSerializer(request.user.vendor_profile).data)
+ 
 
 
 class AdminDashboardStatsView(APIView):

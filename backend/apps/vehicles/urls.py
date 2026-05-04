@@ -8,6 +8,7 @@ from .views import (
     AdminDocReviewView,
     AdminMechCertUploadView,
     AdminVehicleBlacklistView,
+    AdminVehicleSetStatusView,
     VehicleQRScanView,
     VehicleQRTamperFlagView,
     VehicleSearchView,
@@ -39,6 +40,7 @@ urlpatterns = [
     path('admin/docs/<int:doc_id>/review/',            AdminDocReviewView.as_view(),       name='admin-doc-review'),
     path('admin/<int:vehicle_id>/certify/',            AdminMechCertUploadView.as_view(),  name='admin-certify'),
     path('admin/<int:vehicle_id>/blacklist/',          AdminVehicleBlacklistView.as_view(),name='admin-blacklist'),
+    path('admin/<int:vehicle_id>/set-status/',         AdminVehicleSetStatusView.as_view(), name='admin-set-status'),
     path('admin/<int:vehicle_id>/flag-qr/',            VehicleQRTamperFlagView.as_view(), name='admin-flag-qr'),
     path('admin/<int:vehicle_id>/vahan-check/',        VAHANCheckView.as_view(), name='admin-vahan-check'),
 ]

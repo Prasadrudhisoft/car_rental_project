@@ -543,3 +543,50 @@ def _call_vahan_api(plate_number):
         'blacklisted':  False,
         'message':      'STUB: Vehicle not flagged (development mode).',
     }
+
+
+class AdminVehicleSetStatusView(APIView):
+    """
+    POST /api/vehicles/admin/{vehicle_id}/set-status/
+    Admin directly overrides a vehicle's status.
+ 
+    Body: { "status": "PENDING_DOCS" | "DOCS_SUBMITTED" | "ADMIN_APPROVED" | "LIVE" | "INACTIVE", "note": "..." }
+ 
+    Use cases:
+      - Push a vehicle back to PENDING_DOCS / DOCS_SUBMITTED for re-submission
+      - Manually mark INACTIVE (soft deactivation, without blacklisting)
+      - Promote to LIVE after manual off-platform verification
+      - Demote from LIVE back to ADMIN_APPROVED if a doc expires
+    """
+    permission_classes = [IsAdminRole]
+ 
+    ALLOWED_STATUSES = ['PENDING_DOCS', 'DOCS_SUBMITTED', 'ADMIN_APPROVED', 'LIVE', 'INACTIVE']
+ 
+    def post(self, request, vehicle_id):
+        vehicle    = get_object_or_404(Vehicle, pk=vehicle_id)
+        new_status = request.data.get('status', '').upper()
+        note       = request.data.get('note', '')
+ 
+        if new_status not in self.ALLOWED_STATUSES:
+            return Response(
+                {'error': f'status must be one of: {", ".join(self.ALLOWED_STATUSES)}'},
+                status=400,
+            )
+ 
+        old_status       = vehicle.status
+        vehicle.status   = new_status
+        if note:
+            vehicle.admin_note = note
+ 
+        # If promoting to LIVE, also flag as certified so frontend shows it correctly
+        if new_status == 'LIVE' and not vehicle.is_certified:
+            vehicle.is_certified = True
+ 
+        vehicle.save(update_fields=['status', 'admin_note', 'is_certified', 'updated_at'])
+ 
+        return Response({
+            'message':     f'Vehicle status changed from {old_status} → {new_status}.',
+            'old_status':  old_status,
+            'new_status':  new_status,
+            'vehicle_id':  vehicle.id,
+        })

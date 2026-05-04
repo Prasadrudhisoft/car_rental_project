@@ -127,78 +127,71 @@ class VendorKYCSerializer(serializers.ModelSerializer):
     """
     PATCH serializer for vendor KYC + address + map-pin submission.
     Endpoint: PATCH /api/users/vendor/kyc/
-
-    City is a FK to admin-managed locations.City — vendor selects from a dropdown.
-    State is automatically populated from the selected city (read-only on the model).
-    When latitude & longitude are provided, automatically creates/updates
-    a locations.Location record (type=vendor_lot) for the vendor's city
-    and links it as their pickup_location.
+ 
+    BUG FIX (validate_kyc_document):
+    The original validator called value.content_type unconditionally.
+    content_type is only present on InMemoryUploadedFile / TemporaryUploadedFile
+    (i.e. a freshly uploaded file from request.FILES).
+    On a partial PATCH where kyc_document is not re-sent, DRF passes the
+    existing FieldFile object through the validator — which has no
+    .content_type attribute — causing an AttributeError that Django REST
+    Framework silently converts to a validation failure, rejecting the
+    entire PATCH even when the document was not being changed.
+    Fix: guard with hasattr() on both content_type and size.
     """
-    # Write field: vendor sends city id (integer) chosen from admin-created cities
     city = serializers.PrimaryKeyRelatedField(
         queryset=__import__('apps.locations.models', fromlist=['City']).City.objects.filter(is_active=True),
         required=False,
         allow_null=True,
     )
-
-    # state is derived from city — expose it as read-only so the frontend can
-    # display the auto-filled value after save, but vendors cannot write it directly.
-    state = serializers.CharField(read_only=True)
-
+ 
     class Meta:
         model  = VendorProfile
         fields = [
-            # KYC
             'aadhaar_number', 'pan_number',
             'bank_account_name', 'bank_account_no', 'bank_ifsc',
             'gstin', 'kyc_document',
-            # Address
             'addr_line1', 'addr_line2', 'addr_line3',
-            'city', 'state', 'country', 'pincode',
-            # Shop hours
+            'city', 'country', 'pincode',
             'shop_opening_time', 'shop_closing_time',
-            # Map pin
             'latitude', 'longitude',
         ]
-
+ 
     def validate_kyc_document(self, value):
-        allowed = ['application/pdf', 'image/jpeg', 'image/png']
-        if hasattr(value, 'content_type') and value.content_type not in allowed:
-            raise serializers.ValidationError('KYC document must be PDF, JPG, or PNG.')
-        if value.size > 5 * 1024 * 1024:
-            raise serializers.ValidationError('File size must be under 5 MB.')
+        # ← FIX: only inspect upload-specific attrs when they're actually present
+        if hasattr(value, 'content_type') and hasattr(value, 'size'):
+            allowed = ['application/pdf', 'image/jpeg', 'image/png']
+            if value.content_type not in allowed:
+                raise serializers.ValidationError(
+                    'KYC document must be PDF, JPG, or PNG.'
+                )
+            if value.size > 5 * 1024 * 1024:
+                raise serializers.ValidationError(
+                    'File size must be under 5 MB.'
+                )
         return value
-
+ 
     def save(self, **kwargs):
-        """
-        Override save to:
-        1. Auto-fill state from city.state (always kept in sync)
-        2. Create/update a vendor_lot Location record when lat/lng are provided
-        """
         instance = super().save(**kwargs)
-
-        # Auto-fill / sync state from the chosen city
+ 
+        # Keep state in sync with the chosen city
         if instance.city:
-            new_state = instance.city.state
-            if instance.state != new_state:
-                instance.state = new_state
-                instance.save(update_fields=['state'])
-
+            try:
+                if not instance.state or instance.state != instance.city.state:
+                    instance.state = instance.city.state
+                    instance.save(update_fields=['state'])
+            except Exception:
+                pass
+ 
         # Create/update the Location record from the map pin
         if instance.latitude and instance.longitude and instance.city:
             self._sync_pickup_location(instance)
-
+ 
         return instance
-
+ 
     def _sync_pickup_location(self, instance):
-        """
-        Create (or update) a locations.Location of type 'vendor_lot'
-        linked to this vendor's chosen city + lat/lng.
-        We use the business_name as the location name.
-        """
         from apps.locations.models import Location
-
-        # Build a human-readable address from the stored fields
+ 
         addr_parts = filter(None, [
             instance.addr_line1,
             instance.addr_line2,
@@ -206,22 +199,19 @@ class VendorKYCSerializer(serializers.ModelSerializer):
             instance.pincode,
         ])
         full_address = ', '.join(addr_parts)
-
         location_name = f"{instance.business_name}"
-
+ 
         if instance.pickup_location_id:
-            # Update existing location
             Location.objects.filter(pk=instance.pickup_location_id).update(
-                name         = location_name,
-                city         = instance.city,
-                address      = full_address,
-                latitude     = instance.latitude,
-                longitude    = instance.longitude,
-                location_type= 'vendor_lot',
-                is_active    = True,
+                name          = location_name,
+                city          = instance.city,
+                address       = full_address,
+                latitude      = instance.latitude,
+                longitude     = instance.longitude,
+                location_type = 'vendor_lot',
+                is_active     = True,
             )
         else:
-            # Create new location
             loc = Location.objects.create(
                 name          = location_name,
                 city          = instance.city,
@@ -233,3 +223,113 @@ class VendorKYCSerializer(serializers.ModelSerializer):
             )
             instance.pickup_location = loc
             instance.save(update_fields=['pickup_location'])
+
+
+
+class VendorProfileFullSerializer(serializers.ModelSerializer):
+    """
+    Complete read serializer for vendor profiles.
+    Used by:
+      - GET /api/users/vendor/profile/   (vendor self-view)
+      - GET /api/users/admin/vendors/    (admin list)
+ 
+    BUG FIX: VendorProfileSerializer.Meta.fields was missing:
+      • kyc_document       → frontend always showed "Missing"
+      • aadhaar_number     → admin could not verify identity
+      • pan_number         → admin could not verify identity
+      • bank_account_name  → admin could not verify payout details
+      • bank_account_no    → admin could not verify payout details
+      • bank_ifsc          → admin could not verify payout details
+      • addr_line1/2/3     → admin and vendor could not see full address
+      • country, pincode   → incomplete address
+    All of these are now included.
+    """
+    email          = serializers.EmailField(source='user.email',      read_only=True)
+    full_name      = serializers.CharField(source='user.full_name',   read_only=True)
+    phone          = serializers.CharField(source='user.phone',       read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    city_id        = serializers.PrimaryKeyRelatedField(source='city', read_only=True)
+    city_name      = serializers.CharField(source='city.name',        read_only=True, default='')
+    state          = serializers.CharField(read_only=True)
+ 
+    class Meta:
+        model  = VendorProfile
+        fields = [
+            'id',
+            # User fields
+            'email', 'full_name', 'phone',
+            # Business
+            'business_name', 'gstin',
+            # Status
+            'status', 'status_display', 'admin_note',
+            # Ratings
+            'rating', 'total_reviews',
+            'is_cooperation_member',
+            # Hours
+            'shop_opening_time', 'shop_closing_time',
+            # Full address (all lines — were absent from VendorProfileSerializer)
+            'addr_line1', 'addr_line2', 'addr_line3',
+            'city_id', 'city_name', 'state', 'country', 'pincode',
+            # Map pin
+            'latitude', 'longitude',
+            'pickup_location',
+            # KYC identity (were absent from VendorProfileSerializer)
+            'aadhaar_number', 'pan_number',
+            # KYC bank (were absent from VendorProfileSerializer)
+            'bank_account_name', 'bank_account_no', 'bank_ifsc',
+            # KYC document URL — THE PRIMARY BUG: this field was missing
+            'kyc_document',
+            'created_at',
+        ]
+
+
+
+
+class AdminCustomerSerializer(serializers.ModelSerializer):
+    """
+    Admin-facing serializer for customer accounts.
+    Nests the CustomerProfile so the admin user list returns
+    driving licence, DOB, loyalty points, KYC status and
+    Aadhaar/PAN in one response — no second request needed.
+ 
+    Used exclusively by AdminUserListView when role=customer.
+    """
+    # ── Profile fields (nested read-only) ─────────────────────────────
+    driving_licence  = serializers.CharField(
+        source='customer_profile.driving_licence', read_only=True, default='')
+    dl_expiry        = serializers.DateField(
+        source='customer_profile.dl_expiry', read_only=True, default=None)
+    date_of_birth    = serializers.DateField(
+        source='customer_profile.date_of_birth', read_only=True, default=None)
+    loyalty_points   = serializers.IntegerField(
+        source='customer_profile.loyalty_points', read_only=True, default=0)
+    aadhaar_number   = serializers.CharField(
+        source='customer_profile.aadhaar_number', read_only=True, default='')
+    pan_number       = serializers.CharField(
+        source='customer_profile.pan_number', read_only=True, default='')
+    kyc_status       = serializers.CharField(
+        source='customer_profile.kyc_status', read_only=True, default='pending')
+ 
+    # ── Booking count (quick stats) ────────────────────────────────────
+    total_bookings   = serializers.SerializerMethodField()
+    active_bookings  = serializers.SerializerMethodField()
+ 
+    class Meta:
+        model  = get_user_model()
+        fields = [
+            'id', 'full_name', 'email', 'phone', 'role',
+            'is_email_verified', 'is_phone_verified', 'date_joined',
+            # profile
+            'driving_licence', 'dl_expiry', 'date_of_birth',
+            'loyalty_points', 'aadhaar_number', 'pan_number', 'kyc_status',
+            # stats
+            'total_bookings', 'active_bookings',
+        ]
+ 
+    def get_total_bookings(self, obj):
+        return obj.bookings_as_customer.count()
+ 
+    def get_active_bookings(self, obj):
+        return obj.bookings_as_customer.filter(
+            status__in=['CONFIRMED', 'ACTIVE']
+        ).count()
