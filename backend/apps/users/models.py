@@ -204,3 +204,114 @@ class VendorProfile(models.Model):
             except Exception:
                 pass
         super().save(*args, **kwargs)
+
+
+
+
+from django.db import models
+from django.contrib.auth import get_user_model
+ 
+User = get_user_model()
+ 
+ 
+class AdminProfile(models.Model):
+    """
+    Extra fields for admin accounts.
+    SQL table: users_admin_profile
+ 
+    scope:
+      'superadmin'      — sees everything, can assign vendors to other admins
+      'assigned_admin'  — sees only their assigned vendors + those vendors' customers/bookings
+    """
+    SCOPE_CHOICES = [
+        ('superadmin',      'Super Admin — full platform access'),
+        ('assigned_admin',  'Assigned Admin — scoped to assigned vendors only'),
+    ]
+ 
+    user              = models.OneToOneField(
+        User, on_delete=models.CASCADE,
+        related_name='admin_profile',
+        limit_choices_to={'role': 'admin'},
+    )
+    scope             = models.CharField(
+        max_length=20, choices=SCOPE_CHOICES, default='assigned_admin',
+    )
+    display_name      = models.CharField(max_length=200, blank=True)
+    notes             = models.TextField(blank=True)
+ 
+    created_at        = models.DateTimeField(auto_now_add=True)
+    updated_at        = models.DateTimeField(auto_now=True)
+ 
+    class Meta:
+        db_table = 'users_admin_profile'
+ 
+    def __str__(self):
+        return f'Admin: {self.user.full_name} [{self.scope}]'
+ 
+    @property
+    def is_superadmin(self):
+        return self.scope == 'superadmin'
+ 
+    @property
+    def assigned_vendor_ids(self):
+        """Returns a queryset of vendor User PKs assigned to this admin."""
+        return VendorAdminAssignment.objects.filter(
+            admin=self.user, is_active=True
+        ).values_list('vendor_id', flat=True)
+ 
+ 
+class VendorAdminAssignment(models.Model):
+    """
+    Links a vendor to the admin responsible for managing them.
+    SQL table: users_vendor_admin_assignment
+ 
+    Rules:
+    - A vendor can have at most ONE active admin assignment at a time.
+    - Superadmins can reassign vendors between admins.
+    - Historical assignments are kept (is_active=False) for audit.
+    """
+    admin   = models.ForeignKey(
+        User, on_delete=models.PROTECT,
+        related_name='vendor_assignments',
+        limit_choices_to={'role': 'admin'},
+    )
+    vendor  = models.ForeignKey(
+        User, on_delete=models.PROTECT,
+        related_name='admin_assignments',
+        limit_choices_to={'role': 'vendor'},
+    )
+    is_active       = models.BooleanField(default=True)
+    assigned_at     = models.DateTimeField(auto_now_add=True)
+    assigned_by     = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='assignments_made',
+        limit_choices_to={'role': 'admin'},
+    )
+    notes           = models.TextField(blank=True)
+    deactivated_at  = models.DateTimeField(null=True, blank=True)
+ 
+    class Meta:
+        db_table = 'users_vendor_admin_assignment'
+        ordering = ['-assigned_at']
+        # Only one active assignment per vendor
+        constraints = [
+            models.UniqueConstraint(
+                fields=['vendor'],
+                condition=models.Q(is_active=True),
+                name='unique_active_vendor_assignment',
+            )
+        ]
+ 
+    def __str__(self):
+        status = 'active' if self.is_active else 'inactive'
+        return f'{self.vendor.vendor_profile.business_name} → {self.admin.full_name} [{status}]'
+ 
+    def deactivate(self, deactivated_by=None):
+        """Soft-deactivate this assignment."""
+        from django.utils import timezone
+        self.is_active = False
+        self.deactivated_at = timezone.now()
+        if deactivated_by:
+            self.notes += f' | Deactivated by {deactivated_by.email}'
+        self.save(update_fields=['is_active', 'deactivated_at', 'notes'])
+ 

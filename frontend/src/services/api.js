@@ -143,7 +143,6 @@ export const flagQRTamper = (vehicleId) =>
   api.post(`/vehicles/admin/${vehicleId}/flag-qr/`);
 export const setVehicleStatus = (vehicleId, status, note = '') =>
   api.post(`/vehicles/admin/${vehicleId}/set-status/`, { status, note });
- 
 
 // ── Pricing ───────────────────────────────────────────────────────────────
 export const calculatePrice = (data) =>
@@ -158,10 +157,6 @@ export const getMyBookingDetail = (id) =>
   api.get(`/bookings/my/${id}/`);
 export const cancelBooking = (id, reason) =>
   api.post(`/bookings/${id}/cancel/`, { reason });
-// export const verifyPayment = (bookingId, data) =>
-//   api.post(`/bookings/${bookingId}/payment/verify/`, data);
-// export const signAgreement = (bookingId, step, otpCode) =>
-//   api.post(`/bookings/${bookingId}/sign/`, { step, otp_code: otpCode });
 
 // ── Bookings — Vendor ─────────────────────────────────────────────────────
 export const getVendorBookings = (status) =>
@@ -316,71 +311,228 @@ export const getSegmentConfigs = () =>
 export const updateSegmentConfig = (id, data) =>
   api.patch(`/configuration/segments/${id}/`, data);
 
-
-
-
-
 // ── DUMMY PAYMENT (dev) — replaces Razorpay ───────────────────────────────
-// payment_type: "advance" | "full" | "remaining"
-// method:       "cash" | "upi" | "online"
 export const dummyPayment = (bookingId, { payment_type = "advance", method = "online", amount } = {}) =>
   api.post(`/bookings/${bookingId}/payment/dummy/`, {
     payment_type,
     method,
     ...(amount != null ? { amount } : {}),
   });
- 
-// Keep the Razorpay verify endpoint for future production use
+
 export const verifyPayment = (bookingId, data) =>
   api.post(`/bookings/${bookingId}/payment/verify/`, data);
- 
+
 export const signAgreement = (bookingId, step, otpCode, version) =>
   api.post(`/bookings/${bookingId}/sign/`, { step, otp_code: otpCode, version_id: version });
- 
- 
-// NEW: full booking detail for vendor (includes inspections, addons, invoice)
+
 export const getVendorBookingDetail = (id) =>
   api.get(`/bookings/vendor/${id}/`);
- 
-// Fetch the currently active T&C version (called when sign modal opens)
+
 export const getActiveAgreement = () =>
   api.get("/agreements/active/");
- 
-// Fetch a specific version by ID (used to display what a customer signed)
 export const getAgreementVersion = (versionId) =>
   api.get(`/agreements/versions/${versionId}/`);
- 
-// Record the customer's acceptance (called after OTP verify succeeds)
 export const recordAgreementAcceptance = (data) =>
   api.post("/agreements/accept/", data);
-// data shape: { version_id, booking_id (optional), otp_verified, acceptance_method }
- 
-// Customer's full acceptance history
 export const getMyAgreementHistory = () =>
   api.get("/agreements/my-history/");
- 
-// ── Admin Agreement Management ────────────────────────────────────────
-// List all versions / create new version
+
 export const getAdminAgreementVersions = () =>
   api.get("/agreements/admin/versions/");
- 
 export const createAgreementVersion = (data) =>
   api.post("/agreements/admin/versions/", data);
-// data shape: { version_tag, title, content, summary, effective_from }
- 
-// Edit a draft version (blocked by backend once it has acceptances)
 export const updateAgreementVersion = (id, data) =>
   api.patch(`/agreements/admin/versions/${id}/`, data);
- 
-// Activate (publish) a version — makes it the live T&C
 export const activateAgreementVersion = (id) =>
   api.post(`/agreements/admin/versions/${id}/activate/`);
- 
-// Full acceptance audit log
 export const getAdminAcceptances = (params) =>
   api.get("/agreements/admin/acceptances/", { params });
-// params: { version_id, user_id, booking_id }
 
+
+// ════════════════════════════════════════════════════════════════════════
+// NEW: KYC Phone & Email OTP Verification
+// ════════════════════════════════════════════════════════════════════════
+//
+// TWO INTERCHANGEABLE IMPLEMENTATIONS:
+//   - HARDCODED (dev): active by default, OTP is always "123456"
+//   - REAL (prod): uses backend /otp/ endpoints
+//
+// To switch to production:
+//   1. Comment out the HARDCODED block below
+//   2. Uncomment the REAL block below
+//   No other changes needed anywhere in the codebase.
+//
+// ════════════════════════════════════════════════════════════════════════
+
+// ── HARDCODED (DEV) — ACTIVE ──────────────────────────────────────────────
+
+/**
+ * Send OTP to customer's phone number for KYC verification.
+ * DEV: Always succeeds, OTP is "123456" (logged to console).
+ * @param {string} phone - The phone number to send OTP to
+ * @param {string} email - The user's email (used to look up the account)
+ */
+export const sendKYCPhoneOTP = async (phone, email) => {
+  console.log(`[DEV] KYC Phone OTP → ${phone} (account: ${email}). Use 123456`);
+  // Simulate network delay
+  await new Promise(r => setTimeout(r, 400));
+  return { data: { message: `OTP sent to ${phone}. Use 123456 in development.` } };
+};
+
+/**
+ * Verify OTP entered by customer for phone KYC.
+ * DEV: Accepts "123456" only.
+ * @param {string} email - The user's email (account identifier)
+ * @param {string} code - The 6-digit OTP entered by the user
+ */
+export const verifyKYCPhoneOTP = async (email, code) => {
+  await new Promise(r => setTimeout(r, 400));
+  if (code === "123456") {
+    return { data: { valid: true, message: "Phone number verified successfully." } };
+  }
+  const err = new Error("Invalid OTP");
+  err.response = { data: { error: "Invalid OTP. In development, use 123456." } };
+  throw err;
+};
+
+/**
+ * Send OTP to customer's email address for KYC verification.
+ * DEV: Always succeeds, OTP is "123456" (logged to console).
+ * @param {string} email - The email address to verify
+ */
+export const sendKYCEmailOTP = async (email) => {
+  console.log(`[DEV] KYC Email OTP → ${email}. Use 123456`);
+  await new Promise(r => setTimeout(r, 400));
+  return { data: { message: `OTP sent to ${email}. Use 123456 in development.` } };
+};
+
+/**
+ * Verify OTP entered by customer for email KYC.
+ * DEV: Accepts "123456" only.
+ * @param {string} email - The email address being verified
+ * @param {string} code - The 6-digit OTP entered by the user
+ */
+export const verifyKYCEmailOTP = async (email, code) => {
+  await new Promise(r => setTimeout(r, 400));
+  if (code === "123456") {
+    return { data: { valid: true, message: "Email address verified successfully." } };
+  }
+  const err = new Error("Invalid OTP");
+  err.response = { data: { error: "Invalid OTP. In development, use 123456." } };
+  throw err;
+};
+
+
+// ── REAL (PRODUCTION) — COMMENT OUT DEV BLOCK ABOVE AND UNCOMMENT THIS ───
+//
+// export const sendKYCPhoneOTP = (phone, email) =>
+//   // Uses the existing OTP infrastructure with purpose='phone_verify'.
+//   // The backend's SendOTPView looks up the user by email and sends the code.
+//   api.post("/otp/send/", { email, purpose: "phone_verify" });
+//
+// export const verifyKYCPhoneOTP = (email, code) =>
+//   // On success the backend sets user.is_phone_verified = True automatically.
+//   api.post("/otp/verify/", { email, code, purpose: "phone_verify" });
+//
+// export const sendKYCEmailOTP = (email) =>
+//   // Reuses phone_verify purpose for email OTP until a dedicated
+//   // 'email_verify' purpose is added to the backend OTPRecord model.
+//   api.post("/otp/send/", { email, purpose: "phone_verify" });
+//
+// export const verifyKYCEmailOTP = (email, code) =>
+//   api.post("/otp/verify/", { email, code, purpose: "phone_verify" });
+
+
+// ════════════════════════════════════════════════════════════════════════
+// NEW: Customer submitted reviews (read-only listing of own reviews)
+// ════════════════════════════════════════════════════════════════════════
+
+/**
+ * Fetch all reviews submitted by the currently logged-in customer.
+ *
+ * The existing backend has no dedicated "my reviews" endpoint, so we
+ * derive the list by fetching completed bookings.  Each completed
+ * booking's detail includes a `review` sub-object when present.
+ *
+ * We accept a pre-loaded list of completed booking details to avoid
+ * redundant network calls from the dashboard, or fetch them here.
+ *
+ * Usage in CustomerDashboard:
+ *   const reviews = await getMySubmittedReviews(completedBookingDetails);
+ */
+export const getMySubmittedReviews = async (completedBookingDetails = []) => {
+  // Extract reviews from already-fetched booking detail objects
+  const reviews = completedBookingDetails
+    .filter(b => b.review)
+    .map(b => ({
+      booking_id:      b.id,
+      booking_ref:     b.booking_ref,
+      vehicle_display: b.vehicle_display ||
+        `${b.vehicle?.year || ''} ${b.vehicle?.make || ''} ${b.vehicle?.model || ''}`.trim(),
+      return_date:     b.return_date,
+      vendor_rating:   b.review.vendor_rating,
+      vehicle_rating:  b.review.vehicle_rating,
+      review_text:     b.review.review_text,
+      created_at:      b.review.created_at,
+    }));
+  return { data: { results: reviews } };
+};
+
+
+// ════════════════════════════════════════════════════════════════════════
+// NEW: Admin / Vendor — fetch reviews for a specific vendor
+// (wraps the existing public endpoint with a cleaner name for dashboard use)
+// ════════════════════════════════════════════════════════════════════════
+
+/**
+ * Fetch all visible reviews for a vendor (used by AdminDashboard and VendorDashboard).
+ * @param {number|string} vendorId
+ * @param {'recency'|'rating'} ordering
+ */
+export const fetchVendorReviews = (vendorId, ordering = 'recency') =>
+  api.get(`/reviews/vendor/${vendorId}/`, { params: { ordering } });
+
+// ── Admin Profile & Scope ──────────────────────────────────────────────
+export const getMyAdminProfile = () =>
+    api.get('/users/admin/me/');
+ 
+export const updateMyAdminProfile = (data) =>
+    api.patch('/users/admin/me/', data);
+ 
+// ── Admin Management (superadmin only) ────────────────────────────────
+export const getAdminList = () =>
+    api.get('/users/admin/admins/');
+ 
+// ── Assignment Management (superadmin only) ────────────────────────────
+export const assignVendorToAdmin = (vendorId, adminId, notes = '') =>
+    api.post('/users/admin/assign-vendor/', {
+        vendor_id: vendorId,
+        admin_id: adminId,
+        notes,
+    });
+ 
+export const unassignVendor = (vendorId) =>
+    api.post('/users/admin/unassign-vendor/', { vendor_id: vendorId });
+ 
+export const bulkAssignVendors = (vendorIds, adminId, notes = '') =>
+    api.post('/users/admin/bulk-assign/', {
+        vendor_ids: vendorIds,
+        admin_id: adminId,
+        notes,
+    });
+ 
+export const getAllAssignments = (adminId = null) =>
+    api.get('/users/admin/assignments/', {
+        params: adminId ? { admin_id: adminId } : {},
+    });
+ 
+export const getAssignmentHistory = (vendorId = null) =>
+    api.get('/users/admin/assignment-history/', {
+        params: vendorId ? { vendor_id: vendorId } : {},
+    });
+ 
+export const getMyAssignedVendors = () =>
+    api.get('/users/admin/my-vendors/');
 
 
 export default api;

@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
-from .models import CustomerProfile, VendorProfile, SavedAddress
+from .models import CustomerProfile, VendorProfile, SavedAddress, AdminProfile, VendorAdminAssignment
 
 User = get_user_model()
 
@@ -226,61 +226,61 @@ class VendorKYCSerializer(serializers.ModelSerializer):
 
 
 
-class VendorProfileFullSerializer(serializers.ModelSerializer):
-    """
-    Complete read serializer for vendor profiles.
-    Used by:
-      - GET /api/users/vendor/profile/   (vendor self-view)
-      - GET /api/users/admin/vendors/    (admin list)
+# class VendorProfileFullSerializer(serializers.ModelSerializer):
+#     """
+#     Complete read serializer for vendor profiles.
+#     Used by:
+#       - GET /api/users/vendor/profile/   (vendor self-view)
+#       - GET /api/users/admin/vendors/    (admin list)
  
-    BUG FIX: VendorProfileSerializer.Meta.fields was missing:
-      • kyc_document       → frontend always showed "Missing"
-      • aadhaar_number     → admin could not verify identity
-      • pan_number         → admin could not verify identity
-      • bank_account_name  → admin could not verify payout details
-      • bank_account_no    → admin could not verify payout details
-      • bank_ifsc          → admin could not verify payout details
-      • addr_line1/2/3     → admin and vendor could not see full address
-      • country, pincode   → incomplete address
-    All of these are now included.
-    """
-    email          = serializers.EmailField(source='user.email',      read_only=True)
-    full_name      = serializers.CharField(source='user.full_name',   read_only=True)
-    phone          = serializers.CharField(source='user.phone',       read_only=True)
-    status_display = serializers.CharField(source='get_status_display', read_only=True)
-    city_id        = serializers.PrimaryKeyRelatedField(source='city', read_only=True)
-    city_name      = serializers.CharField(source='city.name',        read_only=True, default='')
-    state          = serializers.CharField(read_only=True)
+#      FIX: VendorProfileSerializer.Meta.fields was missing:
+#       • kyc_document       → frontend always showed "Missing"
+#       • aadhaar_number     → admin could not verify identity
+#       • pan_number         → admin could not verify identity
+#       • bank_account_name  → admin could not verify payout details
+#       • bank_account_no    → admin could not verify payout details
+#       • bank_ifsc          → admin could not verify payout details
+#       • addr_line1/2/3     → admin and vendor could not see full address
+#       • country, pincode   → incomplete address
+#     All of these are now included.
+#     """
+#     email          = serializers.EmailField(source='user.email',      read_only=True)
+#     full_name      = serializers.CharField(source='user.full_name',   read_only=True)
+#     phone          = serializers.CharField(source='user.phone',       read_only=True)
+#     status_display = serializers.CharField(source='get_status_display', read_only=True)
+#     city_id        = serializers.PrimaryKeyRelatedField(source='city', read_only=True)
+#     city_name      = serializers.CharField(source='city.name',        read_only=True, default='')
+#     state          = serializers.CharField(read_only=True)
  
-    class Meta:
-        model  = VendorProfile
-        fields = [
-            'id',
-            # User fields
-            'email', 'full_name', 'phone',
-            # Business
-            'business_name', 'gstin',
-            # Status
-            'status', 'status_display', 'admin_note',
-            # Ratings
-            'rating', 'total_reviews',
-            'is_cooperation_member',
-            # Hours
-            'shop_opening_time', 'shop_closing_time',
-            # Full address (all lines — were absent from VendorProfileSerializer)
-            'addr_line1', 'addr_line2', 'addr_line3',
-            'city_id', 'city_name', 'state', 'country', 'pincode',
-            # Map pin
-            'latitude', 'longitude',
-            'pickup_location',
-            # KYC identity (were absent from VendorProfileSerializer)
-            'aadhaar_number', 'pan_number',
-            # KYC bank (were absent from VendorProfileSerializer)
-            'bank_account_name', 'bank_account_no', 'bank_ifsc',
-            # KYC document URL — THE PRIMARY BUG: this field was missing
-            'kyc_document',
-            'created_at',
-        ]
+#     class Meta:
+#         model  = VendorProfile
+#         fields = [
+#             'id',
+#             # User fields
+#             'email', 'full_name', 'phone',
+#             # Business
+#             'business_name', 'gstin',
+#             # Status
+#             'status', 'status_display', 'admin_note',
+#             # Ratings
+#             'rating', 'total_reviews',
+#             'is_cooperation_member',
+#             # Hours
+#             'shop_opening_time', 'shop_closing_time',
+#             # Full address (all lines — were absent from VendorProfileSerializer)
+#             'addr_line1', 'addr_line2', 'addr_line3',
+#             'city_id', 'city_name', 'state', 'country', 'pincode',
+#             # Map pin
+#             'latitude', 'longitude',
+#             'pickup_location',
+#             # KYC identity (were absent from VendorProfileSerializer)
+#             'aadhaar_number', 'pan_number',
+#             # KYC bank (were absent from VendorProfileSerializer)
+#             'bank_account_name', 'bank_account_no', 'bank_ifsc',
+#             # KYC document URL — THE PRIMARY BUG: this field was missing
+#             'kyc_document',
+#             'created_at',
+#         ]
 
 
 
@@ -333,3 +333,252 @@ class AdminCustomerSerializer(serializers.ModelSerializer):
         return obj.bookings_as_customer.filter(
             status__in=['CONFIRMED', 'ACTIVE']
         ).count()
+    
+
+ 
+from rest_framework import serializers
+# from .models import AdminProfile, VendorAdminAssignment  # add to imports
+ 
+ 
+# class AdminProfileSerializer(serializers.ModelSerializer):
+#     email      = serializers.EmailField(source='user.email', read_only=True)
+#     full_name  = serializers.CharField(source='user.full_name', read_only=True)
+#     scope_display = serializers.CharField(source='get_scope_display', read_only=True)
+ 
+#     # Computed stats
+#     assigned_vendor_count = serializers.SerializerMethodField()
+#     assigned_vendor_ids   = serializers.SerializerMethodField()
+ 
+#     class Meta:
+#         from apps.users.models import AdminProfile  # local import to avoid circular
+#         model  = AdminProfile
+#         fields = [
+#             'id', 'email', 'full_name',
+#             'scope', 'scope_display',
+#             'display_name', 'notes',
+#             'assigned_vendor_count', 'assigned_vendor_ids',
+#             'created_at', 'updated_at',
+#         ]
+#         read_only_fields = ['created_at', 'updated_at']
+ 
+#     def get_assigned_vendor_count(self, obj):
+#         return obj.assigned_vendor_ids.count()
+ 
+#     def get_assigned_vendor_ids(self, obj):
+#         return list(obj.assigned_vendor_ids)
+ 
+ 
+# class VendorAdminAssignmentSerializer(serializers.ModelSerializer):
+#     admin_name          = serializers.CharField(source='admin.full_name', read_only=True)
+#     admin_email         = serializers.CharField(source='admin.email', read_only=True)
+#     vendor_business     = serializers.SerializerMethodField()
+#     vendor_email        = serializers.CharField(source='vendor.email', read_only=True)
+#     assigned_by_name    = serializers.CharField(source='assigned_by.full_name', read_only=True, default='')
+ 
+#     class Meta:
+#         from apps.users.models import VendorAdminAssignment
+#         model  = VendorAdminAssignment
+#         fields = [
+#             'id', 'admin', 'admin_name', 'admin_email',
+#             'vendor', 'vendor_business', 'vendor_email',
+#             'is_active', 'assigned_at', 'assigned_by',
+#             'assigned_by_name', 'notes', 'deactivated_at',
+#         ]
+#         read_only_fields = ['assigned_at', 'deactivated_at']
+ 
+#     def get_vendor_business(self, obj):
+#         try:
+#             return obj.vendor.vendor_profile.business_name
+#         except Exception:
+#             return obj.vendor.full_name
+ 
+ 
+# class AssignVendorSerializer(serializers.Serializer):
+#     """
+#     Used by SuperAdmin to assign or reassign a vendor to an admin.
+#     POST body: { vendor_id, admin_id, notes? }
+#     """
+#     vendor_id = serializers.IntegerField()
+#     admin_id  = serializers.IntegerField()
+#     notes     = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+
+# ── Thin user serializer (used inside vendor / admin profiles) ────────────────
+class UserBasicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'phone', 'full_name', 'role',
+                  'is_active', 'is_email_verified', 'is_phone_verified']
+ 
+ 
+# ── VendorProfile — full detail for admin views ───────────────────────────────
+class VendorProfileFullSerializer(serializers.ModelSerializer):
+    """
+    Returned by:
+      GET /api/users/admin/vendors/          (AdminVendorListView)
+      GET /api/users/vendor/profile/         (VendorProfileDetailView)
+      GET /api/users/admin/my-vendors/       (MyAssignedVendorsView)
+      GET /api/users/admin/assign-vendor/    (assignment views)
+ 
+    Key field: `user_id` (plain integer) — used by the frontend for Set lookups.
+               `user`    (nested object)  — used for display (email, name, phone).
+    """
+    # Flat integer PK — the frontend uses this for checkbox/Set operations
+    user_id     = serializers.IntegerField(source='user.id', read_only=True)
+    # Nested object — for display
+    email       = serializers.EmailField(source='user.email', read_only=True)
+    phone       = serializers.CharField(source='user.phone', read_only=True)
+    full_name   = serializers.CharField(source='user.full_name', read_only=True)
+    city_name   = serializers.SerializerMethodField()
+    city_id     = serializers.IntegerField(source='city.id', read_only=True, default=None)
+ 
+    class Meta:
+        model = VendorProfile
+        fields = [
+            # ── Identity ──────────────────────────────────────────────────
+            'id',           # VendorProfile PK
+            'user_id',      # User PK (flat int) ← KEY for frontend
+            'email',
+            'phone',
+            'full_name',
+            'business_name',
+            'gstin',
+            # ── KYC ──────────────────────────────────────────────────────
+            'aadhaar_number',
+            'pan_number',
+            'bank_account_name',
+            'bank_account_no',
+            'bank_ifsc',
+            'kyc_document',
+            # ── Address ───────────────────────────────────────────────────
+            'addr_line1',
+            'addr_line2',
+            'addr_line3',
+            'city',         # FK PK (for dropdowns)
+            'city_id',      # explicit flat int
+            'city_name',    # human-readable
+            'state',
+            'country',
+            'pincode',
+            # ── Location ──────────────────────────────────────────────────
+            'latitude',
+            'longitude',
+            # ── Status ────────────────────────────────────────────────────
+            'status',
+            'admin_note',
+            'rating',
+            'total_reviews',
+            'is_cooperation_member',
+            # ── Shop hours ────────────────────────────────────────────────
+            'shop_opening_time',
+            'shop_closing_time',
+            # ── Timestamps ────────────────────────────────────────────────
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'user_id', 'email', 'phone', 'full_name',
+                            'city_name', 'city_id', 'created_at', 'updated_at']
+ 
+    def get_city_name(self, obj):
+        return obj.city.name if obj.city else None
+ 
+ 
+# ── AdminProfile serializer ───────────────────────────────────────────────────
+class AdminProfileSerializer(serializers.ModelSerializer):
+    """
+    Returned by:
+      GET /api/users/admin/admins/   (AdminListView)
+      GET /api/users/admin/me/       (AdminProfileDetailView)
+ 
+    Key field: `user_id` (plain int) — frontend uses this to match
+               against assignment.admin values.
+    """
+    user_id    = serializers.IntegerField(source='user.id',       read_only=True)
+    email      = serializers.EmailField  (source='user.email',    read_only=True)
+    full_name  = serializers.CharField   (source='user.full_name', read_only=True)
+    assigned_vendor_count = serializers.SerializerMethodField()
+ 
+    class Meta:
+        model = AdminProfile
+        fields = [
+            'id',           # AdminProfile PK
+            'user_id',      # User PK (flat int) ← KEY for frontend
+            'email',
+            'full_name',
+            'scope',
+            'display_name',
+            'notes',
+            'assigned_vendor_count',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'user_id', 'email', 'full_name',
+                            'assigned_vendor_count', 'created_at', 'updated_at']
+ 
+    def get_assigned_vendor_count(self, obj):
+        return VendorAdminAssignment.objects.filter(
+            admin=obj.user, is_active=True
+        ).count()
+ 
+ 
+# ── VendorAdminAssignment serializer ─────────────────────────────────────────
+class VendorAdminAssignmentSerializer(serializers.ModelSerializer):
+    """
+    Returned by all assignment list / history endpoints.
+ 
+    All FK fields are exposed as BOTH flat ints AND human-readable strings
+    so the frontend never needs to do nested lookups.
+    """
+    # Flat PKs (User PKs, not VendorAdminAssignment PKs)
+    vendor          = serializers.IntegerField(source='vendor.id',        read_only=True)
+    admin           = serializers.IntegerField(source='admin.id',         read_only=True)
+    assigned_by_id  = serializers.IntegerField(source='assigned_by.id',   read_only=True,
+                                               default=None, allow_null=True)
+ 
+    # Human-readable strings
+    vendor_business = serializers.SerializerMethodField()
+    vendor_email    = serializers.EmailField(source='vendor.email',       read_only=True)
+    admin_name      = serializers.CharField (source='admin.full_name',    read_only=True)
+    admin_email     = serializers.EmailField(source='admin.email',        read_only=True)
+    assigned_by_name = serializers.SerializerMethodField()
+ 
+    class Meta:
+        model = VendorAdminAssignment
+        fields = [
+            'id',
+            # ── Flat PKs for JS comparisons ────────────────────────────
+            'vendor',           # User PK of the vendor
+            'admin',            # User PK of the admin
+            'assigned_by_id',
+            # ── Display strings ────────────────────────────────────────
+            'vendor_business',
+            'vendor_email',
+            'admin_name',
+            'admin_email',
+            'assigned_by_name',
+            # ── Status / timestamps ────────────────────────────────────
+            'is_active',
+            'assigned_at',
+            'deactivated_at',
+            'notes',
+        ]
+ 
+    def get_vendor_business(self, obj):
+        try:
+            return obj.vendor.vendor_profile.business_name
+        except Exception:
+            return obj.vendor.email
+ 
+    def get_assigned_by_name(self, obj):
+        if obj.assigned_by:
+            return obj.assigned_by.full_name or obj.assigned_by.email
+        return None
+ 
+ 
+# ── AssignVendorSerializer (input validation) ─────────────────────────────────
+class AssignVendorSerializer(serializers.Serializer):
+    vendor_id = serializers.IntegerField()
+    admin_id  = serializers.IntegerField()
+    notes     = serializers.CharField(required=False, allow_blank=True, default='')
+ 

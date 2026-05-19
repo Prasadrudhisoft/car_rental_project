@@ -2414,13 +2414,183 @@
 }
 
 .cd-inspection-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
 }
- 
+
 @media (max-width: 640px) {
-  .cd-inspection-grid {
-    grid-template-columns: 1fr;
-  }
+    .cd-inspection-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   CustomerDashboard.css ADDITIONS
+   Append these styles to the existing CustomerDashboard.css
+   New styles for: KYC verification rows, submitted reviews tab
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── KYC Verification Row ─────────────────────────────────────────── */
+.cd-kyc-verify-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--cd-bdr);
+    flex-wrap: wrap;
+}
+
+.cd-kyc-verify-row:last-of-type {
+    /* only border-bottom on the last row that's a verify row
+       (handled by the element after it) */
+}
+
+.cd-kyc-verify-row__left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cd-kyc-verify-row__icon {
+    font-size: 22px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--cd-surf2);
+    border: 1px solid var(--cd-bdr);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cd-kyc-verify-row__label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--cd-muted);
+    margin-bottom: 2px;
+}
+
+.cd-kyc-verify-row__value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cd-txt);
+}
+
+.cd-kyc-verify-row__right {
+    flex-shrink: 0;
+}
+
+/* Verified / unverified badges */
+.cd-kyc-verify-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 11px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.cd-kyc-verify-badge--verified {
+    background: #D1FAE5;
+    color: #059669;
+    border: 1px solid #6EE7B7;
+}
+
+.cd-kyc-verify-badge--missing {
+    background: #F3F4F6;
+    color: #9CA3AF;
+    border: 1px solid #E5E7EB;
+    font-style: italic;
+}
+
+/* ── Submitted Reviews Tab ────────────────────────────────────────── */
+.cd-submitted-reviews {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.cd-submitted-reviews__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Submitted review card — slightly different from the pending review card */
+.cd-submitted-review-card {
+    background: var(--cd-surf);
+    border: 1px solid var(--cd-bdr);
+    border-radius: 14px;
+    padding: 16px 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: border-color .16s;
+}
+
+.cd-submitted-review-card:hover {
+    border-color: rgba(13, 184, 158, .25);
+}
+
+.cd-submitted-review-card__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.cd-submitted-review-card__text {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--cd-txt2);
+    line-height: 1.65;
+    background: var(--cd-surf2);
+    border: 1px solid var(--cd-bdr);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-style: italic;
+}
+
+/* ── Responsive additions ────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .cd-kyc-verify-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .cd-kyc-verify-row__right {
+        width: 100%;
+    }
+
+    .cd-kyc-verify-row__right .cd-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .cd-kyc-verify-badge {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .cd-submitted-review-card {
+        padding: 13px 15px;
+    }
+
+    .cd-submitted-reviews__header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }

@@ -3697,3 +3697,138 @@ div:hover .admin-img-hover {
     .user-card__stats { grid-template-columns: repeat(2, 1fr); }
     .user-modal__stats { grid-template-columns: 1fr 1fr; }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADDITIONS — append these to the bottom of AdminDashboard.css
+   Covers: scope indicator, assignment matrix drag states,
+   unassigned warning pulse, and a few missing utility classes.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Scope indicator (hero banner) ──────────────────────────────────── */
+.admin-scope-indicator {
+    display: flex;
+    align-items: center;
+    margin-top: 7px;
+}
+
+.admin-scope-indicator--super,
+.admin-scope-indicator--assigned {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    /* frosted-glass look on the teal banner */
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.admin-scope-indicator--super {
+    background: rgba(255, 251, 235, 0.88);
+    color: #92400E;
+    border: 1px solid rgba(252, 211, 77, 0.75);
+}
+
+.admin-scope-indicator--assigned {
+    background: rgba(237, 233, 254, 0.88);
+    color: #6D28D9;
+    border: 1px solid rgba(196, 181, 253, 0.75);
+}
+
+/* ── Unassigned KPI pulse (when count > 0) ───────────────────────────── */
+@keyframes kpi-warn-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.55; }
+}
+.cd__kpi--warn .cd__kpi-val {
+    animation: kpi-warn-pulse 2.2s ease-in-out infinite;
+}
+
+/* ── Assignment drag-over state on admin card ────────────────────────── */
+/*
+   The inline styles in AssignmentsTab already handle this,
+   but these classes let you override via CSS if needed.
+*/
+.asgn-dropzone {
+    transition: background 0.18s, border-color 0.18s, box-shadow 0.18s;
+}
+.asgn-dropzone--over {
+    background: var(--teal-light) !important;
+    border-color: var(--teal-primary) !important;
+    box-shadow: 0 0 0 3px rgba(13, 184, 158, 0.18) !important;
+}
+
+/* ── cd-filter-bar (used in Reviews tab) ────────────────────────────── */
+/*
+   Already in AdminDashboard.css; included here as safety net
+   in case the existing file is missing it.
+*/
+.cd-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    background: var(--vs);
+    border: 1px solid var(--vbdr);
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+}
+.cd-filter-bar--dropdown {
+    gap: 10px;
+    align-items: center;
+}
+
+/* ── admin-empty (used when no results in reviews / assignments) ─────── */
+.admin-empty {
+    text-align: center;
+    padding: 60px 40px;
+    background: var(--vs);
+    border: 1px dashed var(--vbdr2);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: var(--vm);
+    font-size: 14px;
+}
+.admin-empty span { font-size: 30px; }
+.admin-empty p    { font-size: 14px; margin: 0; }
+
+/* ── Missing badge colours used in logistics network table ──────────── */
+.admin-badge--green {
+    background: var(--vgrn-l, #D1FAE5);
+    color: #059669;
+}
+.admin-badge--red {
+    background: var(--vred-l, #FEE2E2);
+    color: var(--vred, #EF4444);
+}
+
+/* ── Responsive tweaks for assignments tab on narrow screens ─────────── */
+@media (max-width: 900px) {
+    /* Admin card grid: single column */
+    .admin-section > div[style*="grid-template-columns: repeat(auto-fill, minmax(300px"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 640px) {
+    .admin-scope-indicator--super,
+    .admin-scope-indicator--assigned {
+        font-size: 10px;
+        padding: 3px 9px;
+    }
+
+    /* Summary strip: 2-column grid on phones */
+    .admin-section > div[style*="display:'flex'"][style*="gap:10px"] {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+    }
+}

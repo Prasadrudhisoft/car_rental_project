@@ -54,14 +54,10 @@ const ICONS = {
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-5 4h8v2H8v-2zm0 4h5v2H8v-2z" />
         </svg>
     ),
-    inspections: (
+    /* assignments icon — person with link/chain */
+    assignments: (
         <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M10 2a8 8 0 1 1-5.29 14.29L2 19l2.71-2.71A8 8 0 0 1 10 2zm1 5H9v4l3.5 2.1 1-1.65-2.5-1.45V7z" />
-        </svg>
-    ),
-    handovers: (
-        <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M7 7h11v2H7V7zm0 4h7v2H7v-2zm0 4h11v2H7v-2z" />
+            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
         </svg>
     ),
     network: (
@@ -69,7 +65,8 @@ const ICONS = {
             <circle cx="12" cy="5" r="3" />
             <circle cx="5" cy="19" r="3" />
             <circle cx="19" cy="19" r="3" />
-            <path d="M12 8v4M8.5 17.5l-1.5-1.5M15.5 17.5l1.5-1.5M10 12l-3 4M14 12l3 4" stroke="currentColor" strokeWidth="1.5" fill="none" />
+            <path d="M12 8v4M8.5 17.5l-1.5-1.5M15.5 17.5l1.5-1.5M10 12l-3 4M14 12l3 4"
+                  stroke="currentColor" strokeWidth="1.5" fill="none" />
         </svg>
     ),
     profile: (
@@ -87,6 +84,11 @@ const ICONS = {
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
     ),
+    myReviewsIcon: (
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 2H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h3l3 3 3-3h7a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm-8 12l-2.5-1.5L7 14l.7-2.8L5.5 9.5l2.9-.2L9.5 7l1.1 2.3 2.9.2-2.2 1.7.7 2.8z" />
+        </svg>
+    ),
     loyaltyIcon: (
         <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M11.5 2C6.81 2 3 5.81 3 10.5S6.81 19 11.5 19h.5v3c4.86-2.34 8-7 8-11.5C20 5.81 16.19 2 11.5 2zm1 14.5h-2v-2h2v2zm0-4h-2c0-3.25 3-3 3-5 0-1.1-.9-2-2-2s-2 .9-2 2h-2c0-2.21 1.79-4 4-4s4 1.79 4 4c0 2.5-3 2.75-3 5z" />
@@ -97,36 +99,49 @@ const ICONS = {
             <path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7V3zm-1 5v5.41l3.29 3.3 1.42-1.42L14 12.59V8h-2z" />
         </svg>
     ),
+    inspections: (
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10 2a8 8 0 1 1-5.29 14.29L2 19l2.71-2.71A8 8 0 0 1 10 2zm1 5H9v4l3.5 2.1 1-1.65-2.5-1.45V7z" />
+        </svg>
+    ),
+    handovers: (
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7 7h11v2H7V7zm0 4h7v2H7v-2zm0 4h11v2H7v-2z" />
+        </svg>
+    ),
 };
 
+/* ── Sidebar items per role ──────────────────────────────────────────────── */
 const SIDEBAR_ITEMS = {
     admin: [
-        { id: 'overview', icon: ICONS.overview, tip: 'Overview' },
-        { id: 'vendors', icon: ICONS.network, tip: 'Vendors' },
-        { id: 'vehicles', icon: ICONS.vehicles, tip: 'Vehicles' },
-        { id: 'bookings', icon: ICONS.bookings, tip: 'Bookings' },
-        { id: 'users', icon: ICONS.users, tip: 'Users' },
-        { id: 'locations', icon: ICONS.locations, tip: 'Locations' },
-        { id: 'logistics', icon: ICONS.logistics, tip: 'Logistics' },
-        { id: 'config', icon: ICONS.config, tip: 'Config' },
-        { id: 'promos', icon: ICONS.promos, tip: 'Promos' },
-        { id: 'agreements', icon: ICONS.agreements, tip: 'Agreements' },
+        { id: 'overview',     icon: ICONS.overview,     tip: 'Overview' },
+        { id: 'vendors',      icon: ICONS.network,      tip: 'Vendors' },
+        { id: 'vehicles',     icon: ICONS.vehicles,     tip: 'Vehicles' },
+        { id: 'bookings',     icon: ICONS.bookings,     tip: 'Bookings' },
+        { id: 'users',        icon: ICONS.users,        tip: 'Users' },
+        { id: 'locations',    icon: ICONS.locations,    tip: 'Locations' },
+        { id: 'logistics',    icon: ICONS.logistics,    tip: 'Logistics' },
+        { id: 'config',       icon: ICONS.config,       tip: 'Config' },
+        { id: 'promos',       icon: ICONS.promos,       tip: 'Promos' },
+        { id: 'agreements',   icon: ICONS.agreements,   tip: 'Agreements' },
+        { id: 'reviews',      icon: ICONS.starIcon,     tip: 'Reviews' },
+        { id: 'assignments',  icon: ICONS.assignments,  tip: 'Assignments' }, // ← NEW
     ],
     vendor: [
-        { id: 'overview', icon: ICONS.overview, tip: 'Overview' },
-        { id: 'bookings', icon: ICONS.bookings, tip: 'Bookings' },
-        { id: 'fleet', icon: ICONS.vehicles, tip: 'Fleet' },
-        { id: 'handovers', icon: ICONS.handovers, tip: 'Handovers' },
-        { id: 'network', icon: ICONS.network, tip: 'Network' },
-        { id: 'profile', icon: ICONS.profile, tip: 'Profile & KYC' },
+        { id: 'overview',  icon: ICONS.overview,   tip: 'Overview' },
+        { id: 'bookings',  icon: ICONS.bookings,   tip: 'Bookings' },
+        { id: 'fleet',     icon: ICONS.vehicles,   tip: 'Fleet' },
+        { id: 'handovers', icon: ICONS.handovers,  tip: 'Handovers' },
+        { id: 'network',   icon: ICONS.network,    tip: 'Network' },
+        { id: 'reviews',   icon: ICONS.starIcon,   tip: 'Reviews' },
+        { id: 'profile',   icon: ICONS.profile,    tip: 'Profile & KYC' },
     ],
     customer: [
-        { id: 'bookings', icon: ICONS.calendarIcon, tip: 'My Bookings' },
-        // { id: 'history', icon: ICONS.historyIcon, tip: 'Trip History' },
-        // { id: 'agreements', icon: ICONS.agreements, tip: 'Agreements' },
-        { id: 'reviews', icon: ICONS.starIcon, tip: 'Reviews' },
-        { id: 'loyalty', icon: ICONS.loyaltyIcon, tip: 'Loyalty Rewards' },
-        { id: 'profile', icon: ICONS.profile, tip: 'Profile & KYC' },
+        { id: 'bookings',   icon: ICONS.calendarIcon,  tip: 'My Bookings' },
+        { id: 'reviews',    icon: ICONS.starIcon,       tip: 'Write a Review' },
+        { id: 'my-reviews', icon: ICONS.myReviewsIcon,  tip: 'My Reviews' },
+        { id: 'loyalty',    icon: ICONS.loyaltyIcon,    tip: 'Loyalty Rewards' },
+        { id: 'profile',    icon: ICONS.profile,        tip: 'Profile & KYC' },
     ],
 };
 
@@ -134,67 +149,21 @@ const SIDEBAR_ITEMS = {
 export function Sidebar({ activeTab, onTabChange }) {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
-    const role = user?.role || 'customer';
+    const role  = user?.role || 'customer';
     const items = SIDEBAR_ITEMS[role] || [];
     const [mobileOpen, setMobileOpen] = useState(false);
-
-    // useEffect(() => {
-    //     const sidebar = document.querySelector('.sidebar');
-    //     if (!sidebar || sidebar.querySelector('.snow-canvas')) return;
-    //     const canvas = document.createElement('canvas');
-    //     canvas.className = 'snow-canvas';
-    //     canvas.style.cssText =
-    //         'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;';
-    //     sidebar.prepend(canvas);
-    //     const ctx = canvas.getContext('2d');
-    //     const COUNT = 40;
-    //     let flakes = [], raf;
-    //     const resize = () => {
-    //         canvas.width = sidebar.offsetWidth;
-    //         canvas.height = sidebar.offsetHeight;
-    //     };
-    //     const init = () => {
-    //         flakes = Array.from({ length: COUNT }, () => ({
-    //             x: Math.random() * canvas.width,
-    //             y: Math.random() * canvas.height,
-    //             r: Math.random() * 2 + 0.5,
-    //             speed: Math.random() * 0.6 + 0.2,
-    //             drift: (Math.random() - 0.5) * 0.3,
-    //             opacity: Math.random() * 0.4 + 0.08,
-    //         }));
-    //     };
-    //     const draw = () => {
-    //         ctx.clearRect(0, 0, canvas.width, canvas.height);
-    //         for (const f of flakes) {
-    //             ctx.beginPath();
-    //             ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-    //             ctx.fillStyle = `rgba(255,255,255,${f.opacity})`;
-    //             ctx.fill();
-    //             f.y += f.speed;
-    //             f.x += f.drift;
-    //             if (f.y > canvas.height + f.r) { f.y = -f.r; f.x = Math.random() * canvas.width; }
-    //             if (f.x > canvas.width + f.r) f.x = -f.r;
-    //             if (f.x < -f.r) f.x = canvas.width + f.r;
-    //         }
-    //         raf = requestAnimationFrame(draw);
-    //     };
-    //     resize(); init(); draw();
-    //     window.addEventListener('resize', () => { resize(); init(); });
-    //     return () => { cancelAnimationFrame(raf); canvas.remove(); };
-    // }, []);
 
     const handleLogout = async () => {
         await logout();
         navigate('/');
     };
 
-    const initials = (user?.full_name || user?.email || 'U')
+    const initials     = (user?.full_name || user?.email || 'U')
         .split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
     const fullNameCaps = (user?.full_name || user?.email || 'USER').toUpperCase();
 
     return (
         <>
-            {/* ── Hamburger button (mobile only) ── */}
             <button
                 className="sidebar__hamburger"
                 onClick={() => setMobileOpen(v => !v)}
@@ -202,31 +171,20 @@ export function Sidebar({ activeTab, onTabChange }) {
             >
                 <span className={`sidebar__hamburger-icon${mobileOpen ? ' open' : ''}`} />
             </button>
-
-            {/* ── Mobile overlay ── */}
             {mobileOpen && (
-                <div
-                    className="sidebar__overlay"
-                    onClick={() => setMobileOpen(false)}
-                />
+                <div className="sidebar__overlay" onClick={() => setMobileOpen(false)} />
             )}
-
-            {/* ── Original sidebar (add mobile-open class) ── */}
             <aside className={`sidebar${mobileOpen ? ' sidebar--open' : ''}`}>
-                {/* ...all existing sidebar content unchanged... */}
                 <Link
-                    to={
-                        user
-                            ? user.role === 'admin' ? '/admin'
-                                : user.role === 'vendor' ? '/vendor'
-                                    : '/customer'
-                            : '/'
-                    }
+                    to={user
+                        ? (user.role === 'admin'   ? '/admin'
+                         : user.role === 'vendor'  ? '/vendor'
+                         : '/customer')
+                        : '/'}
                     className="sidebar__brand"
                 >
                     ⬡
                 </Link>
-
                 <nav className="sidebar__nav">
                     {items.map(item => (
                         <button
@@ -239,7 +197,6 @@ export function Sidebar({ activeTab, onTabChange }) {
                         </button>
                     ))}
                 </nav>
-
                 <div className="sidebar__bottom">
                     <div
                         className="sidebar__avatar"
@@ -258,10 +215,10 @@ export function Sidebar({ activeTab, onTabChange }) {
 /* ── Top Navbar ─────────────────────────────────────────────────────────── */
 export default function Navbar({ onLoginClick, breadcrumb, hideLogo = false }) {
     const { user, logout } = useAuth();
-    const navigate = useNavigate();
-    const location = useLocation();
-    const [scrolled, setScrolled] = useState(false);
-    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const navigate  = useNavigate();
+    const location  = useLocation();
+    const [scrolled,          setScrolled]          = useState(false);
+    const [dropdownOpen,      setDropdownOpen]      = useState(false);
     const [showBookingWidget, setShowBookingWidget] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -273,33 +230,28 @@ export default function Navbar({ onLoginClick, breadcrumb, hideLogo = false }) {
 
     useEffect(() => {
         const handleClickOutside = (e) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target))
                 setDropdownOpen(false);
-            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Close booking widget on navigation
     useEffect(() => { setShowBookingWidget(false); }, [location.pathname]);
 
+    /* ── Snowflake canvas effect ── */
     useEffect(() => {
         const navbar = document.querySelector('.navbar');
         if (!navbar || navbar.querySelector('.snow-canvas')) return;
         const canvas = document.createElement('canvas');
         canvas.className = 'snow-canvas';
-        canvas.style.cssText =
-            'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;';
+        canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;';
         navbar.prepend(canvas);
-        const ctx = canvas.getContext('2d');
+        const ctx   = canvas.getContext('2d');
         const COUNT = 60;
-        let flakes = [], raf;
-        const resize = () => {
-            canvas.width = navbar.offsetWidth;
-            canvas.height = navbar.offsetHeight;
-        };
-        const init = () => {
+        let flakes  = [], raf;
+        const resize = () => { canvas.width = navbar.offsetWidth; canvas.height = navbar.offsetHeight; };
+        const init   = () => {
             flakes = Array.from({ length: COUNT }, () => ({
                 x: Math.random() * canvas.width,
                 y: Math.random() * canvas.height,
@@ -316,11 +268,10 @@ export default function Navbar({ onLoginClick, breadcrumb, hideLogo = false }) {
                 ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(255,255,255,${f.opacity})`;
                 ctx.fill();
-                f.y += f.speed;
-                f.x += f.drift;
+                f.y += f.speed; f.x += f.drift;
                 if (f.y > canvas.height + f.r) { f.y = -f.r; f.x = Math.random() * canvas.width; }
-                if (f.x > canvas.width + f.r) f.x = -f.r;
-                if (f.x < -f.r) f.x = canvas.width + f.r;
+                if (f.x > canvas.width  + f.r) f.x = -f.r;
+                if (f.x < -f.r)                f.x = canvas.width + f.r;
             }
             raf = requestAnimationFrame(draw);
         };
@@ -336,25 +287,13 @@ export default function Navbar({ onLoginClick, breadcrumb, hideLogo = false }) {
     };
 
     const dashboardPath = user
-        ? user.role === 'admin' ? '/admin'
-            : user.role === 'vendor' ? '/vendor'
-                : '/customer'
+        ? user.role === 'admin'  ? '/admin'
+        : user.role === 'vendor' ? '/vendor'
+        : '/customer'
         : null;
 
-    const initials = user
-        ? (user.full_name || user.email || 'U')
-            .split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-        : '';
-
-    const roleLabel = user?.role
-        ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
-        : '';
-
     const handleLogoClick = (e) => {
-        if (user && dashboardPath) {
-            e.preventDefault();
-            navigate(dashboardPath);
-        }
+        if (user && dashboardPath) { e.preventDefault(); navigate(dashboardPath); }
     };
 
     return (
@@ -367,8 +306,7 @@ export default function Navbar({ onLoginClick, breadcrumb, hideLogo = false }) {
                                 {i > 0 && <span className="navbar__breadcrumb-sep">/</span>}
                                 {i < breadcrumb.length - 1
                                     ? <Link to={crumb.href || '#'}>{crumb.label}</Link>
-                                    : <span className="navbar__breadcrumb-current">{crumb.label}</span>
-                                }
+                                    : <span className="navbar__breadcrumb-current">{crumb.label}</span>}
                             </React.Fragment>
                         ))}
                     </div>
@@ -381,58 +319,18 @@ export default function Navbar({ onLoginClick, breadcrumb, hideLogo = false }) {
 
                 <div className="navbar__right">
                     {user ? (
-                        <>
-                            <button
-                                className="navbar__booking-btn"
-                                onClick={() => setShowBookingWidget(v => !v)}
-                                title="Book a car"
-                            >
-                                🚗 Booking
-                            </button>
-
-                            {/* <div
-                                className={`navbar__user${dropdownOpen ? ' navbar__user--open' : ''}`}
-                                ref={dropdownRef}
-                                onClick={() => setDropdownOpen(v => !v)}
-                            >
-                                <div className="navbar__avatar">{initials}</div>
-                                <div className="navbar__user-info">
-                                    <div className="navbar__user-name">
-                                        {user.full_name?.split(' ')[0] || 'User'}
-                                    </div>
-                                    <div className="navbar__user-role">{roleLabel}</div>
-                                </div>
-                                <span className="navbar__user-chevron">▾</span>
-
-                                {dropdownOpen && (
-                                    <div
-                                        className="navbar__dropdown"
-                                        onClick={e => e.stopPropagation()}
-                                    >
-                                        <hr />
-                                        <button onClick={handleLogout}>
-                                            <span>↩</span> Sign Out
-                                        </button>
-                                    </div>
-                                )}
-                            </div> */}
-                        </>
+                        <button
+                            className="navbar__booking-btn"
+                            onClick={() => setShowBookingWidget(v => !v)}
+                            title="Book a car"
+                        >
+                            🚗 Booking
+                        </button>
                     ) : (
                         <button
-                            style={{
-                                background: 'var(--c-teal)',
-                                color: '#fff',
-                                border: 'none',
-                                padding: '8px 20px',
-                                borderRadius: 'var(--r-full)',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                transition: 'background 0.18s',
-                                fontFamily: 'var(--font-body)',
-                            }}
+                            style={{ background:'var(--c-teal)', color:'#fff', border:'none', padding:'8px 20px', borderRadius:'var(--r-full)', fontSize:'13px', fontWeight:'600', cursor:'pointer', transition:'background 0.18s', fontFamily:'var(--font-body)' }}
                             onMouseOver={e => e.currentTarget.style.background = 'var(--c-teal-dark)'}
-                            onMouseOut={e => e.currentTarget.style.background = 'var(--c-teal)'}
+                            onMouseOut={e  => e.currentTarget.style.background = 'var(--c-teal)'}
                             onClick={onLoginClick}
                         >
                             Sign In
@@ -441,7 +339,6 @@ export default function Navbar({ onLoginClick, breadcrumb, hideLogo = false }) {
                 </div>
             </nav>
 
-            {/* Booking widget overlay */}
             {showBookingWidget && user && (
                 <div
                     className="navbar__booking-overlay"
@@ -450,12 +347,7 @@ export default function Navbar({ onLoginClick, breadcrumb, hideLogo = false }) {
                     <div className="navbar__booking-panel">
                         <div className="navbar__booking-panel-header">
                             <span>Book a Car</span>
-                            <button
-                                className="navbar__booking-close"
-                                onClick={() => setShowBookingWidget(false)}
-                            >
-                                ✕
-                            </button>
+                            <button className="navbar__booking-close" onClick={() => setShowBookingWidget(false)}>✕</button>
                         </div>
                         <SearchWidget onSearchComplete={() => setShowBookingWidget(false)} />
                     </div>
