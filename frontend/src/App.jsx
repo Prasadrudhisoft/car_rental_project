@@ -4,14 +4,14 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { BookingProvider } from './context/BookingContext';
 
 import HomePage from './pages/HomePage';
-import CarModelSelectPage from './pages/CarModelSelectPage';
-import VendorSelectPage from './pages/VendorSelectPage';
-import ReturnVendorPage from './pages/ReturnVendorPage';
-import AddonsPage from './pages/AddonsPage';
-import ConfirmBookingPage from './pages/ConfirmBookingPage';
-import CustomerDashboard from './pages/CustomerDashboard';
-import VendorDashboard from './pages/VendorDashboard';
-import AdminDashboard from './pages/AdminDashboard';
+import CarModelSelectPage from './pages/booking/CarModelSelectPage';
+import VendorSelectPage from './pages/booking/VendorSelectPage';
+import ReturnVendorPage from './pages/booking/ReturnVendorPage';
+import AddonsPage from './pages/booking/AddonsPage';
+import ConfirmBookingPage from './pages/booking/ConfirmBookingPage';
+import CustomerDashboard from './pages/CustomerDashboard/CustomerDashboard';
+import VendorDashboard from './pages/VendorDashboard/VendorDashboard';
+import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
 import AuthModal from './components/auth/AuthModal';
 
 function RequireAuth({ children, role }) {
