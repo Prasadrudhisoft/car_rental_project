@@ -3,16 +3,13 @@
    ═══════════════════════════════════════════════ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-/* ── Tokens (mirrored from CustomerDashboard) ── */
 :root {
-    /* ── Core Teal Palette ── */
     --teal-primary: #0DB89E;
     --teal-light: #E6F7F5;
     --teal-mid: #B2EDE6;
     --teal-dark: #0A9E87;
     --teal-deep: #007B6E;
 
-    /* Supporting colors (keeping existing structure but updated) */
     --vt: #111827;
     --vt2: #4B5563;
     --vm: #9CA3AF;
@@ -22,13 +19,11 @@
     --vbdr: #E8EDF2;
     --vbdr2: #D5DEE8;
 
-    /* Using Teal as primary accent */
     --vacc: var(--teal-primary);
     --vacc-l: var(--teal-light);
     --vacc-d: var(--teal-dark);
     --vacc-mid: var(--teal-mid);
 
-    /* Supporting accent colors */
     --vamb: #F59E0B;
     --vamb-l: #FEF3C7;
     --vgrn: #10B981;
@@ -47,7 +42,6 @@
     --sidebar-active: var(--teal-primary);
 }
 
-/* ── Base ── */
 .vd {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: var(--vbg);
@@ -65,7 +59,6 @@
     font-weight: 700;
 }
 
-/* ── Shell (matches cd__shell) ── */
 .page-shell {
     margin-left: var(--sidebar-w);
     min-height: 100vh;
@@ -80,7 +73,6 @@
     gap: 20px;
 }
 
-/* ── Toast (matches cd-toast) ── */
 .vd-toast {
     position: fixed;
     bottom: 24px;
@@ -122,7 +114,6 @@
     }
 }
 
-/* ── Hero (matches cd__hero) ── */
 .vd__hero {
     position: relative;
     background: var(--vs);
@@ -132,7 +123,6 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
 }
 
-/* INCREASED HEIGHT from 110px to 160px */
 .vd__hero-banner {
     height: 160px;
     background: linear-gradient(135deg, var(--teal-dark) 0%, var(--teal-primary) 50%, var(--teal-mid) 100%);
@@ -202,7 +192,6 @@
     flex-wrap: wrap;
 }
 
-/* KPI strip (matches cd__kpis) */
 .vd__kpis {
     display: flex;
     gap: 10px;
@@ -245,7 +234,6 @@
     color: var(--vm);
 }
 
-/* ── Loading / Error (matches cd-loading) ── */
 .vd-loading {
     display: flex;
     align-items: center;
@@ -304,7 +292,6 @@
     text-align: center;
 }
 
-/* ── Content ── */
 .vd__content {
     display: flex;
     flex-direction: column;
@@ -318,14 +305,12 @@
     align-items: start;
 }
 
-/* ── Section ── */
 .vd-section {
     display: flex;
     flex-direction: column;
     gap: 14px;
 }
 
-/* ── Cards (matches cd-card) ── */
 .vd-card {
     background: var(--vs);
     border: 1px solid var(--vbdr);
@@ -357,7 +342,6 @@
     margin-top: 2px;
 }
 
-/* ── Badge (matches StatusBadge) ── */
 .vd-badge {
     display: inline-flex;
     align-items: center;
@@ -370,7 +354,6 @@
     white-space: nowrap;
 }
 
-/* ── Info groups (matches cd-info-group) ── */
 .vd-info-group {
     background: var(--vs2);
     border: 1px solid var(--vbdr);
@@ -381,7 +364,6 @@
     gap: 0;
 }
 
-/* HIGHLIGHTED STYLE for info-group title */
 .vd-info-group__title {
     font-size: 16px;
     font-weight: 700;
@@ -416,7 +398,6 @@
     word-break: break-all;
 }
 
-/* ── Section header ── */
 .vd-sec-hd {
     display: flex;
     justify-content: space-between;
@@ -432,7 +413,6 @@
     margin-left: 4px;
 }
 
-/* ── Inputs (matches cd-input) ── */
 .vd-input {
     background: var(--vs);
     border: 1px solid var(--vbdr2);
@@ -494,7 +474,6 @@
     font-style: italic;
 }
 
-/* ── Form grid ── */
 .vd-fg {
     display: grid;
     gap: 12px;
@@ -508,7 +487,6 @@
     grid-template-columns: 1fr 1fr 1fr;
 }
 
-/* ── Buttons (matches cd-btn) ── */
 .vd-btn {
     display: inline-flex;
     align-items: center;
@@ -608,7 +586,6 @@
     font-size: 11px;
 }
 
-/* Legacy alias */
 .vd-btn-primary {
     display: inline-flex;
     align-items: center;
@@ -706,17 +683,23 @@
     border-color: var(--vbdr2);
 }
 
-/* ── Filter bar (matches cd-filter-bar) ── */
 .vd-filter-bar {
     display: flex;
     align-items: center;
     gap: 6px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     padding: 10px 14px;
     background: var(--vs);
     border: 1px solid var(--vbdr);
     border-radius: 14px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+}
+
+.vd-filter-bar::-webkit-scrollbar {
+    display: none;
 }
 
 .vd-filter-lbl {
@@ -748,7 +731,6 @@
     color: #fff;
 }
 
-/* ── Booking list (matches cd-booking-list) ── */
 .vd-booking-list {
     display: flex;
     flex-direction: column;
@@ -848,7 +830,6 @@
     border: 1px solid #FCD34D;
 }
 
-/* ── Booking detail panel (matches cd-booking-card__body) ── */
 .vd-detail-panel {
     background: var(--vs2);
     border: 1px solid var(--vbdr);
@@ -888,7 +869,6 @@
     gap: 12px;
 }
 
-/* ── Overview stats ── */
 .vd-stat-chip {
     background: var(--vs2);
     border: 1px solid var(--vbdr);
@@ -942,7 +922,6 @@
     color: var(--vm);
 }
 
-/* ── Vehicle cards ── */
 .vd-vehicle-card {
     background: var(--vs);
     border: 1px solid var(--vbdr);
@@ -1035,7 +1014,6 @@
     color: var(--vm);
 }
 
-/* Progress track */
 .vd-vehicle-progress {
     display: flex;
     padding: 0 18px 10px;
@@ -1093,7 +1071,6 @@
     font-weight: 700;
 }
 
-/* Vehicle body */
 .vd-vehicle-card__body {
     border-top: 1px solid var(--vbdr);
     background: var(--vs2);
@@ -1132,7 +1109,6 @@
     margin-bottom: 10px;
 }
 
-/* Docs */
 .vd-doc-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -1168,7 +1144,6 @@
     color: var(--vm);
 }
 
-/* Photos */
 .vd-photo-status {
     margin-bottom: 10px;
 }
@@ -1256,7 +1231,6 @@
     border-radius: 3px;
 }
 
-/* Availability */
 .vd-blocked-dates {
     display: flex;
     flex-wrap: wrap;
@@ -1297,7 +1271,6 @@
     max-width: 340px;
 }
 
-/* ── Handovers ── */
 .vd-handover-info {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1316,11 +1289,12 @@
     padding-top: 4px;
 }
 
-/* ── Network table ── */
 .vd-network-table {
     display: flex;
     flex-direction: column;
     gap: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .vd-network-table__head,
@@ -1350,7 +1324,6 @@
     border-bottom: none;
 }
 
-/* ── Profile ── */
 .vd-profile-rows {
     display: flex;
     flex-direction: column;
@@ -1395,7 +1368,6 @@
     font-weight: 500;
 }
 
-/* ── Map Picker ── */
 .vd-map-picker {
     border: 1px solid var(--vbdr2);
     border-radius: 14px;
@@ -1440,6 +1412,7 @@
     height: 320px;
 }
 
+/* FIX: duplicate color removed — first color: #059669 was dead */
 .vd-map-picker__coords {
     padding: 9px 14px;
     display: flex;
@@ -1449,7 +1422,6 @@
     border-top: 1px solid var(--vbdr);
     font-size: 12px;
     font-weight: 600;
-    color: #059669;
     background: var(--teal-light);
     color: var(--teal-dark);
 }
@@ -1481,7 +1453,6 @@
     font-size: 12px;
 }
 
-/* ── KYC section labels ── */
 .vd-kyc-section-label {
     font-size: 11px;
     font-weight: 700;
@@ -1506,7 +1477,6 @@
     border-radius: 999px;
 }
 
-/* ── Form field label (matches cd-form-field) ── */
 .vd-form-field {
     display: flex;
     flex-direction: column;
@@ -1522,14 +1492,12 @@
     color: var(--vm);
 }
 
-/* ── Inspection inspections grid ── */
 .vd-inspection-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
 }
 
-/* ── Payment form in detail panel ── */
 .vd-payment-breakdown {
     background: var(--vs2);
     border: 1px solid var(--vbdr);
@@ -1560,7 +1528,6 @@
     margin: 4px 0;
 }
 
-/* ── Booking action bar (matches cd-booking-actions) ── */
 .vd-booking-actions {
     display: flex;
     gap: 10px;
@@ -1591,7 +1558,6 @@
     flex-wrap: wrap;
 }
 
-/* ── Leaflet z-index fix ── */
 .vd-map-picker__canvas .leaflet-pane {
     z-index: 1;
 }
@@ -1601,272 +1567,14 @@
     z-index: 2;
 }
 
-/* ── UPDATED: Light green text now uses warm amber/orange ── */
 .vd-text-warning,
 .vd-warning-text {
     color: var(--vorange);
 }
 
-/* ── Responsive ── */
-@media (max-width: 1280px) {
-    .page-shell {
-        margin-left: var(--sidebar-w);
-    }
-
-    .vd__inner {
-        padding: 16px;
-        gap: 16px;
-    }
-
-    .vd__kpis {
-        gap: 8px;
-    }
-
-    .vd__kpi {
-        min-width: 72px;
-        padding: 8px 12px;
-    }
-
-    .vd__kpi-val {
-        font-size: 14px;
-    }
-
-    .vd-grid-2 {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 1024px) {
-    .vd__hero-banner {
-        height: 140px;
-    }
-
-    .vd__hero-body {
-        flex-direction: column;
-        align-items: flex-start;
-        margin-top: -32px;
-        gap: 12px;
-        padding: 12px;
-    }
-
-    .vd__hero-left {
-        align-items: center;
-    }
-
-    .vd__kpis {
-        width: 100%;
-        justify-content: flex-start;
-    }
-
-    .vd__kpi {
-        flex: 1 1 calc(25% - 8px);
-        min-width: 60px;
-    }
-
-    .vd-detail-panel__grid {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .vd-handover-info {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-@media (max-width: 768px) {
-    .page-shell {
-        margin-left: 0;
-        margin-top: 52px;
-    }
-
-    .vd__inner {
-        padding: 12px;
-        gap: 12px;
-    }
-
-    .vd__hero-banner {
-        height: 110px;
-    }
-
-    .vd__hero-body {
-        flex-direction: column;
-        margin-top: -28px;
-        padding: 10px;
-        gap: 10px;
-    }
-
-    .vd__hero-name {
-        font-size: 15px;
-    }
-
-    .vd__hero-avatar {
-        width: 44px;
-        height: 44px;
-        font-size: 16px;
-        border-radius: 12px;
-    }
-
-    .vd__kpis {
-        width: 100%;
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-    }
-
-    .vd__kpi {
-        flex: unset;
-        min-width: unset;
-    }
-
-    .vd-filter-bar {
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-
-    .vd-booking-row__head {
-        padding: 12px 14px;
-        gap: 10px;
-    }
-
-    .vd-booking-row__id {
-        font-size: 12px;
-    }
-
-    .vd-booking-row__amt {
-        font-size: 14px;
-    }
-
-    .vd-detail-panel {
-        padding: 14px 16px;
-    }
-
-    .vd-detail-panel__grid {
-        grid-template-columns: 1fr;
-        gap: 10px;
-    }
-
-    .vd-fg--3 {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .vd-fg--2 {
-        grid-template-columns: 1fr;
-    }
-
-    .vd-booking-actions {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-    .vd-cancel-confirm {
-        flex-wrap: wrap;
-        gap: 8px;
-        width: 100%;
-    }
-
-    .vd-cancel-confirm .vd-input {
-        flex: 1 1 100%;
-    }
-
-    .vd-card {
-        padding: 14px 16px;
-        gap: 10px;
-    }
-
-    .vd-inspection-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .vd-toast {
-        left: 12px;
-        right: 12px;
-        bottom: 16px;
-        max-width: unset;
-    }
-}
-
-@media (max-width: 480px) {
-    .page-shell {
-        margin-top: 1px;
-    }
-
-    .vd__inner {
-        padding: 10px;
-        gap: 10px;
-    }
-
-    .vd__hero-banner {
-        height: 90px;
-    }
-
-    .vd__hero-body {
-        margin-top: -22px;
-        padding: 8px;
-    }
-
-    .vd__hero-avatar {
-        width: 38px;
-        height: 38px;
-        font-size: 14px;
-        border-radius: 10px;
-    }
-
-    .vd__hero-name {
-        font-size: 14px;
-    }
-
-    .vd__kpis {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 6px;
-    }
-
-    .vd__kpi {
-        padding: 8px 10px;
-    }
-
-    .vd__kpi-val {
-        font-size: 13px;
-    }
-
-    .vd__kpi-lbl {
-        font-size: 9px;
-    }
-
-    .vd-card {
-        padding: 14px 16px;
-        gap: 10px;
-    }
-
-    .vd-fg--3 {
-        grid-template-columns: 1fr;
-    }
-
-    .vd-doc-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .vd-booking-row__meta {
-        display: none;
-    }
-
-    .vd-btn {
-        padding: 8px 14px;
-        font-size: 12px;
-    }
-
-    .vd-btn--sm {
-        padding: 6px 10px;
-        font-size: 11px;
-    }
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   VendorDashboard ADDITIONS
-   New styles for: KYC gate, KYC progress banner, KYC checklist,
-   KYC document viewer, hero KYC alert badge, overview warning
-   ═══════════════════════════════════════════════════════════════════ */
-
-/* ── KYC Gate (full-section block) ───────────────────────────────── */
+/* ═══════════════════════════════════════════════
+   KYC additions
+   ═══════════════════════════════════════════════ */
 .vd-kyc-gate {
     background: var(--vs);
     border: 1px solid #FCA5A5;
@@ -1906,7 +1614,6 @@
     max-width: 520px;
 }
 
-/* ── KYC Overview Warning Banner ─────────────────────────────────── */
 .vd-kyc-overview-warn {
     background: #FFFBEB;
     border: 1px solid #FCD34D;
@@ -1922,7 +1629,6 @@
     color: #78350F;
 }
 
-/* ── KYC Progress Banner (inside profile card) ───────────────────── */
 .vd-kyc-progress-banner {
     background: #FFFBEB;
     border: 1px solid #FCD34D;
@@ -1948,7 +1654,6 @@
     margin-bottom: 8px;
 }
 
-/* ── KYC Checklist ───────────────────────────────────────────────── */
 .vd-kyc-checklist {
     display: flex;
     flex-direction: column;
@@ -1978,7 +1683,6 @@
     flex-shrink: 0;
 }
 
-/* ── KYC Document Viewer ─────────────────────────────────────────── */
 .vd-kyc-doc-viewer {
     display: flex;
     flex-direction: column;
@@ -2035,8 +1739,9 @@
 
 .vd-kyc-doc-viewer__pdf-link {
     display: inline-flex;
-    align-items: center;
-    gap: 7px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
     background: var(--vs2);
     border: 1px solid var(--vbdr2);
     border-radius: 8px;
@@ -2047,9 +1752,6 @@
     text-decoration: none;
     transition: border-color .14s, background .14s;
     width: fit-content;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
 }
 
 .vd-kyc-doc-viewer__pdf-link:hover {
@@ -2058,7 +1760,6 @@
     color: var(--teal-dark);
 }
 
-/* ── Hero KYC alert button ───────────────────────────────────────── */
 .vd-kyc-hero-alert {
     cursor: pointer;
     font-family: 'Inter', sans-serif;
@@ -2069,7 +1770,6 @@
     opacity: 0.85;
 }
 
-/* ── Photo hover overlay (global vendor dashboard) ───────────────── */
 .vd-photo-hover-overlay {
     opacity: 0;
     transition: opacity 0.15s;
@@ -2080,8 +1780,332 @@ div:hover>.vd-photo-hover-overlay {
     opacity: 1;
 }
 
-/* ── Responsive KYC gate ─────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════
+   Modal
+   ═══════════════════════════════════════════════ */
+.vd-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 8000;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 32px 16px 40px;
+    overflow-y: auto;
+    animation: vd-modal-bg-in .2s ease;
+}
+
+@keyframes vd-modal-bg-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.vd-modal {
+    background: var(--vs);
+    border: 1px solid var(--vbdr);
+    border-radius: 18px;
+    width: 100%;
+    max-width: 860px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, .18);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: vd-modal-slide .22s cubic-bezier(.16, 1, .3, 1);
+}
+
+@keyframes vd-modal-slide {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.vd-modal__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--vbdr);
+    background: var(--vs);
+    flex-wrap: wrap;
+}
+
+/* ═══════════════════════════════════════════════
+   BASELINE RESPONSIVE FIXES
+   ═══════════════════════════════════════════════ */
+
+/* cancel-confirm: hardcoded width:200px replaced */
+.vd-cancel-confirm .vd-input {
+    width: auto;
+    flex: 1 1 160px;
+    min-width: 0;
+}
+
+/* filter-bar scroll/nowrap merged into base rule above */
+
+/* network-table scroll merged into base rule above */
+
+/* .vd-booking-row__meta span font-size already set in base rule above */
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE
+   All breakpoints in a single consolidated block,
+   widest → narrowest, each rule appearing once.
+   ═══════════════════════════════════════════════ */
+
+@media (max-width: 1280px) {
+    .page-shell {
+        margin-left: var(--sidebar-w);
+    }
+
+    .vd__inner {
+        padding: 16px;
+        gap: 16px;
+    }
+
+    .vd__kpis {
+        gap: 8px;
+    }
+
+    .vd__kpi {
+        min-width: 72px;
+        padding: 8px 12px;
+    }
+
+    .vd__kpi-val {
+        font-size: 14px;
+    }
+
+    .vd-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 1024px) {
+    .vd__hero-banner {
+        height: 140px;
+    }
+
+    .vd__hero-body {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-top: -32px;
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .vd__hero-left {
+        align-items: center;
+    }
+
+    .vd__kpis {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    /* min-width updated from original 60px → 64px; flex unchanged */
+    .vd__kpi {
+        flex: 1 1 calc(25% - 8px);
+        min-width: 64px;
+    }
+
+    /* gap added; grid-template-columns unchanged from original */
+    .vd-detail-panel__grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .vd-handover-info {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .vd-vehicle-card__head {
+        padding: 12px 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-shell {
+        margin-left: 0;
+        margin-top: 52px;
+    }
+
+    .vd__inner {
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .vd__hero-banner {
+        height: 110px;
+    }
+
+    .vd__hero-body {
+        flex-direction: column;
+        margin-top: -28px;
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .vd__hero-name {
+        font-size: 15px;
+    }
+
+    .vd__hero-avatar {
+        width: 44px;
+        height: 44px;
+        font-size: 16px;
+        border-radius: 12px;
+    }
+
+    /* gap tightened from original 8px → 6px; rest identical */
+    .vd__kpis {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+
+    .vd__kpi {
+        flex: unset;
+        min-width: unset;
+    }
+
+    /* nowrap overrides original flex-wrap:wrap; adds scroll + tighter padding */
+    .vd-filter-bar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding: 8px 10px;
+        gap: 6px;
+    }
+
+    /* gap tightened from original 10px → 8px */
+    .vd-booking-row__head {
+        padding: 12px 14px;
+        gap: 8px;
+    }
+
+    .vd-booking-row__id {
+        font-size: 12px;
+    }
+
+    /* tightened from original 14px → 13px */
+    .vd-booking-row__amt {
+        font-size: 13px;
+    }
+
+    .vd-booking-row__meta {
+        gap: 8px;
+    }
+
+    .vd-booking-row__meta span {
+        font-size: 11px;
+    }
+
+    .vd-detail-panel {
+        padding: 14px 16px;
+    }
+
+    .vd-detail-panel__grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .vd-fg--3 {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .vd-fg--2 {
+        grid-template-columns: 1fr;
+    }
+
+    .vd-booking-actions {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .vd-cancel-confirm {
+        flex-wrap: wrap;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .vd-cancel-confirm .vd-input {
+        flex: 1 1 100%;
+    }
+
+    .vd-card {
+        padding: 14px 16px;
+        gap: 10px;
+    }
+
+    .vd-inspection-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .vd-toast {
+        left: 12px;
+        right: 12px;
+        bottom: 16px;
+        max-width: unset;
+    }
+
+    /* collapse handover to single column (original only goes to 2-col at 1024px) */
+    .vd-handover-info {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .vd-sec-hd {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .vd-photo-upload-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .vd-vehicle-card__head {
+        padding: 12px 14px;
+        gap: 8px;
+    }
+
+    /* tighter top/bottom padding than original 16px/32px */
+    .vd-modal-overlay {
+        padding: 12px 8px 24px;
+        align-items: flex-start;
+    }
+
+    .vd-modal {
+        border-radius: 14px;
+        max-width: 100%;
+    }
+
+    .vd-modal__head {
+        padding: 14px 16px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+}
+
 @media (max-width: 600px) {
+
+    /* KYC gate */
     .vd-kyc-gate {
         flex-direction: column;
         padding: 24px 20px;
@@ -2110,94 +2134,358 @@ div:hover>.vd-photo-hover-overlay {
         width: 100%;
         justify-content: center;
     }
-}
 
-/* ═══════════════════════════════════════════════════════════════════
-   VendorDashboard — Modal additions
-   Append these rules to the bottom of VendorDashboard.css
-   ═══════════════════════════════════════════════════════════════════ */
-
-/* ── Modal overlay ───────────────────────────────────────────────── */
-.vd-modal-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 8000;
-    background: rgba(0, 0, 0, 0.55);
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: 32px 16px 40px;
-    overflow-y: auto;
-    animation: vd-modal-bg-in .2s ease;
-}
-
-@keyframes vd-modal-bg-in {
-    from {
-        opacity: 0;
+    /* Hero: compact further */
+    .vd__hero-banner {
+        height: 100px;
     }
 
-    to {
-        opacity: 1;
-    }
-}
-
-/* ── Modal panel ─────────────────────────────────────────────────── */
-.vd-modal {
-    background: var(--vs);
-    border: 1px solid var(--vbdr);
-    border-radius: 18px;
-    width: 100%;
-    max-width: 860px;
-    box-shadow: 0 24px 64px rgba(0, 0, 0, .18);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    animation: vd-modal-slide .22s cubic-bezier(.16, 1, .3, 1);
-}
-
-@keyframes vd-modal-slide {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
+    .vd__hero-body {
+        margin-top: -24px;
+        padding: 8px 10px;
+        gap: 8px;
     }
 
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-/* ── Modal header ────────────────────────────────────────────────── */
-.vd-modal__head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 20px 24px;
-    border-bottom: 1px solid var(--vbdr);
-    background: var(--vs);
-    flex-wrap: wrap;
-}
-
-/* ── Responsive modals ───────────────────────────────────────────── */
-@media (max-width: 768px) {
-    .vd-modal-overlay {
-        padding: 16px 8px 32px;
-        align-items: flex-start;
+    /* border-radius:12px already set at 768px — omitted */
+    .vd__hero-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 15px;
     }
 
-    .vd-modal {
-        border-radius: 14px;
-        max-width: 100%;
+    .vd__hero-name {
+        font-size: 14px;
     }
 
-    .vd-modal__head {
+    .vd__hero-meta {
+        gap: 5px;
+    }
+
+    /* KPI: scrollable single row; width:100% already set at 768px — omitted */
+    .vd__kpis {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 2px;
+    }
+
+    .vd__kpis::-webkit-scrollbar {
+        display: none;
+    }
+
+    .vd__kpi {
+        flex-shrink: 0;
+        min-width: 72px;
+        padding: 8px 10px;
+    }
+
+    .vd__kpi-val {
+        font-size: 13px;
+    }
+
+    .vd__kpi-lbl {
+        font-size: 9px;
+    }
+
+    /* hide meta row; vd-fg--2 already 1fr from 768px; vd-grid-2 already 1fr from 1280px */
+    .vd-booking-row__meta {
+        display: none;
+    }
+
+    .vd-booking-row__head {
+        padding: 10px 12px;
+        gap: 6px;
+    }
+
+    .vd-booking-row__ref {
+        min-width: 100px;
+    }
+
+    .vd-detail-panel {
+        padding: 12px 14px;
+        gap: 12px;
+    }
+
+    .vd-info-pair {
+        font-size: 13px;
+        gap: 6px;
+    }
+
+    .vd-info-pair strong {
+        font-size: 13px;
+        word-break: break-word;
+    }
+
+    .vd-vehicle-card__body {
         padding: 14px 16px;
+    }
+
+    .vd-subtabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 5px;
+    }
+
+    .vd-subtabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .vd-subtab {
+        flex-shrink: 0;
+    }
+
+    .vd-doc-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .vd-booking-actions .vd-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .vd-cancel-confirm .vd-btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .vd-action-block .vd-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .vd-map-picker__canvas {
+        height: 240px;
     }
 }
 
 @media (max-width: 480px) {
+    .page-shell {
+        margin-top: 1px;
+    }
+
+    .vd__inner {
+        padding: 8px;
+        gap: 8px;
+    }
+
+    .vd__hero-banner {
+        height: 80px;
+    }
+
+    /* padding:8px identical to original — omitted */
+    .vd__hero-body {
+        margin-top: -18px;
+    }
+
+    /* border-radius:10px identical to original — omitted */
+    .vd__hero-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 13px;
+    }
+
+    .vd__hero-name {
+        font-size: 13px;
+    }
+
+    /* gap and padding-bottom differ from 600px; display/flex-wrap/overflow already set at 600px */
+    .vd__kpis {
+        gap: 6px;
+        padding-bottom: 4px;
+    }
+
+    /* flex-shrink already set at 600px — omitted; min-width and padding differ */
+    .vd__kpi {
+        min-width: 64px;
+        padding: 7px 8px;
+    }
+
+    .vd__kpi-val {
+        font-size: 12px;
+    }
+
+    .vd__kpi-lbl {
+        font-size: 8px;
+        letter-spacing: 0.2px;
+    }
+
+    /* tighter than 768px values */
+    .vd-card {
+        padding: 12px 14px;
+        gap: 8px;
+    }
+
+    .vd-fg--3 {
+        grid-template-columns: 1fr;
+    }
+
+    .vd-doc-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .vd-booking-row__meta {
+        display: none;
+    }
+
+    .vd-btn {
+        padding: 8px 14px;
+        font-size: 12px;
+    }
+
+    .vd-btn--sm {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+
+    .vd-detail-panel {
+        padding: 10px 12px;
+        gap: 10px;
+    }
+
+    .vd-info-pair {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+
+    .vd-info-pair strong {
+        text-align: left;
+    }
+
+    .vd-handover-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+
+    .vd-handover-actions .vd-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* bottom-sheet: overrides 480px_modal padding:10px 6px 24px */
     .vd-modal-overlay {
-        padding: 10px 6px 24px;
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    .vd-modal {
+        border-radius: 18px 18px 0 0;
+        max-height: 92vh;
+    }
+
+    .vd-vehicle-card__icon {
+        font-size: 22px;
+    }
+
+    .vd-vehicle-card__name {
+        font-size: 13px;
+    }
+
+    .vd-photos-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .vd-blocked-chip {
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+
+    .vd-filter-btn {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+
+    .vd-sec-hd h2 {
+        font-size: 15px;
+    }
+
+    .vd-map-picker__canvas {
+        height: 200px;
+    }
+
+    .vd-network-table__head,
+    .vd-network-table__row {
+        grid-template-columns: 1fr 60px 80px 90px 50px;
+        font-size: 11px;
+        padding: 8px 2px;
+        gap: 4px;
+    }
+
+    .vd-payment-breakdown {
+        padding: 10px 12px;
+    }
+
+    .vd-payment-breakdown__row {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 360px) {
+    .vd__inner {
+        padding: 6px;
+        gap: 6px;
+    }
+
+    .vd__kpi {
+        min-width: 58px;
+        padding: 6px;
+    }
+
+    .vd__kpi-val {
+        font-size: 11px;
+    }
+
+    .vd-card {
+        padding: 10px 12px;
+    }
+
+    .vd-btn {
+        padding: 7px 12px;
+        font-size: 11px;
+    }
+
+    .vd-network-table__head,
+    .vd-network-table__row {
+        grid-template-columns: 1fr 70px 80px;
+    }
+
+    .vd-network-table__head>span:nth-child(n+4),
+    .vd-network-table__row>span:nth-child(n+4) {
+        display: none;
+    }
+}
+
+@media (max-height: 500px) and (max-width: 900px) {
+    .vd-modal-overlay {
+        align-items: flex-start;
+        padding: 8px;
+        overflow-y: auto;
+    }
+
+    .vd-modal {
+        border-radius: 12px;
+        max-height: 96vh;
+    }
+
+    .vd__hero-banner {
+        height: 60px;
+    }
+
+    .vd__hero-body {
+        margin-top: -16px;
+    }
+
+    .vd__kpis {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+
+    .vd__kpi {
+        flex-shrink: 0;
     }
 }

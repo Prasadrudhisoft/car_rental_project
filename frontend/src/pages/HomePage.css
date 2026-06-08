@@ -831,3 +831,190 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ════════════════════════════════════════════════
+   HERO — Responsive overrides
+   Drop these at the bottom of HomePage.css,
+   replacing / extending the existing @media blocks
+   ════════════════════════════════════════════════ */
+
+/* ── Tablet: ≤ 900px (already existed — extended) ── */
+@media (max-width: 900px) {
+    .home__hero {
+        padding: 100px 24px 60px;
+        min-height: unset;           /* let content drive height on tablet */
+    }
+
+    .home__hero-inner {
+        grid-template-columns: 1fr;
+        gap: 40px;
+        text-align: center;
+    }
+
+    /* Move the search widget above the copy on tablet/mobile */
+    .home__hero-widget {
+        order: -1;
+    }
+
+    /* Center-align copy elements that were left-aligned */
+    .home__eyebrow {
+        justify-content: center;
+    }
+
+    .home__hero-sub {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .home__stats {
+        justify-content: center;
+    }
+
+    .home__hero-ctas {
+        justify-content: center;
+    }
+
+    /* Contain the ambient orbs so they don't create horizontal scroll */
+    .home__orb--amber {
+        width: 400px;
+        height: 300px;
+        right: -120px;
+        top: -80px;
+    }
+
+    .home__orb--blue {
+        width: 300px;
+        height: 240px;
+        left: -80px;
+    }
+
+    .home__orb--teal {
+        width: 260px;
+        height: 200px;
+        left: 20%;
+    }
+
+    /* Widget glow can bleed on narrow viewports — clip it */
+    .home__hero-widget {
+        overflow: hidden;
+    }
+
+    .home__widget-glow {
+        inset: -20px;
+    }
+}
+
+/* ── Mobile: ≤ 640px ── */
+@media (max-width: 640px) {
+    .home__hero {
+        padding: 88px 16px 48px;
+    }
+
+    .home__hero-inner {
+        gap: 32px;
+    }
+
+    /* Stats: tighten spacing so 4 items fit on one row */
+    .home__stats {
+        flex-wrap: nowrap;       /* keep single row */
+        gap: 0;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .home__stat {
+        padding: 0 8px;
+        flex: 1;
+    }
+
+    .home__stat:first-child {
+        padding-left: 0;
+    }
+
+    .home__stat-val {
+        font-size: 18px;
+    }
+
+    .home__stat-lbl {
+        font-size: 9px;
+        letter-spacing: 0.4px;
+    }
+
+    .home__stat-sep {
+        height: 28px;
+    }
+
+    /* Hero CTAs: full-width stack */
+    .home__hero-ctas {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .home__btn-primary,
+    .home__btn-ghost {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Orbs: minimal presence — just atmosphere, no overflow */
+    .home__orb--amber {
+        width: 280px;
+        height: 200px;
+        right: -80px;
+        top: -40px;
+        opacity: 0;
+        animation: orbIn 1.2s 0.1s var(--ease) forwards;
+    }
+
+    .home__orb--blue {
+        width: 220px;
+        height: 160px;
+        left: -60px;
+    }
+
+    .home__orb--teal {
+        display: none; /* third orb is redundant at this size */
+    }
+
+    /* Scroll hint sits lower on short mobile viewports */
+    .home__scroll-hint {
+        bottom: 16px;
+    }
+}
+
+/* ── Small mobile: ≤ 400px ── */
+@media (max-width: 400px) {
+    .home__hero {
+        padding: 80px 12px 40px;
+    }
+
+    /* At very small widths, wrap stats into 2×2 grid */
+    .home__stats {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px 0;
+    }
+
+    .home__stat-sep:nth-child(4) {
+        /* hide the third divider so the grid breaks cleanly */
+        display: none;
+    }
+
+    .home__stat {
+        flex: 0 0 50%;
+        text-align: center;
+        padding: 0;
+    }
+
+    .home__stat-sep {
+        display: none; /* replaced by gap */
+    }
+
+    .home__stat-val {
+        font-size: 22px;
+    }
+
+    .home__stat-lbl {
+        font-size: 10px;
+    }
+}

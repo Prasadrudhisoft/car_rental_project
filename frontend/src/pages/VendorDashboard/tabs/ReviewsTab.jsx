@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import DataTable from '../../../components/common/DataTable';
 import { SectionCard } from '../VendorShared';
-import ReviewDetailModal from '../modals/ReviewDetailModal';
+// import ReviewDetailModal from '../modals/ReviewDetailModal';
 import { fetchVendorReviews } from '../../../services/api';
 import { fmtDate } from '../vendorConstants';
 
@@ -67,9 +67,9 @@ export default function ReviewsTab({ userId, profile, initialReviews, initialOrd
 
     return (
         <div className="vd-section">
-            {selectedReview && (
+            {/* {selectedReview && (
                 <ReviewDetailModal review={selectedReview} onClose={() => setSelectedReview(null)} />
-            )}
+            )} */}
 
             {/* Summary card */}
             <SectionCard

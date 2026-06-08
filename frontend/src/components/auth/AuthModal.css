@@ -563,3 +563,231 @@
         max-height: 96vh;
     }
 }
+
+
+/* ════════════════════════════════════════════════
+   AuthModal — Responsive overrides
+   Append to the bottom of AuthModal.css
+   ════════════════════════════════════════════════ */
+
+/* ── Fix: panel switch text is invisible on dark bg ── */
+.am-panel__switch {
+    color: rgba(255, 255, 255, 0.55);
+}
+.am-panel__switch:hover {
+    color: #E8A020;
+}
+
+/* ── Mid-range: 700px–860px — panel gets narrower before collapsing ── */
+@media (max-width: 860px) and (min-width: 701px) {
+    .am-modal {
+        grid-template-columns: 260px 1fr;
+    }
+
+    .am-panel {
+        padding: 28px 22px;
+    }
+
+    .am-panel__title {
+        font-size: 24px;
+    }
+
+    .am-panel__pills {
+        gap: 6px;
+    }
+
+    .am-panel__pill {
+        font-size: 12px;
+        padding: 7px 10px;
+    }
+}
+
+/* ── Mobile: ≤ 700px — stacked layout ── */
+@media (max-width: 700px) {
+    .am-backdrop {
+        padding: 16px;
+        align-items: center;
+    }
+
+    .am-modal {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        max-height: 92vh;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    /* Brand panel: compact horizontal strip */
+    .am-panel {
+        padding: 20px 20px 16px;
+        flex-shrink: 0;
+    }
+
+    .am-panel__logo {
+        margin-bottom: 12px;
+    }
+
+    .am-panel__logo-icon {
+        width: 30px;
+        height: 30px;
+        font-size: 15px;
+    }
+
+    .am-panel__logo-text {
+        font-size: 16px;
+    }
+
+    .am-panel__copy {
+        flex: unset;
+    }
+
+    .am-panel__title {
+        font-size: 20px;
+        margin-bottom: 6px;
+    }
+
+    /* Hide long sub-text — takes too much vertical space on mobile */
+    .am-panel__sub {
+        display: none;
+    }
+
+    /* Pills: horizontal scrollable row */
+    .am-panel__pills {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 6px;
+        margin: 12px 0;
+        padding-bottom: 2px;
+    }
+
+    .am-panel__pills::-webkit-scrollbar {
+        display: none;
+    }
+
+    .am-panel__pill {
+        flex-shrink: 0;
+        padding: 6px 10px;
+        font-size: 12px;
+        border-radius: 8px;
+    }
+
+    /* Switch link sits flush below pills */
+    .am-panel__switch {
+        font-size: 11.5px;
+        margin-top: 0;
+    }
+
+    /* Form panel: scrollable, takes remaining height */
+    .am-form-panel {
+        padding: 20px 20px 24px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        flex: 1;
+        min-height: 0;           /* required for overflow-y to work inside grid */
+    }
+
+    .am-close {
+        top: 12px;
+        right: 12px;
+    }
+
+    .am-tabs {
+        margin-bottom: 16px;
+    }
+
+    .am-tab {
+        font-size: 12px;
+        padding: 6px 8px;
+    }
+
+    .am-form-header {
+        margin-bottom: 14px;
+    }
+
+    .am-form-title {
+        font-size: 16px;
+    }
+
+    .am-form {
+        gap: 8px;
+    }
+
+    .am-field__wrap {
+        padding: 8px 0;
+    }
+
+    .am-submit {
+        padding: 12px 20px;
+        font-size: 13.5px;
+    }
+}
+
+/* ── Small mobile: ≤ 420px — bottom sheet ── */
+@media (max-width: 420px) {
+    .am-backdrop {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    .am-modal {
+        border-radius: 20px 20px 0 0;
+        max-height: 96vh;
+        width: 100%;
+    }
+
+    .am-panel {
+        padding: 16px 16px 12px;
+    }
+
+    .am-form-panel {
+        padding: 16px 16px 32px;  /* 32px bottom for home-indicator clearance */
+    }
+
+    .am-panel__title {
+        font-size: 18px;
+    }
+}
+
+/* ── Landscape mobile: short viewport ── */
+@media (max-height: 600px) and (max-width: 900px) {
+    .am-modal {
+        grid-template-columns: 220px 1fr;  /* side-by-side again in landscape */
+        grid-template-rows: unset;
+        max-height: 98vh;
+    }
+
+    /* Re-enable the side panel layout for landscape */
+    .am-panel {
+        padding: 20px 16px;
+        overflow-y: auto;
+    }
+
+    .am-panel__logo {
+        margin-bottom: 16px;
+    }
+
+    .am-panel__pills {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        overflow-x: unset;
+        gap: 5px;
+        margin: 12px 0;
+    }
+
+    .am-panel__pill {
+        flex-shrink: unset;
+    }
+
+    .am-panel__sub {
+        display: block;
+        font-size: 12px;
+    }
+
+    .am-form-panel {
+        padding: 20px 20px 16px;
+        overflow-y: auto;
+    }
+}
