@@ -1816,6 +1816,8 @@ div:hover>.vd-photo-hover-overlay {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     animation: vd-modal-slide .22s cubic-bezier(.16, 1, .3, 1);
 }
 
@@ -2089,11 +2091,15 @@ div:hover>.vd-photo-hover-overlay {
     .vd-modal-overlay {
         padding: 12px 8px 24px;
         align-items: flex-start;
+        overflow-y: hidden;
     }
 
     .vd-modal {
         border-radius: 14px;
         max-width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .vd-modal__head {
@@ -2343,6 +2349,7 @@ div:hover>.vd-photo-hover-overlay {
     .vd-detail-panel {
         padding: 10px 12px;
         gap: 10px;
+        padding-bottom: env(safe-area-inset-bottom, 20px);
     }
 
     .vd-info-pair {
@@ -2375,6 +2382,8 @@ div:hover>.vd-photo-hover-overlay {
     .vd-modal {
         border-radius: 18px 18px 0 0;
         max-height: 92vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .vd-vehicle-card__icon {
@@ -2469,6 +2478,8 @@ div:hover>.vd-photo-hover-overlay {
     .vd-modal {
         border-radius: 12px;
         max-height: 96vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .vd__hero-banner {
@@ -2488,4 +2499,63 @@ div:hover>.vd-photo-hover-overlay {
     .vd__kpi {
         flex-shrink: 0;
     }
+}
+
+/* ── Amount display (right-aligned currency on booking cards) ─── */
+
+.vd-mob-booking-card__amount {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--vacc);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+
+/* ── Inline mini flags (Paid / Signed) ──────────────────────────── */
+
+.vd-mob-flag {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.vd-mob-flag--ok {
+    background: var(--vgrn-l);
+    color: #059669;
+    border: 1px solid #6EE7B7;
+}
+
+/* ── Search input: vendor token overrides ───────────────────────── */
+
+
+
+.vd-mob-search:focus {
+    border-color: var(--vacc);
+    box-shadow: 0 0 0 3px var(--vacc-l);
+}
+
+/* ── Filter pills: vendor teal instead of customer teal ─────────── */
+
+
+.vd-mob-pill:hover {
+    border-color: var(--vacc);
+    color: var(--vacc-d);
+    background: var(--vacc-l);
+}
+
+.vd-mob-pill--active {
+    background: var(--vacc) !important;
+    border-color: var(--vacc-d) !important;
+    color: #fff !important;
+}
+
+/* ── Empty state: reuse vd-empty inside mobile list ─────────────── */
+
+.cd-mob-bookings .vd-empty {
+    border-radius: 12px;
+    margin: 0;
 }

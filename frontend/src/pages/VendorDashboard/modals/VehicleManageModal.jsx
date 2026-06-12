@@ -2,6 +2,10 @@
 // VehicleManageModal.jsx
 // Full vehicle management modal: pipeline progress bar, docs sub-tab,
 // photos sub-tab, availability sub-tab, status toggle.
+//
+// Fix: Documents tab — image files now open in PhotoLightbox (same-page modal)
+// instead of a new browser tab, consistent with the Photos sub-tab behaviour.
+// PDF and non-image files still open in a new tab (no lightbox for those).
 // ─────────────────────────────────────────────────────────────────────────────
 import React, { useState } from 'react';
 import { PhotoLightbox } from '../VendorMediaComponents';
@@ -9,6 +13,10 @@ import { VEHICLE_STATUS_CLR, DOC_TYPES, ANGLES } from '../vendorConstants';
 import { uploadVehicleDoc, uploadVehiclePhoto } from '../../../services/api';
 
 const PIPELINE = ['PENDING_DOCS', 'DOCS_SUBMITTED', 'ADMIN_APPROVED', 'CERTIFIED', 'LIVE'];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const isImageUrl = url =>
+    url && /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url);
 
 export default function VehicleManageModal({
     vehicle: v,
@@ -30,10 +38,32 @@ export default function VehicleManageModal({
     const [subTab,      setSubTab]      = useState('docs');
     const [lightboxIdx, setLightboxIdx] = useState(null);
 
-    const canToggle         = ['LIVE', 'INACTIVE', 'CERTIFIED'].includes(v.status);
-    const photoCount        = (v.photos || []).length;
+    // Lightbox source: 'photos' | 'doc'
+    const [lightboxSource, setLightboxSource] = useState('photos');
+    // For doc lightbox we build a single-item array on the fly
+    const [docLightboxUrl,  setDocLightboxUrl]  = useState(null);
+
+    const canToggle          = ['LIVE', 'INACTIVE', 'CERTIFIED'].includes(v.status);
+    const photoCount         = (v.photos || []).length;
     const currentPipelineIdx = PIPELINE.indexOf(v.status);
-    const vc                = VEHICLE_STATUS_CLR[v.status] || { bg: '#F3F4F6', color: '#6B7280' };
+    const vc                 = VEHICLE_STATUS_CLR[v.status] || { bg: '#F3F4F6', color: '#6B7280' };
+
+    // ── Open doc in lightbox (images) or new tab (PDFs / other) ──────────────
+    const openDoc = (url) => {
+        if (isImageUrl(url)) {
+            setDocLightboxUrl(url);
+            setLightboxSource('doc');
+            setLightboxIdx(0);
+        } else {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+    };
+
+    const closeLightbox = () => {
+        setLightboxIdx(null);
+        setLightboxSource('photos');
+        setDocLightboxUrl(null);
+    };
 
     // ── Doc upload ────────────────────────────────────────────────────────────
     const handleDocUpload = async (docType) => {
@@ -67,21 +97,49 @@ export default function VehicleManageModal({
         }
     };
 
+    // ── Lightbox photos array (vehicle photos or single doc image) ────────────
+    const lightboxPhotos = lightboxSource === 'doc' && docLightboxUrl
+        ? [{ image: docLightboxUrl, angle: 'Document' }]
+        : (v.photos || []);
+
     return (
         <div className="vd-modal-overlay" onClick={onClose}>
             <div className="vd-modal" onClick={e => e.stopPropagation()}>
 
+                {/* Shared lightbox — used by both Photos and Documents tabs */}
+                {lightboxIdx !== null && lightboxPhotos.length > 0 && (
+                    <PhotoLightbox
+                        photos={lightboxPhotos}
+                        initialIndex={lightboxIdx}
+                        onClose={closeLightbox}
+                    />
+                )}
+
                 {/* Header */}
                 <div className="vd-modal__head">
                     <div>
-                        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>{v.year} {v.make} {v.model}</h2>
+                        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>
+                            {v.year} {v.make} {v.model}
+                        </h2>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-                            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 700, color: 'var(--teal-dark)', background: 'var(--teal-light)', padding: '2px 8px', borderRadius: 4 }}>
+                            <span style={{
+                                fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 700,
+                                color: 'var(--teal-dark)', background: 'var(--teal-light)',
+                                padding: '2px 8px', borderRadius: 4,
+                            }}>
                                 {v.plate_number}
                             </span>
-                            <span className="vd-badge" style={{ background: vc.bg, color: vc.color }}>{v.status?.replace(/_/g, ' ')}</span>
-                            {v.is_certified && <span className="vd-badge" style={{ background: '#D1FAE5', color: '#059669', border: '1px solid #6EE7B7' }}>✅ Certified</span>}
-                            <span style={{ fontSize: 12, color: 'var(--vm)' }}>₹{parseInt(v.daily_rate || 0).toLocaleString('en-IN')}/day · {v.segment}</span>
+                            <span className="vd-badge" style={{ background: vc.bg, color: vc.color }}>
+                                {v.status?.replace(/_/g, ' ')}
+                            </span>
+                            {v.is_certified && (
+                                <span className="vd-badge" style={{ background: '#D1FAE5', color: '#059669', border: '1px solid #6EE7B7' }}>
+                                    ✅ Certified
+                                </span>
+                            )}
+                            <span style={{ fontSize: 12, color: 'var(--vm)' }}>
+                                ₹{parseInt(v.daily_rate || 0).toLocaleString('en-IN')}/day · {v.segment}
+                            </span>
                         </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -98,7 +156,11 @@ export default function VehicleManageModal({
                 </div>
 
                 {/* Pipeline progress bar */}
-                <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--vbdr)', background: '#FAFBFC', display: 'flex', alignItems: 'center', gap: 0, overflowX: 'auto' }}>
+                <div style={{
+                    padding: '10px 20px', borderBottom: '1px solid var(--vbdr)',
+                    background: '#FAFBFC', display: 'flex', alignItems: 'center',
+                    gap: 0, overflowX: 'auto',
+                }}>
                     {PIPELINE.map((s, i) => {
                         const done   = i < currentPipelineIdx;
                         const active = i === currentPipelineIdx;
@@ -116,12 +178,20 @@ export default function VehicleManageModal({
                                     }}>
                                         {done ? '✓' : i + 1}
                                     </div>
-                                    <span style={{ fontSize: 8, fontWeight: active ? 800 : 600, color: active ? 'var(--teal-dark)' : 'var(--vm)', textTransform: 'uppercase', letterSpacing: '.3px', whiteSpace: 'nowrap' }}>
+                                    <span style={{
+                                        fontSize: 8, fontWeight: active ? 800 : 600,
+                                        color: active ? 'var(--teal-dark)' : 'var(--vm)',
+                                        textTransform: 'uppercase', letterSpacing: '.3px', whiteSpace: 'nowrap',
+                                    }}>
                                         {s.replace(/_/g, ' ')}
                                     </span>
                                 </div>
                                 {i < PIPELINE.length - 1 && (
-                                    <div style={{ flex: 1, height: 2, background: done ? 'var(--teal-primary)' : 'var(--vbdr2)', margin: '0 4px', marginBottom: 18, minWidth: 16 }} />
+                                    <div style={{
+                                        flex: 1, height: 2,
+                                        background: done ? 'var(--teal-primary)' : 'var(--vbdr2)',
+                                        margin: '0 4px', marginBottom: 18, minWidth: 16,
+                                    }} />
                                 )}
                             </React.Fragment>
                         );
@@ -129,7 +199,11 @@ export default function VehicleManageModal({
                 </div>
 
                 {/* Sub-tabs */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px', borderBottom: '1px solid var(--vbdr)', background: 'var(--vs)' }}>
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '12px 20px', borderBottom: '1px solid var(--vbdr)',
+                    background: 'var(--vs)',
+                }}>
                     {[['docs', '📄 Documents'], ['photos', '📷 Photos'], ['availability', '📅 Availability']].map(([id, label]) => (
                         <button
                             key={id}
@@ -147,25 +221,93 @@ export default function VehicleManageModal({
                     {/* ── Documents ── */}
                     {subTab === 'docs' && (
                         <div>
-                            <p className="vd-hint">Required: RC, Insurance, PUC — all must be admin-approved before LIVE.</p>
+                            <p className="vd-hint">
+                                Required: RC, Insurance, PUC — all must be admin-approved before LIVE.
+                            </p>
                             <div className="vd-doc-grid">
                                 {DOC_TYPES.map(dt => {
                                     const existing = (v.documents || []).find(d => d.doc_type === dt);
                                     const key      = `${v.id}-${dt}`;
-                                    const dc       = existing?.status === 'approved' ? { bg: '#D1FAE5', color: '#059669' }
-                                                   : existing?.status === 'rejected' ? { bg: '#FEE2E2', color: '#EF4444' }
-                                                   :                                   { bg: '#FEF3C7', color: '#D97706' };
+                                    const dc       = existing?.status === 'approved'
+                                        ? { bg: '#D1FAE5', color: '#059669' }
+                                        : existing?.status === 'rejected'
+                                            ? { bg: '#FEE2E2', color: '#EF4444' }
+                                            : { bg: '#FEF3C7', color: '#D97706' };
+
+                                    const fileUrl     = existing?.file;
+                                    const isImg       = isImageUrl(fileUrl);
+
                                     return (
                                         <div key={dt} className="vd-doc-card">
                                             <div className="vd-doc-card__head">
-                                                <span className="vd-doc-card__type">{dt.replace(/_/g, ' ').toUpperCase()}</span>
+                                                <span className="vd-doc-card__type">
+                                                    {dt.replace(/_/g, ' ').toUpperCase()}
+                                                </span>
                                                 {existing && (
-                                                    <span className="vd-badge" style={{ background: dc.bg, color: dc.color, fontSize: 9 }}>{existing.status}</span>
+                                                    <span className="vd-badge" style={{ background: dc.bg, color: dc.color, fontSize: 9 }}>
+                                                        {existing.status}
+                                                    </span>
                                                 )}
                                             </div>
-                                            {existing?.file && (
-                                                <a href={existing.file} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--vacc)', marginBottom: 4, display: 'inline-block' }}>View</a>
+
+                                            {/* ── Document preview / view link ── */}
+                                            {fileUrl && (
+                                                isImg ? (
+                                                    /* Image → thumbnail that opens lightbox */
+                                                    <div
+                                                        onClick={() => openDoc(fileUrl)}
+                                                        style={{
+                                                            cursor: 'pointer',
+                                                            borderRadius: 6,
+                                                            overflow: 'hidden',
+                                                            border: '1px solid var(--vbdr)',
+                                                            display: 'inline-block',
+                                                            position: 'relative',
+                                                        }}
+                                                        title="Click to enlarge"
+                                                    >
+                                                        <img
+                                                            src={fileUrl}
+                                                            alt={dt}
+                                                            style={{
+                                                                width: '100%', height: 70,
+                                                                objectFit: 'cover', display: 'block',
+                                                            }}
+                                                        />
+                                                        <div style={{
+                                                            position: 'absolute', inset: 0,
+                                                            background: 'rgba(0,0,0,0)',
+                                                            display: 'flex', alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            fontSize: 11, color: '#fff',
+                                                            fontWeight: 600,
+                                                            transition: 'background .15s',
+                                                        }}
+                                                            className="vd-photo-hover-overlay"
+                                                        >
+                                                            🔍 View
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    /* PDF / other → link that opens new tab */
+                                                    <button
+                                                        onClick={() => openDoc(fileUrl)}
+                                                        style={{
+                                                            display: 'inline-flex', alignItems: 'center',
+                                                            gap: 5, fontSize: 11, color: 'var(--vacc)',
+                                                            background: 'none', border: 'none',
+                                                            cursor: 'pointer', padding: '2px 0',
+                                                            fontFamily: 'Inter, sans-serif',
+                                                            fontWeight: 600,
+                                                            marginBottom: 4,
+                                                            textDecoration: 'underline',
+                                                        }}
+                                                    >
+                                                        📄 View PDF
+                                                    </button>
+                                                )
                                             )}
+
                                             <input
                                                 type="file"
                                                 accept=".pdf,.jpg,.png"
@@ -185,9 +327,6 @@ export default function VehicleManageModal({
                     {/* ── Photos ── */}
                     {subTab === 'photos' && (
                         <div>
-                            {lightboxIdx !== null && (v.photos || []).length > 0 && (
-                                <PhotoLightbox photos={v.photos} initialIndex={lightboxIdx} onClose={() => setLightboxIdx(null)} />
-                            )}
                             <div className="vd-photo-status">
                                 <span className={`vd-photo-count ${photoCount >= 10 ? 'ok' : 'warn'}`}>
                                     {photoCount}/10 {photoCount >= 10 ? '✓ Complete' : '(min 10 required)'}
@@ -195,25 +334,49 @@ export default function VehicleManageModal({
                             </div>
                             <div className="vd-photo-upload-bar">
                                 <div style={{ minWidth: 120 }}>
-                                    <label style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--vm)', display: 'block', marginBottom: 4 }}>Angle</label>
-                                    <select className="vd-input vd-select" value={photoUpload.angle} onChange={e => setPhotoUpload(p => ({ ...p, angle: e.target.value }))}>
+                                    <label style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--vm)', display: 'block', marginBottom: 4 }}>
+                                        Angle
+                                    </label>
+                                    <select
+                                        className="vd-input vd-select"
+                                        value={photoUpload.angle}
+                                        onChange={e => setPhotoUpload(p => ({ ...p, angle: e.target.value }))}
+                                    >
                                         {ANGLES.map(a => <option key={a} value={a}>{a}</option>)}
                                     </select>
                                 </div>
                                 <label className="vd-cover-check">
-                                    <input type="checkbox" checked={photoUpload.is_cover} onChange={e => setPhotoUpload(p => ({ ...p, is_cover: e.target.checked }))} />
+                                    <input
+                                        type="checkbox"
+                                        checked={photoUpload.is_cover}
+                                        onChange={e => setPhotoUpload(p => ({ ...p, is_cover: e.target.checked }))}
+                                    />
                                     Cover photo
                                 </label>
                                 <div>
-                                    <label style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--vm)', display: 'block', marginBottom: 4 }}>Photo</label>
-                                    <input type="file" accept="image/*" className="vd-file-input" onChange={e => setPhotoUpload(p => ({ ...p, file: e.target.files[0] }))} />
+                                    <label style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--vm)', display: 'block', marginBottom: 4 }}>
+                                        Photo
+                                    </label>
+                                    <input
+                                        type="file" accept="image/*" className="vd-file-input"
+                                        onChange={e => setPhotoUpload(p => ({ ...p, file: e.target.files[0] }))}
+                                    />
                                 </div>
                                 <button className="vd-upload-btn" onClick={handlePhotoUpload}>Upload</button>
                             </div>
                             {(v.photos || []).length > 0 && (
                                 <div className="vd-photos-grid">
                                     {v.photos.map((ph, idx) => (
-                                        <div key={ph.id} className="vd-photo-item" onClick={() => setLightboxIdx(idx)} style={{ cursor: 'pointer' }}>
+                                        <div
+                                            key={ph.id}
+                                            className="vd-photo-item"
+                                            onClick={() => {
+                                                setLightboxSource('photos');
+                                                setDocLightboxUrl(null);
+                                                setLightboxIdx(idx);
+                                            }}
+                                            style={{ cursor: 'pointer' }}
+                                        >
                                             <img src={ph.image} alt={ph.angle} />
                                             <div className="vd-photo-item__meta">
                                                 {ph.angle}
@@ -230,7 +393,9 @@ export default function VehicleManageModal({
                     {subTab === 'availability' && (
                         <div>
                             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-                                <button className="vd-ghost-btn" onClick={() => onLoadAvail(v.id)}>Load This Month</button>
+                                <button className="vd-ghost-btn" onClick={() => onLoadAvail(v.id)}>
+                                    Load This Month
+                                </button>
                             </div>
                             {availData && (
                                 <>
@@ -254,7 +419,9 @@ export default function VehicleManageModal({
                                             value={blockInput}
                                             onChange={e => onBlockInputChange(e.target.value)}
                                         />
-                                        <button className="vd-upload-btn" onClick={() => onBlock(v.id)}>Block Dates</button>
+                                        <button className="vd-upload-btn" onClick={() => onBlock(v.id)}>
+                                            Block Dates
+                                        </button>
                                     </div>
                                 </>
                             )}

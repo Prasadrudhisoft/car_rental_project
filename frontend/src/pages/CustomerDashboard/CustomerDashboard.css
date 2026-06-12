@@ -2552,3 +2552,576 @@
         font-size: 11px;
     }
 }
+
+/* ── Visibility toggle ──────────────────────────────────────────── */
+
+/* Desktop: show table, hide card list */
+.cd-bookings-desktop { display: block; }
+.cd-bookings-mobile  { display: none;  }
+
+/* Mobile (≤768px): hide table, show card list */
+@media (max-width: 768px) {
+    .cd-bookings-desktop { display: none;  }
+    .cd-bookings-mobile  { display: block; }
+}
+
+/* ── Mobile bookings shell ──────────────────────────────────────── */
+
+.cd-mob-bookings {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ── Search box ─────────────────────────────────────────────────── */
+
+.cd-mob-bookings__search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.cd-mob-bookings__search-icon {
+    position: absolute;
+    left: 11px;
+    width: 15px;
+    height: 15px;
+    color: var(--cd-muted);
+    pointer-events: none;
+    flex-shrink: 0;
+}
+
+.cd-mob-bookings__search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 14px 10px 36px;
+    background: var(--cd-surf);
+    border: 1px solid var(--cd-bdr2);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    color: var(--cd-txt);
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    -webkit-appearance: none;
+}
+
+.cd-mob-bookings__search:focus {
+    border-color: var(--cd-acc);
+    box-shadow: 0 0 0 3px var(--cd-acc-l);
+}
+
+.cd-mob-bookings__search::placeholder {
+    color: var(--cd-muted);
+}
+
+/* hide the native search clear button — we don't need it */
+.cd-mob-bookings__search::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+}
+
+/* ── Status filter pills ────────────────────────────────────────── */
+
+.cd-mob-bookings__pills {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;           /* stop border clipping */
+}
+
+.cd-mob-bookings__pills::-webkit-scrollbar {
+    display: none;
+}
+
+.cd-mob-bookings__pill {
+    flex-shrink: 0;
+    padding: 6px 13px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    border: 1px solid var(--cd-bdr2);
+    background: var(--cd-surf);
+    color: var(--cd-txt2);
+    cursor: pointer;
+    transition: background .13s, border-color .13s, color .13s;
+    white-space: nowrap;
+}
+
+.cd-mob-bookings__pill:hover {
+    border-color: var(--cd-acc);
+    color: var(--cd-acc-d);
+    background: var(--cd-acc-l);
+}
+
+.cd-mob-bookings__pill--active {
+    background: var(--cd-acc);
+    border-color: var(--cd-acc-d);
+    color: #fff;
+}
+
+/* ── Result count ───────────────────────────────────────────────── */
+
+.cd-mob-bookings__count {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--cd-muted);
+    margin: 0;
+    padding-left: 2px;
+}
+
+/* ── Card list ──────────────────────────────────────────────────── */
+
+.cd-mob-bookings__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ── Individual booking card ────────────────────────────────────── */
+
+.cd-mob-booking-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    background: var(--cd-surf);
+    border: 1px solid var(--cd-bdr);
+    border-radius: 14px;
+    padding: 14px 16px;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+    transition: border-color .15s, box-shadow .15s;
+    font-family: 'Inter', sans-serif;
+    /* reset button defaults */
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+}
+
+.cd-mob-booking-card:hover,
+.cd-mob-booking-card:focus-visible {
+    border-color: rgba(13, 184, 158, .4);
+    box-shadow: 0 0 0 3px var(--cd-acc-l);
+}
+
+.cd-mob-booking-card:active {
+    transform: scale(0.99);
+    background: var(--cd-surf2);
+}
+
+/* Row helpers */
+
+.cd-mob-booking-card__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.cd-mob-booking-card__row--head {
+    justify-content: space-between;
+    flex-wrap: nowrap;
+}
+
+.cd-mob-booking-card__row--footer {
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    margin-top: 2px;
+}
+
+/* Ref — monospaced accent */
+
+.cd-mob-booking-card__ref {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--cd-acc);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Vehicle name */
+
+.cd-mob-booking-card__vehicle {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--cd-txt);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Plate number pill */
+
+.cd-mob-booking-card__plate {
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--cd-txt2);
+    background: var(--cd-surf2);
+    border: 1px solid var(--cd-bdr);
+    border-radius: 4px;
+    padding: 2px 7px;
+    letter-spacing: .3px;
+}
+
+/* Date range */
+
+.cd-mob-booking-card__dates {
+    font-size: 12px;
+    color: var(--cd-txt2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Chevron affordance */
+
+.cd-mob-booking-card__chevron {
+    font-size: 18px;
+    color: var(--cd-muted);
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+/* ── Small phone tweaks (≤480px) ────────────────────────────────── */
+
+@media (max-width: 480px) {
+    .cd-mob-booking-card {
+        padding: 12px 14px;
+        border-radius: 12px;
+    }
+
+    .cd-mob-booking-card__ref {
+        font-size: 12px;
+    }
+
+    .cd-mob-booking-card__vehicle {
+        font-size: 13px;
+    }
+
+    .cd-mob-booking-card__dates {
+        font-size: 11px;
+    }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE BOOKINGS — responsive visibility + card styles
+   Append these rules to CustomerDashboard.css
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Visibility toggle ──────────────────────────────────────────── */
+
+/* Desktop: show table, hide card list */
+.cd-bookings-desktop { display: block; }
+.cd-bookings-mobile  { display: none;  }
+
+/* Mobile (≤768px): hide table, show card list */
+@media (max-width: 768px) {
+    .cd-bookings-desktop { display: none;  }
+    .cd-bookings-mobile  { display: block; }
+}
+
+/* ── Mobile bookings shell ──────────────────────────────────────── */
+
+.cd-mob-bookings {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* ── Search box ─────────────────────────────────────────────────── */
+
+.cd-mob-bookings__search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.cd-mob-bookings__search-icon {
+    position: absolute;
+    left: 11px;
+    width: 15px;
+    height: 15px;
+    color: var(--cd-muted);
+    pointer-events: none;
+    flex-shrink: 0;
+}
+
+.cd-mob-bookings__search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 14px 10px 36px;
+    background: var(--cd-surf);
+    border: 1px solid var(--cd-bdr2);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    color: var(--cd-txt);
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    -webkit-appearance: none;
+}
+
+.cd-mob-bookings__search:focus {
+    border-color: var(--cd-acc);
+    box-shadow: 0 0 0 3px var(--cd-acc-l);
+}
+
+.cd-mob-bookings__search::placeholder {
+    color: var(--cd-muted);
+}
+
+/* hide the native search clear button — we don't need it */
+.cd-mob-bookings__search::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+}
+
+/* ── Status filter pills ────────────────────────────────────────── */
+
+.cd-mob-bookings__pills {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;           /* stop border clipping */
+}
+
+.cd-mob-bookings__pills::-webkit-scrollbar {
+    display: none;
+}
+
+.cd-mob-bookings__pill {
+    flex-shrink: 0;
+    padding: 6px 13px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    border: 1px solid var(--cd-bdr2);
+    background: var(--cd-surf);
+    color: var(--cd-txt2);
+    cursor: pointer;
+    transition: background .13s, border-color .13s, color .13s;
+    white-space: nowrap;
+}
+
+.cd-mob-bookings__pill:hover {
+    border-color: var(--cd-acc);
+    color: var(--cd-acc-d);
+    background: var(--cd-acc-l);
+}
+
+.cd-mob-bookings__pill--active {
+    background: var(--cd-acc);
+    border-color: var(--cd-acc-d);
+    color: #fff;
+}
+
+/* ── Result count ───────────────────────────────────────────────── */
+
+.cd-mob-bookings__count {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--cd-muted);
+    margin: 0;
+    padding-left: 2px;
+}
+
+/* ── Card list ──────────────────────────────────────────────────── */
+
+.cd-mob-bookings__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ── Individual booking card ────────────────────────────────────── */
+
+.cd-mob-booking-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    background: var(--cd-surf);
+    border: 1px solid var(--cd-bdr);
+    border-radius: 14px;
+    padding: 14px 16px;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+    transition: border-color .15s, box-shadow .15s;
+    font-family: 'Inter', sans-serif;
+    /* reset button defaults */
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+}
+
+.cd-mob-booking-card:hover,
+.cd-mob-booking-card:focus-visible {
+    border-color: rgba(13, 184, 158, .4);
+    box-shadow: 0 0 0 3px var(--cd-acc-l);
+}
+
+.cd-mob-booking-card:active {
+    transform: scale(0.99);
+    background: var(--cd-surf2);
+}
+
+/* Row helpers */
+
+.cd-mob-booking-card__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.cd-mob-booking-card__row--head {
+    justify-content: space-between;
+    flex-wrap: nowrap;
+}
+
+.cd-mob-booking-card__row--footer {
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    margin-top: 2px;
+}
+
+/* Ref — monospaced accent */
+
+.cd-mob-booking-card__ref {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--cd-acc);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Vehicle name */
+
+.cd-mob-booking-card__vehicle {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--cd-txt);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* Plate number pill */
+
+.cd-mob-booking-card__plate {
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--cd-txt2);
+    background: var(--cd-surf2);
+    border: 1px solid var(--cd-bdr);
+    border-radius: 4px;
+    padding: 2px 7px;
+    letter-spacing: .3px;
+}
+
+/* Date range */
+
+.cd-mob-booking-card__dates {
+    font-size: 12px;
+    color: var(--cd-txt2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Chevron affordance */
+
+.cd-mob-booking-card__chevron {
+    font-size: 18px;
+    color: var(--cd-muted);
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+/* ── Small phone tweaks (≤480px) ────────────────────────────────── */
+
+@media (max-width: 480px) {
+    .cd-mob-booking-card {
+        padding: 12px 14px;
+        border-radius: 12px;
+    }
+
+    .cd-mob-booking-card__ref {
+        font-size: 12px;
+    }
+
+    .cd-mob-booking-card__vehicle {
+        font-size: 13px;
+    }
+
+    .cd-mob-booking-card__dates {
+        font-size: 11px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE REVIEWS — badge + rating row additions
+   (these extend the shared mobile card styles above)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* "Write ★" badge on pending review cards */
+.cd-mob-review-write-badge {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: #FEF3C7;
+    color: #D97706;
+    border: 1px solid #FCD34D;
+    white-space: nowrap;
+    letter-spacing: .2px;
+}
+
+/* "✓ Submitted" badge on my-reviews cards */
+.cd-mob-review-submitted-badge {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: #D1FAE5;
+    color: #059669;
+    border: 1px solid #6EE7B7;
+    white-space: nowrap;
+}
+
+/* Inline label + stars pairing */
+.cd-mob-review-rating-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.cd-mob-review-rating-lbl {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--cd-muted);
+}
