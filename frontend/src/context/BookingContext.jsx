@@ -10,6 +10,7 @@ const initialState = {
     returnDate: null,
     pickupTime: '',
     returnTime: '',
+    selectedSegment: null,       // ← NEW: set by SegmentSelectPage (Step 1)
     selectedModel: null,
     selectedVehicle: null,
     pickupLocation: null,

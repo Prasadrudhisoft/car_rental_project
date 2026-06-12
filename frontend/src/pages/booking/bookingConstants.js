@@ -1,7 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // bookingConstants.js
-// All constants, lookup maps, and pure helpers shared across the booking flow.
-// Import from here — never re-define in individual pages.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Segment icons ─────────────────────────────────────────────────────────────
@@ -30,7 +28,7 @@ export const FUEL_COLOR = {
     cng:      '#0DB89E',
 };
 
-// ── City map centres (Leaflet default view) ───────────────────────────────────
+// ── City map centres ─────────────────────────────────────────────────────────
 export const CITY_CENTERS = {
     Nashik:      [20.006,  73.78],
     Mumbai:      [19.076,  72.877],
@@ -39,7 +37,6 @@ export const CITY_CENTERS = {
     Aurangabad:  [19.877,  75.343],
 };
 
-/** Returns [lat, lng] centre for a city name, falling back to Nashik. */
 export const getCityCenter = (cityName) =>
     CITY_CENTERS[cityName] || [20.0, 73.78];
 
@@ -54,20 +51,12 @@ export const ADDON_CATALOG = [
 ];
 
 // ── Nights calculator ─────────────────────────────────────────────────────────
-/**
- * Returns the number of rental days between two ISO date strings.
- * Always returns at least 1.
- */
 export const calcNights = (pickupDate, returnDate) =>
     Math.max(1, Math.round(
         (new Date(returnDate) - new Date(pickupDate)) / 86400000
     ));
 
-// ── Leaflet default icon fix (call once per page that uses Leaflet) ───────────
-/**
- * Fixes the missing default marker icons when Leaflet is bundled with Webpack.
- * Call this at the top of any page that uses react-leaflet.
- */
+// ── Leaflet icon fix ──────────────────────────────────────────────────────────
 export const fixLeafletIcons = (L) => {
     delete L.Icon.Default.prototype._getIconUrl;
     L.Icon.Default.mergeOptions({
@@ -77,11 +66,6 @@ export const fixLeafletIcons = (L) => {
     });
 };
 
-/**
- * Creates a Leaflet DivIcon map pin.
- * @param {boolean} selected  - whether to apply the selected style class
- * @param {string}  emoji     - emoji to display inside the pin (default 📍)
- */
 export const makePinIcon = (L, selected, emoji = '📍') =>
     new L.DivIcon({
         className:   '',
@@ -92,10 +76,6 @@ export const makePinIcon = (L, selected, emoji = '📍') =>
     });
 
 // ── Vehicle coordinate helper ─────────────────────────────────────────────────
-/**
- * Returns [lat, lng] for a vehicle, falling back to a spread layout around
- * the city centre when the vendor has no stored coordinates.
- */
 export const getVehicleCoords = (vehicle, cityCenter, idx) => {
     if (vehicle.vendor_profile?.latitude && vehicle.vendor_profile?.longitude) {
         return [
@@ -111,11 +91,7 @@ export const getVehicleCoords = (vehicle, cityCenter, idx) => {
     ];
 };
 
-// ── Model grouping helper ─────────────────────────────────────────────────────
-/**
- * Groups a flat list of vehicle objects by make+model into summary objects
- * used by CarModelSelectPage.
- */
+// ── Model grouping helper (kept for backwards-compat; no longer used in Step 1) ──
 export function groupByModel(vehicles) {
     const map = {};
     vehicles.forEach(v => {

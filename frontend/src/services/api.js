@@ -534,5 +534,8 @@ export const getAssignmentHistory = (vendorId = null) =>
 export const getMyAssignedVendors = () =>
     api.get('/users/admin/my-vendors/');
 
+export const getAvailableSegments = (params) =>
+  api.get('/vehicles/segments/', { params });
+ 
 
 export default api;

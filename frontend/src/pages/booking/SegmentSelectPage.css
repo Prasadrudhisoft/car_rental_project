@@ -1,0 +1,315 @@
+/* ═══════════════════════════════════════════════
+   SegmentSelectPage.css — Step 1: Choose segment
+   ═══════════════════════════════════════════════ */
+
+.ssp-page {
+    min-height: 100vh;
+    background: var(--wz-bg);
+}
+
+/* ── Trip strip (reuses cmp__ prefix for consistency) ── */
+.ssp__trip-strip {
+    display: flex;
+    align-items: center;
+    background: var(--wz-surf);
+    border: 1px solid var(--wz-bdr);
+    border-radius: var(--wz-r-xl);
+    overflow: hidden;
+    box-shadow: var(--wz-sh-sm);
+    flex-wrap: wrap;
+}
+
+.ssp__trip-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 14px 22px;
+    border-right: 1px solid var(--wz-bdr);
+    flex: 1;
+    min-width: 130px;
+}
+
+.ssp__trip-item:last-child {
+    border-right: none;
+}
+
+.ssp__trip-item span {
+    font-size: 10px;
+    color: var(--wz-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+}
+
+.ssp__trip-item strong {
+    font-size: 13px;
+    color: var(--wz-txt);
+    font-weight: 700;
+}
+
+/* ── Page header ── */
+.ssp__header {
+    text-align: center;
+    padding: 8px 0 4px;
+}
+
+.ssp__header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(20px, 3vw, 28px);
+    font-weight: 800;
+    color: var(--wz-txt);
+    letter-spacing: -0.3px;
+    margin-bottom: 6px;
+}
+
+.ssp__header p {
+    font-size: 14px;
+    color: var(--wz-muted);
+}
+
+/* ── Skeleton grid ── */
+.ssp__skeletons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+}
+
+.ssp__skeleton {
+    height: 200px;
+    border-radius: var(--wz-r-xl);
+}
+
+/* ── Segment grid ── */
+.ssp__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+}
+
+/* ── Segment card ── */
+.seg-card {
+    position: relative;
+    background: var(--wz-surf);
+    border: 1.5px solid var(--wz-bdr);
+    border-radius: var(--wz-r-xl);
+    padding: 28px 24px 24px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: border-color 0.22s, transform 0.22s var(--wz-ease), box-shadow 0.22s;
+    box-shadow: var(--wz-sh-sm);
+    overflow: hidden;
+    text-align: left;
+    width: 100%;
+    font-family: 'DM Sans', sans-serif;
+}
+
+/* Subtle gradient shimmer on top edge */
+.seg-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--wz-teal), transparent);
+    opacity: 0;
+    transition: opacity 0.22s;
+}
+
+.seg-card:hover {
+    border-color: var(--wz-teal);
+    transform: translateY(-6px);
+    box-shadow: 0 18px 44px rgba(13, 184, 158, .13);
+}
+
+.seg-card:hover::before {
+    opacity: 1;
+}
+
+.seg-card:active {
+    transform: translateY(-2px);
+}
+
+/* ── Card header row ── */
+.seg-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.seg-card__icon {
+    font-size: 44px;
+    line-height: 1;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,.12));
+    transition: transform 0.22s;
+}
+
+.seg-card:hover .seg-card__icon {
+    transform: scale(1.12) rotate(-4deg);
+}
+
+/* Certified badge */
+.seg-card__cert {
+    background: var(--wz-grn-l);
+    border: 1px solid #6EE7B7;
+    color: #059669;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: var(--wz-r-f);
+    white-space: nowrap;
+}
+
+/* ── Label + desc ── */
+.seg-card__label {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--wz-txt);
+    letter-spacing: -0.2px;
+}
+
+.seg-card__desc {
+    font-size: 13px;
+    color: var(--wz-muted);
+    margin-top: -8px;
+}
+
+/* ── Stats row ── */
+.seg-card__stats {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.seg-card__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.seg-card__stat-val {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--wz-teal);
+}
+
+.seg-card__stat-lbl {
+    font-size: 11px;
+    color: var(--wz-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+/* ── Price range ── */
+.seg-card__price {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--wz-bdr);
+}
+
+.seg-card__price-from {
+    font-size: 12px;
+    color: var(--wz-muted);
+}
+
+.seg-card__price-val {
+    font-size: 19px;
+    font-weight: 800;
+    color: var(--wz-txt);
+}
+
+.seg-card__price-unit {
+    font-size: 12px;
+    color: var(--wz-muted);
+}
+
+.seg-card__price-range {
+    font-size: 12px;
+    color: var(--wz-muted);
+    margin-left: 4px;
+}
+
+/* ── CTA arrow ── */
+.seg-card__cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #002b36, var(--wz-teal));
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 11px 16px;
+    border-radius: var(--wz-r-lg);
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: opacity 0.18s, transform 0.15s;
+    box-shadow: 0 2px 8px rgba(13, 184, 158, .2);
+}
+
+.seg-card__cta:hover {
+    opacity: 0.9;
+    transform: scale(1.01);
+}
+
+/* ── Empty state ── */
+.ssp__empty {
+    text-align: center;
+    padding: 80px 40px;
+    background: var(--wz-surf);
+    border: 1px dashed var(--wz-bdr2);
+    border-radius: var(--wz-r-xl);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.ssp__empty div { font-size: 48px; }
+.ssp__empty h3  { font-size: 18px; font-weight: 700; }
+.ssp__empty p   { font-size: 13px; color: var(--wz-muted); }
+
+/* ── Error ── */
+.ssp__error {
+    padding: 24px;
+    text-align: center;
+    color: var(--wz-red);
+    background: var(--wz-red-l);
+    border: 1px solid #FCA5A5;
+    border-radius: var(--wz-r-xl);
+}
+
+.ssp__error button {
+    margin-top: 12px;
+    background: var(--wz-teal);
+    color: #fff;
+    font-weight: 700;
+    padding: 9px 22px;
+    border-radius: var(--wz-r-f);
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+    .ssp__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ssp__trip-strip {
+        flex-wrap: wrap;
+    }
+
+    .ssp__trip-item {
+        border-right: none;
+        border-bottom: 1px solid var(--wz-bdr);
+        min-width: 45%;
+    }
+}

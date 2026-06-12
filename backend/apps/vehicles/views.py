@@ -590,3 +590,129 @@ class AdminVehicleSetStatusView(APIView):
             'new_status':  new_status,
             'vehicle_id':  vehicle.id,
         })
+    
+
+class VehicleSegmentSearchView(APIView):
+    """
+    GET /api/vehicles/segments/
+    Query params:
+      city          (required) - city ID
+      pickup_date   (required) - YYYY-MM-DD
+      return_date   (required) - YYYY-MM-DD
+
+    Returns the list of vehicle segments that have at least one available
+    vehicle in the requested city + date range, along with counts and
+    price ranges.  Used by the new SegmentSelectPage (booking Step 1).
+    """
+    permission_classes = [permissions.AllowAny]
+
+    # Static metadata — icon, human label, marketing blurb.
+    # These never change at runtime; no DB hit needed.
+    SEGMENT_META = {
+        'hatchback': {'icon': '🚗', 'label': 'Hatchback', 'desc': 'Compact & fuel-efficient'},
+        'sedan':     {'icon': '🚘', 'label': 'Sedan',     'desc': 'Comfortable family cars'},
+        'suv':       {'icon': '🚙', 'label': 'SUV',       'desc': 'Spacious & versatile'},
+        'luxury':    {'icon': '🏎️', 'label': 'Luxury',    'desc': 'Premium experience'},
+        'van':       {'icon': '🚐', 'label': 'Van / MPV', 'desc': 'Group & cargo trips'},
+        'truck':     {'icon': '🚛', 'label': 'Truck',     'desc': 'Heavy-duty & cargo'},
+    }
+    SEGMENT_ORDER = ['hatchback', 'sedan', 'suv', 'luxury', 'van', 'truck']
+
+    def get(self, request):
+        import datetime
+        from django.db.models import Count, Min, Max
+
+        p = request.query_params
+        city        = p.get('city')
+        pickup_date = p.get('pickup_date')
+        return_date = p.get('return_date')
+
+        if not city or not pickup_date or not return_date:
+            return Response(
+                {'error': 'city, pickup_date, and return_date are required.'},
+                status=400,
+            )
+
+        try:
+            p_date = datetime.date.fromisoformat(pickup_date)
+            r_date = datetime.date.fromisoformat(return_date)
+        except ValueError:
+            return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
+
+        if r_date < p_date:
+            return Response({'error': 'return_date cannot be before pickup_date.'}, status=400)
+
+        # ── Collect all dates in the rental window ────────────────────────
+        date_range = []
+        d = p_date
+        while d <= r_date:
+            date_range.append(d)
+            d += datetime.timedelta(days=1)
+
+        # ── Exclude vehicles blocked on ANY date in the window ────────────
+        blocked_ids = VehicleAvailability.objects.filter(
+            blocked_date__in=date_range
+        ).values_list('vehicle_id', flat=True)
+
+        available_qs = Vehicle.objects.filter(
+            status='LIVE',
+            city_id=city,
+            is_blacklisted=False,
+        ).exclude(id__in=blocked_ids)
+
+        # ── Aggregate by segment (one query) ─────────────────────────────
+        segment_stats = (
+            available_qs
+            .values('segment')
+            .annotate(
+                vehicle_count=Count('id'),
+                vendor_count=Count('vendor', distinct=True),
+                min_rate=Min('daily_rate'),
+                max_rate=Max('daily_rate'),
+                certified_count=Count('id', filter=__import__(
+                    'django.db.models', fromlist=['Q']).Q(is_certified=True)),
+            )
+        )
+
+        # ── Build response, enriched with static metadata ─────────────────
+        stats_by_seg = {row['segment']: row for row in segment_stats}
+        result = []
+
+        for seg in self.SEGMENT_ORDER:
+            if seg not in stats_by_seg:
+                continue          # segment has no available vehicles — omit
+            row  = stats_by_seg[seg]
+            meta = self.SEGMENT_META.get(seg, {
+                'icon': '🚗', 'label': seg.title(), 'desc': '',
+            })
+            result.append({
+                'segment':          seg,
+                'icon':             meta['icon'],
+                'label':            meta['label'],
+                'desc':             meta['desc'],
+                'vehicle_count':    row['vehicle_count'],
+                'vendor_count':     row['vendor_count'],
+                'certified_count':  row['certified_count'],
+                'min_rate':         str(row['min_rate']),
+                'max_rate':         str(row['max_rate']),
+            })
+
+        # Append any unknown segments not in the canonical order
+        for seg, row in stats_by_seg.items():
+            if seg not in self.SEGMENT_ORDER:
+                meta = self.SEGMENT_META.get(seg, {
+                    'icon': '🚗', 'label': seg.title(), 'desc': '',
+                })
+                result.append({
+                    'segment':          seg,
+                    'icon':             meta['icon'],
+                    'label':            meta['label'],
+                    'desc':             meta['desc'],
+                    'vehicle_count':    row['vehicle_count'],
+                    'vendor_count':     row['vendor_count'],
+                    'certified_count':  row.get('certified_count', 0),
+                    'min_rate':         str(row['min_rate']),
+                    'max_rate':         str(row['max_rate']),
+                })
+
+        return Response({'segments': result, 'city_id': city})

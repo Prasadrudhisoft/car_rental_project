@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   VendorSelectPage.css — Step 2: Choose vendor
+   VendorSelectPage.css — Step 2: Choose vendor/vehicle
    Also used by ReturnVendorPage
    ═══════════════════════════════════════════════ */
 
@@ -9,7 +9,7 @@
     font-family: 'DM Sans', sans-serif;
 }
 
-/* ── Model recap banner ── */
+/* ── Segment recap banner ── */
 .vsp__model-recap {
     display: flex;
     align-items: center;
@@ -66,11 +66,175 @@
     line-height: 1.6;
 }
 
+/* ── Body layout: filters + [map | list] ── */
+.vsp__body {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+/* ── Filter sidebar ── */
+.vsp__filters {
+    background: var(--wz-surf);
+    border: 1px solid var(--wz-bdr);
+    border-radius: var(--wz-r-xl);
+    padding: 18px 20px;
+    position: sticky;
+    top: 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: var(--wz-sh-sm);
+}
+
+.vsp__filters h3 {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--wz-muted);
+}
+
+.vsp__filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.vsp__filter-group label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--wz-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.vsp__filter-group select,
+.vsp__filter-group input[type="text"] {
+    background: var(--wz-surf2);
+    border: 1.5px solid var(--wz-bdr2);
+    border-radius: var(--wz-r-md);
+    color: var(--wz-txt);
+    padding: 9px 12px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239CA3AF'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 8px;
+    padding-right: 28px;
+    transition: border-color 0.18s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.vsp__filter-group input[type="text"] {
+    background-image: none;
+    padding-right: 12px;
+    cursor: text;
+}
+
+.vsp__filter-group select:focus,
+.vsp__filter-group input[type="text"]:focus {
+    border-color: var(--wz-teal);
+    box-shadow: 0 0 0 3px var(--wz-teal-l);
+}
+
+.vsp__certified-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--wz-txt2);
+    user-select: none;
+}
+
+.vsp__certified-toggle input { display: none; }
+
+.vsp__certified-track {
+    width: 36px;
+    height: 20px;
+    background: var(--wz-bdr2);
+    border-radius: var(--wz-r-f);
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.25s;
+}
+
+.vsp__certified-track::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,.15);
+    transition: transform 0.25s;
+}
+
+.vsp__certified-toggle input:checked + .vsp__certified-track {
+    background: var(--wz-teal);
+}
+
+.vsp__certified-toggle input:checked + .vsp__certified-track::after {
+    transform: translateX(16px);
+}
+
+.vsp__filter-clear {
+    background: none;
+    border: 1px solid var(--wz-bdr2);
+    color: var(--wz-muted);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 7px 12px;
+    border-radius: var(--wz-r-f);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color 0.18s, color 0.18s;
+}
+
+.vsp__filter-clear:hover {
+    border-color: var(--wz-teal);
+    color: var(--wz-teal);
+}
+
+/* ── Right column: map + list ── */
+.vsp__right {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Result count bar */
+.vsp__result-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.vsp__result-bar h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--wz-txt);
+}
+
+.vsp__result-bar p {
+    font-size: 12px;
+    color: var(--wz-muted);
+}
+
 /* ── Map + vendor list layout ── */
 .vsp__map-layout {
     display: grid;
     grid-template-columns: 1fr 380px;
-    gap: 20px;
+    gap: 16px;
     min-height: 520px;
     align-items: start;
 }
@@ -83,7 +247,7 @@
     box-shadow: var(--wz-sh-sm);
 }
 
-/* ── Vendor list (scrollable) ── */
+/* ── Vendor/vehicle list (scrollable) ── */
 .vsp__vendor-list {
     display: flex;
     flex-direction: column;
@@ -93,18 +257,9 @@
     padding-right: 2px;
 }
 
-.vsp__vendor-list::-webkit-scrollbar {
-    width: 5px;
-}
-
-.vsp__vendor-list::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.vsp__vendor-list::-webkit-scrollbar-thumb {
-    background: var(--wz-bdr2);
-    border-radius: 3px;
-}
+.vsp__vendor-list::-webkit-scrollbar { width: 5px; }
+.vsp__vendor-list::-webkit-scrollbar-track { background: transparent; }
+.vsp__vendor-list::-webkit-scrollbar-thumb { background: var(--wz-bdr2); border-radius: 3px; }
 
 .vsp__vendor-list h3 {
     font-size: 10px;
@@ -113,20 +268,19 @@
     letter-spacing: 0.8px;
     color: var(--wz-muted);
     flex-shrink: 0;
-    padding: 2px 4px;
+    padding: 2px 4px 8px;
     position: sticky;
     top: 0;
     background: var(--wz-bg);
     z-index: 1;
-    padding-bottom: 8px;
 }
 
-/* Vendor card */
+/* ── Vehicle card ── */
 .vsp__vendor-card {
     background: var(--wz-surf);
     border: 1.5px solid var(--wz-bdr);
     border-radius: var(--wz-r-lg);
-    padding: 13px 15px;
+    padding: 12px 14px;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -151,39 +305,74 @@
     box-shadow: 0 0 0 1px var(--wz-teal);
 }
 
+/* Thumbnail */
+.vsp__vehicle-thumb {
+    width: 60px;
+    height: 48px;
+    border-radius: var(--wz-r-md);
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--wz-surf2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    border: 1px solid var(--wz-bdr);
+}
+
+.vsp__vehicle-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 .vsp__vendor-card__info {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
+    min-width: 0;
 }
 
-.vsp__vendor-card__info strong {
+.vsp__vendor-card__title {
     font-size: 13px;
     font-weight: 700;
     color: var(--wz-txt);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vsp__vendor-card__vendor {
+    font-size: 11px;
+    color: var(--wz-txt2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .vsp__vendor-card__meta {
     display: flex;
     gap: 7px;
     flex-wrap: wrap;
+    margin-top: 2px;
 }
 
 .vsp__vendor-card__meta span {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--wz-txt2);
     text-transform: capitalize;
+}
+
+.vsp__vendor-card__hours {
+    font-size: 10px;
+    color: var(--wz-muted);
+    margin-top: 1px;
 }
 
 .vsp__cert {
     color: #059669 !important;
     font-weight: 600 !important;
-}
-
-.vsp__vendor-card__hours {
-    font-size: 11px;
-    color: var(--wz-muted);
 }
 
 .vsp__vendor-card__price {
@@ -195,7 +384,7 @@
 }
 
 .vsp__rate {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 800;
     color: var(--wz-teal);
     display: flex;
@@ -203,34 +392,17 @@
     gap: 2px;
 }
 
-.vsp__rate span {
-    font-size: 11px;
-    color: var(--wz-muted);
-    font-weight: 400;
-}
-
-.vsp__total {
-    font-size: 11px;
-    color: var(--wz-muted);
-}
-
-.vsp__price-loading {
-    font-size: 10px;
-    color: var(--wz-muted);
-    font-style: italic;
-}
+.vsp__rate span { font-size: 10px; color: var(--wz-muted); font-weight: 400; }
+.vsp__total { font-size: 10px; color: var(--wz-muted); }
+.vsp__price-loading { font-size: 10px; color: var(--wz-muted); font-style: italic; }
 
 .vsp__vendor-card__check {
-    width: 26px;
-    height: 26px;
+    width: 24px; height: 24px;
     background: var(--wz-teal);
     color: #fff;
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800;
     flex-shrink: 0;
 }
 
@@ -265,24 +437,20 @@
     transition: background 0.15s;
 }
 
-.vsp__popup button:hover {
-    background: var(--wz-teal-d);
-}
+.vsp__popup button:hover { background: var(--wz-teal-d); }
 
-/* ── Custom map marker pin ── */
+/* ── Map pin ── */
 .vsp__pin {
     font-size: 24px;
     cursor: pointer;
     transition: transform 0.2s;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .25));
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,.25));
 }
 
-.vsp__pin:hover {
-    transform: scale(1.2);
-}
+.vsp__pin:hover { transform: scale(1.2); }
 
 .vsp__pin--selected {
-    filter: drop-shadow(0 0 6px rgba(13, 184, 158, .6)) drop-shadow(0 2px 4px rgba(0, 0, 0, .25));
+    filter: drop-shadow(0 0 6px rgba(13, 184, 158, .6)) drop-shadow(0 2px 4px rgba(0,0,0,.25));
     transform: scale(1.3);
 }
 
@@ -298,7 +466,37 @@
     animation: wz-panel-in 0.2s var(--wz-ease);
 }
 
+/* ── Empty filter state ── */
+.vsp__no-results {
+    text-align: center;
+    padding: 60px 24px;
+    background: var(--wz-surf);
+    border: 1px dashed var(--wz-bdr2);
+    border-radius: var(--wz-r-xl);
+}
+
+.vsp__no-results div { font-size: 40px; }
+.vsp__no-results h3 { font-size: 16px; font-weight: 700; margin: 8px 0 4px; }
+.vsp__no-results p { font-size: 13px; color: var(--wz-muted); }
+
 /* ── Responsive ── */
+@media (max-width: 1100px) {
+    .vsp__body {
+        grid-template-columns: 1fr;
+    }
+
+    .vsp__filters {
+        position: static;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 12px;
+    }
+
+    .vsp__filters h3 {
+        grid-column: 1 / -1;
+    }
+}
+
 @media (max-width: 960px) {
     .vsp__map-layout {
         grid-template-columns: 1fr;
@@ -306,11 +504,11 @@
     }
 
     .vsp__map-container {
-        height: 340px;
+        height: 320px;
     }
 
     .vsp__vendor-list {
         height: auto;
-        max-height: 320px;
+        max-height: 360px;
     }
 }

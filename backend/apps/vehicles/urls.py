@@ -12,6 +12,7 @@ from .views import (
     VehicleQRScanView,
     VehicleQRTamperFlagView,
     VehicleSearchView,
+    VehicleSegmentSearchView,
     VehicleDetailPublicView,
     AvailabilityView,
     VehicleAdminStatsView,
@@ -25,6 +26,7 @@ urlpatterns = [
     path("", include(router.urls)),
  
     # Public
+    path('segments/',                                  VehicleSegmentSearchView.as_view(),  name='vehicle-segments'),
     path('search/',                                    VehicleSearchView.as_view(),       name='vehicle-search'),
     path('<int:pk>/',                                  VehicleDetailPublicView.as_view(),  name='vehicle-detail'),
     path('qr/<str:vehicle_id_code>/',                 VehicleQRScanView.as_view(),        name='vehicle-qr'),
@@ -43,5 +45,6 @@ urlpatterns = [
     path('admin/<int:vehicle_id>/set-status/',         AdminVehicleSetStatusView.as_view(), name='admin-set-status'),
     path('admin/<int:vehicle_id>/flag-qr/',            VehicleQRTamperFlagView.as_view(), name='admin-flag-qr'),
     path('admin/<int:vehicle_id>/vahan-check/',        VAHANCheckView.as_view(), name='admin-vahan-check'),
+    
 ]
 
