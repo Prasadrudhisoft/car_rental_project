@@ -536,6 +536,30 @@ export const getMyAssignedVendors = () =>
 
 export const getAvailableSegments = (params) =>
   api.get('/vehicles/segments/', { params });
- 
+
+// ── Configuration — Admin (extended: categories, create/delete, history) ──
+export const getConfigCategories = ()     => api.get('/configuration/categories/');
+export const createConfigSetting = (data) => api.post('/configuration/settings/', data);
+export const archiveConfigSetting = (id, changeReason = '') =>
+  api.post(`/configuration/settings/${id}/archive/`, { change_reason: changeReason });
+export const restoreConfigSetting = (id) => api.post(`/configuration/settings/${id}/restore/`);
+export const deleteConfigSetting = (id)   => api.delete(`/configuration/settings/${id}/`);
+export const getConfigHistory    = (id)   => api.get(`/configuration/settings/${id}/history/`);
+
+
+
+export const approveVehicleEdit     = (vehicleId) => api.post(`/vehicles/admin/${vehicleId}/approve-edit/`);
+export const rejectVehicleEdit      = (vehicleId, reason = '') =>
+    api.post(`/vehicles/admin/${vehicleId}/reject-edit/`, { reason });
+export const completeReverification = (vehicleId) => api.post(`/vehicles/admin/${vehicleId}/complete-reverification/`);
+
+
+// ── Notifications ─────────────────────────────────────────────────────────
+export const getNotifications          = (params) => api.get('/notifications/', { params });
+export const getUnreadNotificationCount = () => api.get('/notifications/unread-count/');
+export const markNotificationRead      = (id)   => api.post(`/notifications/${id}/read/`);
+export const markAllNotificationsRead  = ()     => api.post('/notifications/mark-all-read/');
+export const adminSendNotification     = (data) => api.post('/notifications/admin/send/', data);
+export const getAdminSentNotifications = ()     => api.get('/notifications/admin/sent/');
 
 export default api;

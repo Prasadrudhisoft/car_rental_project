@@ -1,7 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// modals/ViewReviewModal.jsx
-// Read-only display of a customer's previously submitted review.
-// ─────────────────────────────────────────────────────────────────────────────
 import React from 'react';
 import { fmtDate } from '../cdConstants';
 

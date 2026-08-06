@@ -2,6 +2,13 @@
 // VehicleDetailModal.jsx
 // Full vehicle review sheet: pipeline progress, document checklist,
 // photo strip, status change, certification, VAHAN check, blacklist.
+//
+// NEW: pending-edit approval panel. When a vendor submits changes to an
+// already-reviewed vehicle, the backend stages them (pending_changes) and
+// sets needs_review=True instead of applying them. This panel shows the
+// old → new diff and lets the admin Approve & Apply or Reject.
+// Also shows a re-verification panel when odometer distance crosses the
+// configured threshold.
 // ─────────────────────────────────────────────────────────────────────────────
 import React from "react";
 import { StatusBadge } from "../AdminShared";
@@ -10,6 +17,7 @@ import {
     VEHICLE_STATUS_CLR,
     REQUIRED_DOCS,
     PIPELINE_STEPS,
+    fmtDatetime,
 } from "../adminConstants";
 
 export default function VehicleDetailModal({
@@ -26,6 +34,9 @@ export default function VehicleDetailModal({
     onBlacklist,
     onSetStatus,
     onVahanCheck,
+    onApproveEdit,
+    onRejectEdit,
+    onCompleteReverification,
     setVehiclePhotoLightbox,
 }) {
     const docMap     = Object.fromEntries((v.documents || []).map((d) => [d.doc_type, d]));
@@ -48,6 +59,16 @@ export default function VehicleDetailModal({
                             <StatusBadge status={v.status} colorMap={VEHICLE_STATUS_CLR} />
                             {v.is_blacklisted && <span className="admin-blacklisted-badge">🚫 Blacklisted</span>}
                             {v.is_certified   && <span className="admin-certified-badge">✅ Certified</span>}
+                            {v.needs_review && (
+                                <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 999, background: "#FEF3C7", color: "#D97706", border: "1px solid #FCD34D" }}>
+                                    ✏️ Vendor Changes Pending
+                                </span>
+                            )}
+                            {v.needs_reverification && (
+                                <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 999, background: "#FEE2E2", color: "#EF4444", border: "1px solid #FCA5A5" }}>
+                                    🔁 Re-verification Due
+                                </span>
+                            )}
                             <span style={{ fontSize: 11, color: "var(--vm)" }}>
                                 {v.vendor?.vendor_profile?.business_name || v.vendor?.email} · {v.city?.name}
                             </span>
@@ -79,7 +100,60 @@ export default function VehicleDetailModal({
                     </div>
                 )}
 
-                <div className="vcard-v2__body" style={{ maxHeight: "65vh", overflowY: "auto" }}>
+                {/* ── Pending vendor edit / re-verification panels ── */}
+                {(v.needs_review || v.needs_reverification) && (
+                    <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--vbdr)", display: "flex", flexDirection: "column", gap: 10 }}>
+
+                        {v.needs_review && (
+                            <div className="vcard-action-block" style={{ background: "#FFFBEB", borderColor: "#FCD34D" }}>
+                                <div className="vcard-action-block__hd">✏️ Vendor Changes — Awaiting Your Approval</div>
+                                {v.last_edited_at && (
+                                    <p style={{ fontSize: 11, color: "var(--vm)", margin: "4px 0" }}>
+                                        Submitted {fmtDatetime(v.last_edited_at)}. Live values shown throughout this modal
+                                        are unchanged until you approve.
+                                    </p>
+                                )}
+                                {(v.pending_changes_readable || []).length > 0 && (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "8px 0" }}>
+                                        {v.pending_changes_readable.map((c) => (
+                                            <div key={c.field} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 12, background: "#fff", border: "1px solid #FCD34D", borderRadius: 6, padding: "6px 10px" }}>
+                                                <strong>{c.label}</strong>
+                                                <span>
+                                                    <s style={{ opacity: 0.6 }}>{c.old_value ?? "—"}</s>
+                                                    {" → "}
+                                                    <strong style={{ color: "#B45309" }}>{c.new_value ?? "—"}</strong>
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                                    <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => onApproveEdit(v.id)}>
+                                        ✓ Approve &amp; Apply
+                                    </button>
+                                    <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => onRejectEdit(v.id)}>
+                                        ✕ Reject
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {v.needs_reverification && (
+                            <div className="vcard-action-block" style={{ background: "#FEE2E2", borderColor: "#FCA5A5" }}>
+                                <div className="vcard-action-block__hd">🔁 Odometer Re-verification Due</div>
+                                <p style={{ fontSize: 12, color: "#7F1D1D", margin: "4px 0 8px" }}>
+                                    Current odometer: {v.current_odometer?.toLocaleString("en-IN") ?? "—"} km ·
+                                    {" "}Last verified: {v.last_verified_odometer?.toLocaleString("en-IN") ?? "—"} km
+                                </p>
+                                <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => onCompleteReverification(v.id)}>
+                                    ✓ Confirm Re-verified
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <div className="vcard-v2__body" style={{ maxHeight: "60vh", overflowY: "auto" }}>
 
                     {/* Documents column */}
                     <div className="vcard-v2__docs-col">
@@ -205,6 +279,7 @@ export default function VehicleDetailModal({
                             <button className="admin-btn admin-btn--ghost" style={{ width: "100%", justifyContent: "center" }} onClick={() => onVahanCheck(v.id)}>
                                 Run VAHAN Check
                             </button>
+                            
                         </div>
 
                         {/* Blacklist */}

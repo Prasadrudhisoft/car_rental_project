@@ -6,17 +6,17 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from apps.locations.models import Location
+from apps.locations.models import Location, City
  
 from .models import Vehicle, VehicleDocument, VehiclePhoto, VehicleAvailability
 from .serializers import (
     VehicleListSerializer, VehicleDetailSerializer, VehicleCreateSerializer,
-    VehicleDocumentSerializer, VehiclePhotoSerializer, VehicleAvailabilitySerializer,
+    VehicleDocumentSerializer, VehiclePhotoSerializer, VehicleAvailabilitySerializer, VehicleVendorUpdateSerializer
 )
- 
+from decimal import Decimal
  
 # ── Role permission helpers ─────────────────────────────────────────────
 class IsAdminRole(permissions.BasePermission):
@@ -46,70 +46,70 @@ def _generate_qr(vehicle):
 # VENDOR VIEWS
 # ════════════════════════════════════════════════════════════════════════
  
-class VendorVehicleViewSet(viewsets.ModelViewSet):
-    """
-    CRUD for a vendor's own vehicles.
-    GET  /api/vehicles/vendor/             -> list my vehicles
-    POST /api/vehicles/vendor/             -> create a new listing
-    GET  /api/vehicles/vendor/{id}/        -> single vehicle detail
-    PATCH /api/vehicles/vendor/{id}/       -> edit vehicle info
-    POST /api/vehicles/vendor/{id}/toggle/ -> activate or deactivate listing
-    """
-    permission_classes = [IsVendorRole]
-    parser_classes     = [MultiPartParser, FormParser]
+# class VendorVehicleViewSet(viewsets.ModelViewSet):
+#     """
+#     CRUD for a vendor's own vehicles.
+#     GET  /api/vehicles/vendor/             -> list my vehicles
+#     POST /api/vehicles/vendor/             -> create a new listing
+#     GET  /api/vehicles/vendor/{id}/        -> single vehicle detail
+#     PATCH /api/vehicles/vendor/{id}/       -> edit vehicle info
+#     POST /api/vehicles/vendor/{id}/toggle/ -> activate or deactivate listing
+#     """
+#     permission_classes = [IsVendorRole]
+#     parser_classes     = [MultiPartParser, FormParser]
  
-    def get_serializer_class(self):
-        if self.action in ['create', 'update', 'partial_update']:
-            return VehicleCreateSerializer
-        return VehicleDetailSerializer
+#     def get_serializer_class(self):
+#         if self.action in ['create', 'update', 'partial_update']:
+#             return VehicleCreateSerializer
+#         return VehicleDetailSerializer
  
-    def get_queryset(self):
-        return Vehicle.objects.filter(vendor=self.request.user).select_related(
-            'city', 'pickup_location').prefetch_related('photos', 'documents')
+#     def get_queryset(self):
+#         return Vehicle.objects.filter(vendor=self.request.user).select_related(
+#             'city', 'pickup_location').prefetch_related('photos', 'documents')
  
-    def perform_create(self, serializer):
-        # 1. Save the vehicle first (existing line)
-        vehicle = serializer.save(vendor=self.request.user)
+#     def perform_create(self, serializer):
+#         # 1. Save the vehicle first (existing line)
+#         vehicle = serializer.save(vendor=self.request.user)
 
-        # 2. Handle suggested location from the map picker
-        #    Only runs when the vendor dropped a pin that didn't match
-        #    any existing Location record within 30 km.
-        suggested_name    = self.request.data.get('suggested_location_name')
-        suggested_address = self.request.data.get('suggested_location_address')
-        suggested_lat     = self.request.data.get('suggested_location_lat')
-        suggested_lng     = self.request.data.get('suggested_location_lng')
+#         # 2. Handle suggested location from the map picker
+#         #    Only runs when the vendor dropped a pin that didn't match
+#         #    any existing Location record within 30 km.
+#         suggested_name    = self.request.data.get('suggested_location_name')
+#         suggested_address = self.request.data.get('suggested_location_address')
+#         suggested_lat     = self.request.data.get('suggested_location_lat')
+#         suggested_lng     = self.request.data.get('suggested_location_lng')
 
-        if suggested_name and not vehicle.pickup_location:
-            # Resolve the City object from the vehicle's city FK
-            city = vehicle.city  # already a City instance after serializer.save()
+#         if suggested_name and not vehicle.pickup_location:
+#             # Resolve the City object from the vehicle's city FK
+#             city = vehicle.city  # already a City instance after serializer.save()
 
-            Location.objects.get_or_create(
-                city=city,
-                name=suggested_name,
-                defaults={
-                    'location_type': 'vendor_lot',
-                    'address':       suggested_address or '',
-                    'latitude':      suggested_lat or None,
-                    'longitude':     suggested_lng or None,
-                    'is_active':     False,   # Admin must review and activate
-                }
-            )
+#             Location.objects.get_or_create(
+#                 city=city,
+#                 name=suggested_name,
+#                 defaults={
+#                     'location_type': 'vendor_lot',
+#                     'address':       suggested_address or '',
+#                     'latitude':      suggested_lat or None,
+#                     'longitude':     suggested_lng or None,
+#                     'is_active':     False,   # Admin must review and activate
+#                 }
+#             )
  
-    @action(detail=True, methods=['post'], url_path='toggle')
-    def toggle_active(self, request, pk=None):
-        """Vendor can toggle between LIVE and INACTIVE."""
-        vehicle = self.get_object()
-        if vehicle.status == 'LIVE':
-            vehicle.status = 'INACTIVE'
-        elif vehicle.status in ['INACTIVE', 'CERTIFIED']:
-            vehicle.status = 'LIVE'
-        else:
-            return Response(
-                {'error': 'Vehicle must be CERTIFIED or LIVE to toggle.'},
-                status=400,
-            )
-        vehicle.save()
-        return Response({'status': vehicle.status})
+#     @action(detail=True, methods=['post'], url_path='toggle')
+#     def toggle_active(self, request, pk=None):
+#         """Vendor can toggle between LIVE and INACTIVE."""
+#         vehicle = self.get_object()
+#         if vehicle.status == 'LIVE':
+#             vehicle.status = 'INACTIVE'
+#         elif vehicle.status in ['INACTIVE', 'CERTIFIED']:
+#             vehicle.status = 'LIVE'
+#         else:
+#             return Response(
+#                 {'error': 'Vehicle must be CERTIFIED or LIVE to toggle.'},
+#                 status=400,
+#             )
+#         vehicle.save()
+#         return Response({'status': vehicle.status})
  
  
 class VehicleDocUploadView(APIView):
@@ -188,10 +188,13 @@ class AdminVehicleListView(generics.ListAPIView):
     permission_classes = [IsAdminRole]
  
     def get_queryset(self):
-        qs = Vehicle.objects.select_related(
-            'vendor', 'city').prefetch_related('photos', 'documents').all()
+        qs = Vehicle.objects.select_related('vendor', 'city').prefetch_related('photos', 'documents').all()
         s  = self.request.query_params.get("status")
         if s: qs = qs.filter(status=s)
+        if self.request.query_params.get('needs_review') == 'true':
+            qs = qs.filter(needs_review=True)
+        if self.request.query_params.get('needs_reverification') == 'true':
+            qs = qs.filter(needs_reverification=True)
         return qs
  
  
@@ -506,13 +509,15 @@ class AvailabilityView(APIView):
 
 
 class VehicleAdminStatsView(APIView):
-    """GET /api/vehicles/admin/stats/ — counts per status for admin dashboard."""
     permission_classes = [IsAdminRole]
- 
+
     def get(self, request):
         from django.db.models import Count
         counts = Vehicle.objects.values("status").annotate(count=Count("id"))
-        return Response({item["status"]: item["count"] for item in counts})
+        result = {item["status"]: item["count"] for item in counts}
+        result['_needs_review']         = Vehicle.objects.filter(needs_review=True).count()
+        result['_needs_reverification'] = Vehicle.objects.filter(needs_reverification=True).count()
+        return Response(result)
  
 class VAHANCheckView(APIView):
     """
@@ -716,3 +721,418 @@ class VehicleSegmentSearchView(APIView):
                 })
 
         return Response({'segments': result, 'city_id': city})
+
+
+# class VendorVehicleViewSet(viewsets.ModelViewSet):
+#     permission_classes = [IsVendorRole]
+#     parser_classes     = [MultiPartParser, FormParser, JSONParser]
+
+#     # Fields that, if changed on an already-reviewed vehicle, must alert admin
+#     FIELDS_THAT_TRIGGER_REVIEW = {
+#         'make', 'model', 'year', 'colour', 'segment', 'fuel_type',
+#         'transmission', 'capacity', 'daily_rate', 'city', 'pickup_location',
+#     }
+#     # Statuses past initial review — an edit here is a change to something admin already signed off on
+#     REVIEWED_STATUSES = {'ADMIN_APPROVED', 'CERTIFIED', 'LIVE', 'INACTIVE'}
+
+#     def get_serializer_class(self):
+#         if self.action == 'create':
+#             return VehicleCreateSerializer
+#         if self.action in ('update', 'partial_update'):
+#             return VehicleVendorUpdateSerializer
+#         return VehicleDetailSerializer
+
+#     def get_queryset(self):
+#         return Vehicle.objects.filter(vendor=self.request.user).select_related(
+#             'city', 'pickup_location').prefetch_related('photos', 'documents')
+
+#     def perform_create(self, serializer):
+#         vehicle = serializer.save(
+#             vendor=self.request.user,
+#             current_odometer=serializer.validated_data.get('odometer_at_listing', 0),
+#             last_verified_odometer=serializer.validated_data.get('odometer_at_listing', 0),
+#         )
+#         # ...existing suggested_location logic stays unchanged...
+#         suggested_name    = self.request.data.get('suggested_location_name')
+#         suggested_address = self.request.data.get('suggested_location_address')
+#         suggested_lat     = self.request.data.get('suggested_location_lat')
+#         suggested_lng     = self.request.data.get('suggested_location_lng')
+#         if suggested_name and not vehicle.pickup_location:
+#             city = vehicle.city
+#             Location.objects.get_or_create(
+#                 city=city, name=suggested_name,
+#                 defaults={
+#                     'location_type': 'vendor_lot',
+#                     'address':       suggested_address or '',
+#                     'latitude':      suggested_lat or None,
+#                     'longitude':     suggested_lng or None,
+#                     'is_active':     False,
+#                 }
+#             )
+
+#     def perform_update(self, serializer):
+#         from apps.configuration.utils import get_config
+#         from django.utils import timezone
+
+#         instance = self.get_object()
+#         before = {f: getattr(instance, f) for f in self.FIELDS_THAT_TRIGGER_REVIEW}
+
+#         vehicle = serializer.save()
+
+#         changed = [f for f in self.FIELDS_THAT_TRIGGER_REVIEW
+#                    if str(before[f]) != str(getattr(vehicle, f))]
+
+#         update_fields = set()
+
+#         # ── 1. Flag vendor edits to already-reviewed vehicles ──────────
+#         if changed and vehicle.status in self.REVIEWED_STATUSES:
+#             vehicle.needs_review = True
+#             vehicle.last_edited_at = timezone.now()
+#             vehicle.last_edit_summary = f"Vendor updated: {', '.join(changed)}."
+#             update_fields |= {'needs_review', 'last_edited_at', 'last_edit_summary'}
+
+#         # ── 2. Odometer-based re-verification ───────────────────────────
+#         if vehicle.current_odometer is not None:
+#             if vehicle.last_verified_odometer is None:
+#                 vehicle.last_verified_odometer = vehicle.odometer_at_listing or 0
+#                 update_fields.add('last_verified_odometer')
+
+#             threshold = get_config('odometer_reverification_km', 10000)
+#             distance_travelled = vehicle.current_odometer - (vehicle.last_verified_odometer or 0)
+#             should_flag = distance_travelled >= threshold
+
+#             if should_flag != vehicle.needs_reverification:
+#                 vehicle.needs_reverification = should_flag
+#                 update_fields.add('needs_reverification')
+
+#             if should_flag and vehicle.status in self.REVIEWED_STATUSES:
+#                 note = (f"Odometer at {vehicle.current_odometer} km — "
+#                          f"{distance_travelled} km since last verification "
+#                          f"(threshold {threshold} km).")
+#                 vehicle.needs_review = True
+#                 vehicle.last_edited_at = timezone.now()
+#                 vehicle.last_edit_summary = (
+#                     f"{vehicle.last_edit_summary} {note}".strip()
+#                     if vehicle.last_edit_summary else note
+#                 )
+#                 update_fields |= {'needs_review', 'last_edited_at', 'last_edit_summary'}
+
+#         if update_fields:
+#             vehicle.save(update_fields=list(update_fields))
+
+#     @action(detail=True, methods=['post'], url_path='toggle')
+#     def toggle_active(self, request, pk=None):
+#         # ...unchanged...
+#         vehicle = self.get_object()
+#         if vehicle.status == 'LIVE':
+#             vehicle.status = 'INACTIVE'
+#         elif vehicle.status in ['INACTIVE', 'CERTIFIED']:
+#             vehicle.status = 'LIVE'
+#         else:
+#             return Response({'error': 'Vehicle must be CERTIFIED or LIVE to toggle.'}, status=400)
+#         vehicle.save()
+#         return Response({'status': vehicle.status})
+
+
+
+# class AdminAcknowledgeEditView(APIView):
+#     """
+#     POST /api/vehicles/admin/{vehicle_id}/acknowledge-edit/
+#     Admin dismisses the "vendor edited this" flag after reviewing the change.
+#     """
+#     permission_classes = [IsAdminRole]
+
+#     def post(self, request, vehicle_id):
+#         vehicle = get_object_or_404(Vehicle, pk=vehicle_id)
+#         vehicle.needs_review = False
+#         vehicle.admin_reviewed_edit_at = timezone.now()
+#         vehicle.save(update_fields=['needs_review', 'admin_reviewed_edit_at'])
+#         return Response({'message': 'Marked as reviewed.'})
+class AdminApproveVehicleEditView(APIView):
+    """
+    POST /api/vehicles/admin/{vehicle_id}/approve-edit/
+    Applies the vendor's staged pending_changes to the live vehicle record.
+    This is the ONLY code path that writes a vendor edit onto live fields
+    once a vehicle has passed initial review.
+    """
+    permission_classes = [IsAdminRole]
+
+    FIELD_CASTERS = {
+        'year':             int,
+        'capacity':         int,
+        'daily_rate':       lambda v: Decimal(str(v)),
+        'current_odometer': int,
+    }
+
+    def post(self, request, vehicle_id):
+        from apps.notifications.utils import notify
+
+        vehicle = get_object_or_404(Vehicle, pk=vehicle_id)
+        pending = vehicle.pending_changes or {}
+        if not pending:
+            return Response({'message': 'No pending changes to approve.'})
+
+        odometer_changed = 'current_odometer' in pending
+
+        for field, raw_value in pending.items():
+            if field == 'city':
+                try:
+                    setattr(vehicle, field, City.objects.get(pk=raw_value))
+                except City.DoesNotExist:
+                    continue
+            elif field == 'pickup_location':
+                if raw_value:
+                    try:
+                        setattr(vehicle, field, Location.objects.get(pk=raw_value))
+                    except Location.DoesNotExist:
+                        pass
+                else:
+                    setattr(vehicle, field, None)
+            else:
+                caster = self.FIELD_CASTERS.get(field)
+                setattr(vehicle, field, caster(raw_value) if caster else raw_value)
+
+        vehicle.pending_changes        = {}
+        vehicle.pending_submitted_at   = None
+        vehicle.needs_review           = False
+        vehicle.admin_reviewed_edit_at = timezone.now()
+        vehicle.last_edit_summary      = f"Edits approved by admin on {vehicle.admin_reviewed_edit_at:%d %b %Y, %H:%M}."
+
+        # Recompute the distance-based re-verification flag now that
+        # current_odometer is actually live.
+        if odometer_changed and vehicle.current_odometer is not None:
+            from apps.configuration.utils import get_config
+            threshold = get_config('odometer_reverification_km', 10000)
+            baseline  = vehicle.last_verified_odometer or 0
+            if (vehicle.current_odometer - baseline) >= threshold:
+                vehicle.needs_reverification = True
+
+        vehicle.save()
+        
+        notify(
+            vehicle.vendor,
+            title="Vehicle edit approved",
+            message=f"Your changes to {vehicle.year} {vehicle.make} {vehicle.model} were approved and are now live.",
+            notification_type='vehicle_edit_decided',
+            link_url=f'/vendor?tab=fleet&highlight={vehicle.id}',
+        )
+        return Response({
+            'message': 'Vendor changes approved and applied.',
+            'vehicle': VehicleDetailSerializer(vehicle).data,
+        })
+
+
+
+class AdminRejectVehicleEditView(APIView):
+    """
+    POST /api/vehicles/admin/{vehicle_id}/reject-edit/
+    Body: { "reason": "..." }  (optional)
+    Discards the vendor's staged changes. Live vehicle data is untouched.
+    """
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, vehicle_id):
+        from apps.notifications.utils import notify
+        
+        vehicle = get_object_or_404(Vehicle, pk=vehicle_id)
+        if not vehicle.pending_changes:
+            return Response({'message': 'No pending changes to reject.'})
+
+        reason = request.data.get('reason', '')
+        vehicle.pending_changes        = {}
+        vehicle.pending_submitted_at   = None
+        vehicle.needs_review           = False
+        vehicle.admin_reviewed_edit_at = timezone.now()
+        vehicle.last_edit_summary = (
+            'Vendor changes rejected by admin.' + (f' Reason: {reason}' if reason else '')
+        )
+        vehicle.save(update_fields=[
+            'pending_changes', 'pending_submitted_at', 'needs_review',
+            'admin_reviewed_edit_at', 'last_edit_summary',
+        ])
+
+        notify(
+            vehicle.vendor,
+            title="Vehicle edit rejected",
+            message=f"Your submitted changes to {vehicle.year} {vehicle.make} {vehicle.model} were rejected." + (f" Reason: {reason}" if reason else ""),
+            notification_type='vehicle_edit_decided',
+            link_url=f'/vendor?tab=fleet&highlight={vehicle.id}',
+        )
+        return Response({'message': 'Vendor changes rejected. Live data unchanged.'})
+
+class AdminCompleteReverificationView(APIView):
+    """
+    POST /api/vehicles/admin/{vehicle_id}/complete-reverification/
+    Admin confirms they've re-inspected the vehicle at its current odometer
+    reading. Resets the re-verification distance clock.
+    """
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, vehicle_id):
+        vehicle = get_object_or_404(Vehicle, pk=vehicle_id)
+        vehicle.last_verified_odometer = vehicle.current_odometer or vehicle.last_verified_odometer
+        vehicle.needs_reverification   = False
+        vehicle.needs_review           = False
+        vehicle.admin_reviewed_edit_at = timezone.now()
+        vehicle.save(update_fields=[
+            'last_verified_odometer', 'needs_reverification',
+            'needs_review', 'admin_reviewed_edit_at',
+        ])
+        return Response({'message': 'Re-verification recorded. Odometer clock reset.'})
+
+
+class VendorVehicleViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for a vendor's own vehicles.
+    GET  /api/vehicles/vendor/             -> list my vehicles
+    POST /api/vehicles/vendor/             -> create a new listing (multipart — supports files)
+    GET  /api/vehicles/vendor/{id}/        -> single vehicle detail
+    PATCH /api/vehicles/vendor/{id}/       -> edit vehicle info
+
+    IMPORTANT — approval gate:
+    Once a vehicle has passed initial review (ADMIN_APPROVED / CERTIFIED / LIVE /
+    INACTIVE), a vendor's PATCH is NEVER written directly to the live fields.
+    It is staged in `pending_changes`, `needs_review` is set, and the response
+    reflects the vehicle's still-unchanged approved values. Only an admin
+    approve-edit call applies the staged values.
+
+    Vehicles that haven't been reviewed yet (PENDING_DOCS / DOCS_SUBMITTED)
+    have no approved baseline to protect, so edits there apply immediately —
+    vendors can freely correct onboarding details before first review.
+    """
+    permission_classes = [IsVendorRole]
+    parser_classes     = [MultiPartParser, FormParser, JSONParser]
+
+    FIELDS_THAT_TRIGGER_REVIEW = {
+        'make', 'model', 'year', 'colour', 'segment', 'fuel_type',
+        'transmission', 'capacity', 'daily_rate', 'city', 'pickup_location',
+        'current_odometer',
+    }
+    REVIEWED_STATUSES = {'ADMIN_APPROVED', 'CERTIFIED', 'LIVE', 'INACTIVE'}
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return VehicleCreateSerializer
+        if self.action in ('update', 'partial_update'):
+            return VehicleVendorUpdateSerializer
+        return VehicleDetailSerializer
+
+    def get_queryset(self):
+        return Vehicle.objects.filter(vendor=self.request.user).select_related(
+            'city', 'pickup_location').prefetch_related('photos', 'documents')
+
+    def perform_create(self, serializer):
+        from apps.notifications.utils import notify_admins_for_vendor
+
+        vehicle = serializer.save(
+            vendor=self.request.user,
+            current_odometer=serializer.validated_data.get('odometer_at_listing', 0),
+            last_verified_odometer=serializer.validated_data.get('odometer_at_listing', 0),
+        )
+        
+        suggested_name    = self.request.data.get('suggested_location_name')
+        suggested_address = self.request.data.get('suggested_location_address')
+        suggested_lat     = self.request.data.get('suggested_location_lat')
+        suggested_lng     = self.request.data.get('suggested_location_lng')
+        if suggested_name and not vehicle.pickup_location:
+            city = vehicle.city
+            Location.objects.get_or_create(
+                city=city, name=suggested_name,
+                defaults={
+                    'location_type': 'vendor_lot',
+                    'address':       suggested_address or '',
+                    'latitude':      suggested_lat or None,
+                    'longitude':     suggested_lng or None,
+                    'is_active':     False,
+                }
+            )
+        
+        try:
+            business_name = self.request.user.vendor_profile.business_name
+        except Exception:
+            business_name = self.request.user.full_name or self.request.user.email
+        notify_admins_for_vendor(
+            self.request.user,
+            title="New vehicle listed",
+            message=f"{business_name} listed a {vehicle.year} {vehicle.make} {vehicle.model} ({vehicle.plate_number}).",
+            notification_type='vehicle_added',
+            link_url=f'/admin?tab=vehicles&highlight={vehicle.id}',
+        )
+
+    def perform_update(self, serializer):
+        from apps.notifications.utils import notify_admins_for_vendor
+
+        instance = serializer.instance
+
+        if instance.status not in self.REVIEWED_STATUSES:
+            # No approved baseline yet — apply directly.
+            serializer.save()
+            return
+
+        # ── Gate: stage the diff, never touch live fields ──────────────
+        validated_data = serializer.validated_data
+        changed = {}
+        for field, new_value in validated_data.items():
+            old_value = getattr(instance, field)
+            norm_new = new_value.pk if hasattr(new_value, 'pk') else new_value
+            norm_old = old_value.pk if hasattr(old_value, 'pk') else old_value
+            if str(norm_old) != str(norm_new):
+                changed[field] = str(norm_new) if norm_new is not None else None
+
+        if not changed:
+            return  # nothing actually changed — instance untouched
+
+        pending = dict(instance.pending_changes or {})
+        pending.update(changed)
+
+        instance.pending_changes      = pending
+        instance.pending_submitted_at = timezone.now()
+        instance.needs_review         = True
+        instance.last_edited_at       = timezone.now()
+        instance.last_edit_summary    = (
+            f"Vendor submitted changes to: {', '.join(sorted(changed.keys()))}. "
+            f"Awaiting admin approval — live values unchanged until approved."
+        )
+        instance.save(update_fields=[
+            'pending_changes', 'pending_submitted_at', 'needs_review',
+            'last_edited_at', 'last_edit_summary',
+        ])
+        
+        notify_admins_for_vendor(
+            instance.vendor,
+            title="Vendor edited vehicle details",
+            message=f"Changes submitted for {instance.year} {instance.make} {instance.model} ({instance.plate_number}). Awaiting your approval.",
+            notification_type='vehicle_edit_pending',
+            link_url=f'/admin?tab=vehicles&highlight={instance.id}',
+        )
+        # NOTE: serializer.save() is deliberately never called on this path.
+        # Calling it would write validated_data straight onto the model,
+        # bypassing the approval gate entirely — this was the original bug.
+
+    def update(self, request, *args, **kwargs):
+        partial  = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        instance.refresh_from_db()
+        # Always return the FULL detail representation — including
+        # pending_changes / needs_review — regardless of which serializer
+        # validated the input, so the vendor UI can show what's pending.
+        return Response(VehicleDetailSerializer(instance, context=self.get_serializer_context()).data)
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+
+    @action(detail=True, methods=['post'], url_path='toggle')
+    def toggle_active(self, request, pk=None):
+        vehicle = self.get_object()
+        if vehicle.status == 'LIVE':
+            vehicle.status = 'INACTIVE'
+        elif vehicle.status in ['INACTIVE', 'CERTIFIED']:
+            vehicle.status = 'LIVE'
+        else:
+            return Response({'error': 'Vehicle must be CERTIFIED or LIVE to toggle.'}, status=400)
+        vehicle.save()
+        return Response({'status': vehicle.status})

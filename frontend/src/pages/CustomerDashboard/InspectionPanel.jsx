@@ -1,8 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// InspectionPanel.jsx
-// Customer-facing inspection panel (pickup + return).
-// Handles: locked view, OTP-based pickup sign-off, OTP generation for return.
-// ─────────────────────────────────────────────────────────────────────────────
 import React, { useState } from 'react';
 import {
     createInspection,

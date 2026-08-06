@@ -137,6 +137,7 @@ export default function ConfirmBookingPage() {
                         vehicle={v}
                         user={user}
                         nights={nights}
+                        pricing={p}
                     />
 
                     {/* Right — payment */}

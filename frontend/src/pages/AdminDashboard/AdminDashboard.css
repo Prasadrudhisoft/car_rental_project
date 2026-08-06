@@ -109,7 +109,7 @@
     transform: translateY(-50%);
     font-size: clamp(28px, 6vw, 60px);
     font-weight: 800;
-    color: rgba(255, 255, 255, 0.07);
+    color: #2aa895;
     letter-spacing: clamp(2px, 1vw, 8px);
     font-family: 'Inter', sans-serif;
     user-select: none;

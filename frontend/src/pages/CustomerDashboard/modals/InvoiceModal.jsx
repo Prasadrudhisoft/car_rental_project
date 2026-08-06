@@ -1,7 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// modals/InvoiceModal.jsx
-// Read-only GST invoice viewer for a booking.
-// ─────────────────────────────────────────────────────────────────────────────
 import React from 'react';
 
 export default function InvoiceModal({ invoice, booking, onClose }) {

@@ -31,6 +31,7 @@ urlpatterns = [
     path('api/reviews/', include('apps.reviews.urls')),
     path('api/promos/', include('apps.promotions.urls')),
     path('api/agreements/', include('apps.agreements.urls')),
+    path('api/notifications/', include('apps.notifications.urls')),
 ]
 
 # Serve uploaded media files in development

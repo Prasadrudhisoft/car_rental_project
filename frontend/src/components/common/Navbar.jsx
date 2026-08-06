@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import SearchWidget from '../home/SearchWidget';
+import NotificationBell from '../notifications/NotificationBell';
 import './Navbar.css';
 
 /* ── Sidebar icon items ───────────────────────────────────────────────── */
@@ -109,6 +110,12 @@ const ICONS = {
             <path d="M7 7h11v2H7V7zm0 4h7v2H7v-2zm0 4h11v2H7v-2z" />
         </svg>
     ),
+    notifications: (
+        <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    ),
 };
 
 /* ── Sidebar items per role ──────────────────────────────────────────────── */
@@ -125,7 +132,8 @@ const SIDEBAR_ITEMS = {
         { id: 'promos',       icon: ICONS.promos,       tip: 'Promos' },
         { id: 'agreements',   icon: ICONS.agreements,   tip: 'Agreements' },
         { id: 'reviews',      icon: ICONS.starIcon,     tip: 'Reviews' },
-        { id: 'assignments',  icon: ICONS.assignments,  tip: 'Assignments' }, // ← NEW
+        { id: 'assignments',  icon: ICONS.assignments,  tip: 'Assignments' },
+        { id: 'notifications',icon: ICONS.notifications,tip: 'Notifications' },
     ],
     vendor: [
         { id: 'overview',  icon: ICONS.overview,   tip: 'Overview' },
@@ -134,6 +142,7 @@ const SIDEBAR_ITEMS = {
         { id: 'handovers', icon: ICONS.handovers,  tip: 'Handovers' },
         { id: 'network',   icon: ICONS.network,    tip: 'Network' },
         { id: 'reviews',   icon: ICONS.starIcon,   tip: 'Reviews' },
+        { id: 'notifications', icon: ICONS.notifications, tip: 'Notifications' },
         { id: 'profile',   icon: ICONS.profile,    tip: 'Profile & KYC' },
     ],
     customer: [
@@ -141,6 +150,7 @@ const SIDEBAR_ITEMS = {
         { id: 'reviews',    icon: ICONS.starIcon,       tip: 'Write a Review' },
         { id: 'my-reviews', icon: ICONS.myReviewsIcon,  tip: 'My Reviews' },
         { id: 'loyalty',    icon: ICONS.loyaltyIcon,    tip: 'Loyalty Rewards' },
+        { id: 'notifications', icon: ICONS.notifications, tip: 'Notifications' },
         { id: 'profile',    icon: ICONS.profile,        tip: 'Profile & KYC' },
     ],
 };
@@ -318,6 +328,7 @@ export default function Navbar({ onLoginClick, breadcrumb, hideLogo = false }) {
                 )}
 
                 <div className="navbar__right">
+                    {user && <NotificationBell />}
                     {user ? (
                         <button
                             className="navbar__booking-btn"

@@ -1,8 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// modals/BookingDetailModal.jsx
-// Full booking detail panel rendered inside a modal overlay.
-// Handles agreement signing, payment, cancellation, inspections.
-// ─────────────────────────────────────────────────────────────────────────────
 import React, { useState } from 'react';
 import { cancelBooking } from '../../../services/api';
 import {

@@ -1,23 +1,213 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // VehicleManageModal.jsx
 // Full vehicle management modal: pipeline progress bar, docs sub-tab,
-// photos sub-tab, availability sub-tab, status toggle.
+// photos sub-tab, availability sub-tab, edit-details sub-tab, status toggle.
 //
 // Fix: Documents tab — image files now open in PhotoLightbox (same-page modal)
 // instead of a new browser tab, consistent with the Photos sub-tab behaviour.
 // PDF and non-image files still open in a new tab (no lightbox for those).
+//
+// Edit Details sub-tab: vendors can update previously-submitted fleet info.
+// If the vehicle has already passed initial admin review, the submitted
+// values are NOT applied immediately — the backend stages them in
+// pending_changes and sets needs_review=True. Live values stay unchanged
+// until an admin approves. This modal reflects that: it shows the pending
+// diff (if any) and labels the submit button accordingly.
 // ─────────────────────────────────────────────────────────────────────────────
 import React, { useState } from 'react';
 import { PhotoLightbox } from '../VendorMediaComponents';
-import { VEHICLE_STATUS_CLR, DOC_TYPES, ANGLES } from '../vendorConstants';
+import { VEHICLE_STATUS_CLR, DOC_TYPES, ANGLES, fmtDatetime } from '../vendorConstants';
 import { uploadVehicleDoc, uploadVehiclePhoto } from '../../../services/api';
 
 const PIPELINE = ['PENDING_DOCS', 'DOCS_SUBMITTED', 'ADMIN_APPROVED', 'CERTIFIED', 'LIVE'];
+
+// Statuses that mean the vehicle has already been through admin review at
+// least once — editing core details past this point triggers the
+// stage-for-approval behaviour on the backend.
+const REVIEWED_STATUSES = ['ADMIN_APPROVED', 'CERTIFIED', 'LIVE', 'INACTIVE'];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const isImageUrl = url =>
     url && /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url);
 
+// ── Edit Details form ─────────────────────────────────────────────────────────
+function EditDetailsForm({ vehicle: v, onSave, showToast }) {
+    const [form, setForm] = useState({
+        make:             v.make || '',
+        model:            v.model || '',
+        year:             v.year || '',
+        colour:           v.colour || '',
+        segment:          v.segment || '',
+        fuel_type:        v.fuel_type || '',
+        transmission:     v.transmission || '',
+        capacity:         v.capacity || '',
+        daily_rate:       v.daily_rate || '',
+        current_odometer: v.current_odometer ?? v.odometer_at_listing ?? '',
+    });
+    const [saving, setSaving] = useState(false);
+
+    const set = key => e => setForm(p => ({ ...p, [key]: e.target.value }));
+
+    const alreadyReviewed = REVIEWED_STATUSES.includes(v.status);
+    const pending = v.pending_changes_readable || [];
+
+    const distanceSinceVerified =
+        v.last_verified_odometer != null && form.current_odometer !== ''
+            ? Number(form.current_odometer) - v.last_verified_odometer
+            : null;
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            await onSave(form);
+            if (alreadyReviewed) {
+                showToast('Changes submitted — awaiting admin approval. Live values are unchanged for now.');
+            } else {
+                showToast('Vehicle details updated.');
+            }
+        } catch (err) {
+            showToast(
+                err.response?.data ? JSON.stringify(err.response.data) : 'Update failed.',
+                'error',
+            );
+        }
+        setSaving(false);
+    };
+
+    return (
+        <form onSubmit={handleSubmit}>
+            {alreadyReviewed && (
+                <div style={{
+                    background: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: 8,
+                    padding: '10px 12px', fontSize: 12, color: '#92400E', marginBottom: 14,
+                    display: 'flex', gap: 8, alignItems: 'flex-start',
+                }}>
+                    <span style={{ flexShrink: 0 }}>⚠</span>
+                    <span>
+                        This vehicle has already been reviewed by admin. Changes here will NOT
+                        go live immediately — they'll be submitted for admin approval, and the
+                        currently approved details stay visible to customers and admin until
+                        approved.
+                    </span>
+                </div>
+            )}
+
+            {pending.length > 0 && (
+                <div style={{
+                    background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 8,
+                    padding: '10px 12px', fontSize: 12, marginBottom: 14,
+                }}>
+                    <strong style={{ display: 'block', marginBottom: 6, color: '#92400E' }}>
+                        Pending admin review:
+                    </strong>
+                    {pending.map(c => (
+                        <div key={c.field} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, color: '#78350F' }}>
+                            <span>{c.label}</span>
+                            <span><s style={{ opacity: 0.6 }}>{c.old_value ?? '—'}</s> → {c.new_value ?? '—'}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <div className="vd-fg vd-fg--3">
+                <div className="vd-form-field">
+                    <label>Make</label>
+                    <input className="vd-input" value={form.make} onChange={set('make')} required />
+                </div>
+                <div className="vd-form-field">
+                    <label>Model</label>
+                    <input className="vd-input" value={form.model} onChange={set('model')} required />
+                </div>
+                <div className="vd-form-field">
+                    <label>Year</label>
+                    <input className="vd-input" type="number" value={form.year} onChange={set('year')} required />
+                </div>
+                <div className="vd-form-field">
+                    <label>Colour</label>
+                    <input className="vd-input" value={form.colour} onChange={set('colour')} />
+                </div>
+                <div className="vd-form-field">
+                    <label>Daily Rate (₹)</label>
+                    <input className="vd-input" type="number" value={form.daily_rate} onChange={set('daily_rate')} required />
+                </div>
+                <div className="vd-form-field">
+                    <label>Seats</label>
+                    <input className="vd-input" type="number" value={form.capacity} onChange={set('capacity')} required />
+                </div>
+                <div className="vd-form-field">
+                    <label>Segment</label>
+                    <select className="vd-input vd-select" value={form.segment} onChange={set('segment')}>
+                        {['hatchback', 'sedan', 'suv', 'luxury', 'van', 'truck'].map(s => (
+                            <option key={s} value={s}>{s}</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="vd-form-field">
+                    <label>Fuel</label>
+                    <select className="vd-input vd-select" value={form.fuel_type} onChange={set('fuel_type')}>
+                        {['petrol', 'diesel', 'electric', 'hybrid', 'cng'].map(f => (
+                            <option key={f} value={f}>{f}</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="vd-form-field">
+                    <label>Transmission</label>
+                    <select className="vd-input vd-select" value={form.transmission} onChange={set('transmission')}>
+                        {['manual', 'automatic'].map(t => (
+                            <option key={t} value={t}>{t}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* ── Odometer / re-verification block ── */}
+            <div style={{
+                marginTop: 16, background: 'var(--vs2)', border: '1px solid var(--vbdr)',
+                borderRadius: 10, padding: 14, display: 'flex', flexDirection: 'column', gap: 8,
+            }}>
+                <div className="vd-form-field">
+                    <label>Current Odometer (km)</label>
+                    <input
+                        className="vd-input"
+                        type="number"
+                        value={form.current_odometer}
+                        onChange={set('current_odometer')}
+                        placeholder="e.g. 42500"
+                    />
+                </div>
+
+                {v.last_verified_odometer != null && (
+                    <p style={{ fontSize: 11, color: 'var(--vm)', margin: 0 }}>
+                        Last verified at {Number(v.last_verified_odometer).toLocaleString('en-IN')} km.
+                        {distanceSinceVerified != null && distanceSinceVerified >= 0 && (
+                            <> {distanceSinceVerified.toLocaleString('en-IN')} km travelled since then.</>
+                        )}
+                    </p>
+                )}
+
+                {v.needs_reverification && (
+                    <p style={{ fontSize: 12, color: '#D97706', fontWeight: 700, margin: 0 }}>
+                        🔁 This vehicle is currently flagged for admin re-verification due to distance travelled.
+                    </p>
+                )}
+
+                {v.needs_review && (
+                    <p style={{ fontSize: 12, color: '#D97706', fontWeight: 700, margin: 0 }}>
+                        ✏️ You have changes awaiting admin approval.
+                        {v.last_edited_at && <> Submitted {fmtDatetime(v.last_edited_at)}.</>}
+                    </p>
+                )}
+            </div>
+
+            <button type="submit" className="vd-btn vd-btn--primary" style={{ marginTop: 16 }} disabled={saving}>
+                {saving ? 'Saving…' : alreadyReviewed ? 'Submit for Admin Approval' : 'Save Changes'}
+            </button>
+        </form>
+    );
+}
+
+// ── Main modal ────────────────────────────────────────────────────────────────
 export default function VehicleManageModal({
     vehicle: v,
     onClose,
@@ -34,6 +224,7 @@ export default function VehicleManageModal({
     onBlock,
     onUnblock,
     onStatusToggle,
+    onUpdateVehicle,
 }) {
     const [subTab,      setSubTab]      = useState('docs');
     const [lightboxIdx, setLightboxIdx] = useState(null);
@@ -67,6 +258,7 @@ export default function VehicleManageModal({
 
     // ── Doc upload ────────────────────────────────────────────────────────────
     const handleDocUpload = async (docType) => {
+        if (!v?.id) { showToast('Vehicle not fully loaded — please refresh and try again.', 'error'); return; }
         const file = docUploads[`${v.id}-${docType}`];
         if (!file) { showToast('Select a file.', 'error'); return; }
         const fd = new FormData();
@@ -83,6 +275,7 @@ export default function VehicleManageModal({
 
     // ── Photo upload ──────────────────────────────────────────────────────────
     const handlePhotoUpload = async () => {
+        if (!v?.id) { showToast('Vehicle not fully loaded — please refresh and try again.', 'error'); return; }
         if (!photoUpload.file) { showToast('Select a photo.', 'error'); return; }
         const fd = new FormData();
         fd.append('image',    photoUpload.file);
@@ -95,6 +288,12 @@ export default function VehicleManageModal({
         } catch {
             showToast('Photo upload failed.', 'error');
         }
+    };
+
+    // ── Edit details save ──────────────────────────────────────────────────────
+    const handleSaveDetails = async (form) => {
+        await onUpdateVehicle(v.id, form);
+        onRefresh();
     };
 
     // ── Lightbox photos array (vehicle photos or single doc image) ────────────
@@ -135,6 +334,16 @@ export default function VehicleManageModal({
                             {v.is_certified && (
                                 <span className="vd-badge" style={{ background: '#D1FAE5', color: '#059669', border: '1px solid #6EE7B7' }}>
                                     ✅ Certified
+                                </span>
+                            )}
+                            {v.needs_review && (
+                                <span className="vd-badge" style={{ background: '#FEF3C7', color: '#D97706', border: '1px solid #FCD34D' }}>
+                                    ✏️ Pending Admin Approval
+                                </span>
+                            )}
+                            {v.needs_reverification && (
+                                <span className="vd-badge" style={{ background: '#FEE2E2', color: '#EF4444', border: '1px solid #FCA5A5' }}>
+                                    🔁 Re-verification Needed
                                 </span>
                             )}
                             <span style={{ fontSize: 12, color: 'var(--vm)' }}>
@@ -200,17 +409,28 @@ export default function VehicleManageModal({
 
                 {/* Sub-tabs */}
                 <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
+                    display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
                     padding: '12px 20px', borderBottom: '1px solid var(--vbdr)',
                     background: 'var(--vs)',
                 }}>
-                    {[['docs', '📄 Documents'], ['photos', '📷 Photos'], ['availability', '📅 Availability']].map(([id, label]) => (
+                    {[
+                        ['docs', '📄 Documents'],
+                        ['photos', '📷 Photos'],
+                        ['availability', '📅 Availability'],
+                        ['edit', '✏️ Edit Details'],
+                    ].map(([id, label]) => (
                         <button
                             key={id}
                             className={`vd-btn vd-btn--sm ${subTab === id ? 'vd-btn--primary' : 'vd-btn--ghost'}`}
                             onClick={() => setSubTab(id)}
                         >
                             {label}
+                            {id === 'edit' && (v.needs_review || v.needs_reverification) && (
+                                <span style={{
+                                    marginLeft: 6, width: 7, height: 7, borderRadius: '50%',
+                                    background: '#D97706', display: 'inline-block',
+                                }} />
+                            )}
                         </button>
                     ))}
                 </div>
@@ -253,7 +473,6 @@ export default function VehicleManageModal({
                                             {/* ── Document preview / view link ── */}
                                             {fileUrl && (
                                                 isImg ? (
-                                                    /* Image → thumbnail that opens lightbox */
                                                     <div
                                                         onClick={() => openDoc(fileUrl)}
                                                         style={{
@@ -289,7 +508,6 @@ export default function VehicleManageModal({
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    /* PDF / other → link that opens new tab */
                                                     <button
                                                         onClick={() => openDoc(fileUrl)}
                                                         style={{
@@ -426,6 +644,15 @@ export default function VehicleManageModal({
                                 </>
                             )}
                         </div>
+                    )}
+
+                    {/* ── Edit Details ── */}
+                    {subTab === 'edit' && (
+                        <EditDetailsForm
+                            vehicle={v}
+                            onSave={handleSaveDetails}
+                            showToast={showToast}
+                        />
                     )}
                 </div>
             </div>

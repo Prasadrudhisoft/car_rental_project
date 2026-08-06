@@ -22,43 +22,29 @@ def calculate_price(
     rental_days: int = 0,
     selected_addons: list = None,
     one_way_fee: Decimal = Decimal('0'),
-    pickup_time: str = None,   # "HH:MM"
-    return_time: str = None,   # "HH:MM"
+    pickup_time: str = None,
+    return_time: str = None,
 ) -> dict:
-    """
-    Core pricing function.
-
-    Rental calculation logic:
-    ─────────────────────────
-    • Day 1 (any return on the day after pickup) = 1 full day charge.
-    • For each additional day beyond the first:
-        base_charge   = daily_rate × 50%
-        hourly_charge = (daily_rate × 50%) / 24 × hours_used_that_day
-        day_cost      = base_charge + hourly_charge
-
-    When pickup_time and return_time are provided, the calculation uses
-    actual hours for the fractional last day.
-    When they are not provided, integer rental_days is used (legacy path).
-    """
     daily_rate    = Decimal(str(daily_rate))
     one_way_fee   = Decimal(str(one_way_fee))
     selected_addons = selected_addons or []
 
     gst_rate = Decimal(str(get_config('gst_rate', '0.18')))
-    seg_cfg       = get_segment_config(vehicle_segment)
-    deposit       = seg_cfg.get('security_deposit', Decimal('0'))
+    seg_cfg         = get_segment_config(vehicle_segment)
+    deposit         = seg_cfg.get('security_deposit', Decimal('0'))
+    min_rental_days = seg_cfg.get('min_rental_days', 1)
+    min_driver_age  = seg_cfg.get('min_driver_age', 21)
 
-    # ── Time-aware calculation ──────────────────────────
+    cancellation_free_hours        = get_config('cancellation_free_hours', 48)
+    cancellation_half_refund_hours = get_config('cancellation_half_refund_hours', 24)
+
     if pickup_time and return_time and rental_days >= 0:
         base_amount = _calculate_time_based(daily_rate, rental_days, pickup_time, return_time)
     else:
-        # Legacy: integer days only
         base_amount = daily_rate * Decimal(str(max(rental_days, 1)))
 
-    # ── Add-ons ─────────────────────────────────────────
-    addon_total = sum((get_addon_price(a) * Decimal(str(max(rental_days, 1))) for a in selected_addons),Decimal('0') )
+    addon_total = sum((get_addon_price(a) * Decimal(str(max(rental_days, 1))) for a in selected_addons), Decimal('0'))
 
-    # ── GST ─────────────────────────────────────────────
     taxable     = base_amount + addon_total + one_way_fee
     gst_amount  = (taxable * Decimal(str(gst_rate))).quantize(Decimal('0.01'), ROUND_HALF_UP)
     cgst        = (gst_amount / 2).quantize(Decimal('0.01'), ROUND_HALF_UP)
@@ -77,6 +63,11 @@ def calculate_price(
         'sgst_amount':      str(sgst),
         'grand_total':      str(grand_total.quantize(Decimal('0.01'), ROUND_HALF_UP)),
         'security_deposit': str(deposit),
+        # ── NEW: surfaced so the booking wizard can display and enforce them ──
+        'min_rental_days':               min_rental_days,
+        'min_driver_age':                min_driver_age,
+        'cancellation_free_hours':       cancellation_free_hours,
+        'cancellation_half_refund_hours': cancellation_half_refund_hours,
     }
 
 

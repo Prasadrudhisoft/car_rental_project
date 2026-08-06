@@ -1,40 +1,5 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// AdminDashboard.jsx  (main entry point)
-//
-// This file is now a lean orchestrator:
-//   • Owns all top-level state (data, modals, tab)
-//   • Loads data per tab via loadTab()
-//   • Delegates ALL rendering to imported sub-components
-//
-// Folder structure:
-//   pages/admindashboard/
-//   ├── AdminDashboard.jsx          ← you are here
-//   ├── adminConstants.js           ← colour maps, helpers, PK extractors
-//   ├── AdminShared.jsx             ← StatusBadge, SectionCard, InlineForm, …
-//   ├── MediaComponents.jsx         ← PhotoLightbox, KYCDocumentCell, DocPreviewRow
-//   ├── VendorDetailModal.jsx
-//   ├── VehicleDetailModal.jsx
-//   ├── BookingDetailModal.jsx
-//   ├── UserDetailModal.jsx
-//   ├── ReviewDetailModal.jsx
-//   ├── AdminAssignmentCard.jsx
-//   ├── AssignmentsTab.jsx
-//   └── tabs/
-//       ├── OverviewTab.jsx
-//       ├── VendorsTab.jsx
-//       ├── VehiclesTab.jsx
-//       ├── BookingsTab.jsx
-//       ├── UsersTab.jsx
-//       ├── LocationsTab.jsx
-//       ├── LogisticsTab.jsx
-//       ├── ConfigTab.jsx
-//       ├── PromosTab.jsx
-//       ├── AgreementsTab.jsx
-//       └── ReviewsTab.jsx
-// ─────────────────────────────────────────────────────────────────────────────
-import React, { useState, useEffect, useCallback } from "react";
-
-// ── API ───────────────────────────────────────────────────────────────────────
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
     getAdminStats, getAdminAnalytics,
     getAdminVendors, adminVendorAction,
@@ -43,6 +8,7 @@ import {
     getAdminBookings,
     getAdminUsers,
     getConfigSettings, updateConfigSetting,
+    getConfigCategories, createConfigSetting, archiveConfigSetting, restoreConfigSetting, deleteConfigSetting, getConfigHistory,
     getSegmentConfigs, updateSegmentConfig,
     getLocations, createLocation, deleteLocation,
     getCities, createCity, deleteCity,
@@ -53,7 +19,7 @@ import {
     getAdminAgreementVersions, createAgreementVersion, updateAgreementVersion, activateAgreementVersion,
     getAdminAcceptances,
     getAdminVendors as getReviewVendors,
-    getMyAdminProfile,
+    getMyAdminProfile, approveVehicleEdit, rejectVehicleEdit, completeReverification,
 } from "../../services/api";
 
 // ── Layout ────────────────────────────────────────────────────────────────────
@@ -65,11 +31,12 @@ import { ScopeIndicator } from "./AdminShared";
 import { PhotoLightbox }  from "./MediaComponents";
 
 // ── Modals ────────────────────────────────────────────────────────────────────
-import VendorDetailModal  from "./modals/VendorDetailModal";
-import VehicleDetailModal from "./modals/VehicleDetailModal";
-import BookingDetailModal from "./modals/BookingDetailModal";
-import UserDetailModal    from "./modals/UserDetailModal";
-import ReviewDetailModal  from "./modals/ReviewDetailModal";
+import VendorDetailModal   from "./modals/VendorDetailModal";
+import VehicleDetailModal  from "./modals/VehicleDetailModal";
+import BookingDetailModal  from "./modals/BookingDetailModal";
+import UserDetailModal     from "./modals/UserDetailModal";
+import ReviewDetailModal   from "./modals/ReviewDetailModal";
+import ConfigHistoryModal  from "./modals/ConfigHistoryModal";
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 import OverviewTab    from "./tabs/OverviewTab";
@@ -84,6 +51,7 @@ import PromosTab      from "./tabs/PromosTab";
 import AgreementsTab  from "./tabs/AgreementsTab";
 import ReviewsTab     from "./tabs/ReviewsTab";
 import AssignmentsTab from "./tabs/AssignmentsTab";
+import NotificationsTab from "./tabs/NotificationsTab";
 
 // ── CSS ───────────────────────────────────────────────────────────────────────
 import "./AdminDashboard.css";
@@ -95,6 +63,7 @@ const TAB_LABELS = {
     bookings: "Bookings", users: "Users",     locations: "Locations",
     logistics: "Logistics", config: "Config", promos: "Promos",
     agreements: "Agreements", reviews: "Reviews", assignments: "Assignments",
+    notifications: "Notifications",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -115,6 +84,7 @@ export default function AdminDashboard() {
     const [users,        setUsers]        = useState([]);
     const [configs,      setConfigs]      = useState([]);
     const [segments,     setSegments]     = useState([]);
+    const [configCategories, setConfigCategories] = useState([]);
     const [locations,    setLocations]    = useState([]);
     const [cities,       setCities]       = useState([]);
     const [cityPairFees, setCityPairFees] = useState([]);
@@ -144,6 +114,14 @@ export default function AdminDashboard() {
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [selectedUser,    setSelectedUser]    = useState(null);
     const [vehiclePhotoLightbox, setVehiclePhotoLightbox] = useState(null);
+
+    // ── Config history modal state ───────────────────────────────────────────
+    const [configHistorySetting, setConfigHistorySetting] = useState(null);
+    const [configHistoryData,    setConfigHistoryData]    = useState([]);
+    const [configHistoryLoading, setConfigHistoryLoading] = useState(false);
+
+    const [searchParams, setSearchParams] = useSearchParams();
+    const highlightRef = useRef(null);
 
     // ── Fetch admin profile on mount ──────────────────────────────────────────
     useEffect(() => {
@@ -185,8 +163,14 @@ export default function AdminDashboard() {
                     break;
                 }
                 case "config": {
-                    const [c, sg] = await Promise.all([getConfigSettings(), getSegmentConfigs()]);
-                    setConfigs(c.data.results ?? c.data); setSegments(sg.data.results ?? sg.data);
+                    const [c, sg, cat] = await Promise.all([
+                        getConfigSettings({ include_archived: 'true' }),
+                        getSegmentConfigs(),
+                        getConfigCategories(),
+                    ]);
+                    setConfigs(c.data.results ?? c.data);
+                    setSegments(sg.data.results ?? sg.data);
+                    setConfigCategories(cat.data.results ?? cat.data);
                     break;
                 }
                 case "locations": {
@@ -230,7 +214,25 @@ export default function AdminDashboard() {
     }, [vehicleFilter]);
 
     useEffect(() => { loadTab(tab); }, [tab, loadTab]);
-    useEffect(() => { if (tab === "vehicles") loadTab("vehicles"); }, [vehicleFilter]); // eslint-disable-line
+    useEffect(() => { if (tab === "vehicles") loadTab("vehicles"); }, [vehicleFilter]);
+
+    useEffect(() => {
+        const tabParam = searchParams.get("tab");
+        if (tabParam && tabParam !== tab) setTab(tabParam);
+        const highlight = searchParams.get("highlight");
+        if (highlight) highlightRef.current = highlight;
+    }, [searchParams]);
+
+    useEffect(() => {
+        if (tab === "vehicles" && highlightRef.current && vehicles.length > 0) {
+            const match = vehicles.find((v) => String(v.id) === String(highlightRef.current));
+            if (match) setSelectedVehicle(match);
+            highlightRef.current = null;
+            const next = new URLSearchParams(searchParams);
+            next.delete("highlight");
+            setSearchParams(next, { replace: true });
+        }
+    }, [vehicles, tab]);
 
     // ── Vendor actions ────────────────────────────────────────────────────────
     const handleVendorAction = async (id, action, note = "") => {
@@ -291,11 +293,112 @@ export default function AdminDashboard() {
         catch { alert("VAHAN check failed."); }
     };
 
+    const handleApproveVehicleEdit = async (vehicleId) => {
+    try {
+        const { data } = await approveVehicleEdit(vehicleId);
+        await loadTab("vehicles");
+        setSelectedVehicle((prev) => (prev?.id === vehicleId ? data.vehicle : prev));
+        alert(data.message);
+    } catch { alert("Failed to approve changes."); }
+};
+
+const handleRejectVehicleEdit = async (vehicleId) => {
+    const reason = window.prompt("Reason for rejecting these changes (optional):", "") ?? "";
+    try {
+        await rejectVehicleEdit(vehicleId, reason);
+        await loadTab("vehicles");
+        setSelectedVehicle((prev) =>
+            prev?.id === vehicleId
+                ? { ...prev, needs_review: false, pending_changes: {}, pending_changes_readable: [] }
+                : prev
+        );
+    } catch { alert("Failed to reject changes."); }
+};
+
+const handleCompleteReverification = async (vehicleId) => {
+    try {
+        const { data } = await completeReverification(vehicleId);
+        await loadTab("vehicles");
+        setSelectedVehicle((prev) =>
+            prev?.id === vehicleId ? { ...prev, needs_reverification: false, needs_review: false } : prev
+        );
+        alert(data.message);
+    } catch { alert("Failed to record re-verification."); }
+};
+
     // ── Config actions ────────────────────────────────────────────────────────
-    const handleConfigSave  = async (s) => { try { await updateConfigSetting(s.id, s.value); alert("Saved."); } catch { alert("Save failed."); } };
+    const handleConfigSave = async (s, changeReason = "") => {
+        try {
+            await updateConfigSetting(s.id, s.value, changeReason);
+            alert("Saved.");
+        } catch (e) {
+            alert(e.response?.data?.error || e.response?.data?.value?.[0] || "Save failed.");
+        }
+    };
+
     const handleSegmentSave = async (seg) => {
-        try { await updateSegmentConfig(seg.id, { security_deposit: seg.security_deposit, min_driver_age: seg.min_driver_age, min_rental_days: seg.min_rental_days }); alert("Segment saved."); }
-        catch { alert("Save failed."); }
+        try {
+            await updateSegmentConfig(seg.id, {
+                security_deposit: seg.security_deposit,
+                min_driver_age: seg.min_driver_age,
+                min_rental_days: seg.min_rental_days,
+                platform_commission_override: seg.platform_commission_override,
+                is_active: seg.is_active,
+            });
+            alert("Segment saved.");
+        } catch { alert("Save failed."); }
+    };
+
+    const handleAddConfigSetting = async (v) => {
+        setFormLoading(true);
+        try {
+            await createConfigSetting(v);
+            await loadTab("config");
+        } catch (e) {
+            alert(JSON.stringify(e.response?.data || "Failed to create setting."));
+        }
+        setFormLoading(false);
+    };
+
+    const handleArchiveConfigSetting = async (id, reason = '') => {
+        try {
+            const { data } = await archiveConfigSetting(id, reason);
+            await loadTab("config");
+            alert(data.message);
+        } catch (e) {
+            alert(e.response?.data?.detail || "Couldn't archive this setting.");
+        }
+    };
+
+    const handleRestoreConfigSetting = async (id) => {
+        try {
+            await restoreConfigSetting(id);
+            await loadTab("config");
+        } catch (e) {
+            alert(e.response?.data?.detail || "Couldn't restore this setting.");
+        }
+    };
+
+    const handleDeleteConfigSetting = async (id) => {
+        if (!window.confirm("Permanently delete this setting? This cannot be undone.")) return;
+        try {
+            await deleteConfigSetting(id);
+            setConfigs((p) => p.filter((c) => c.id !== id));
+        } catch (e) {
+            alert(e.response?.data?.detail || "Couldn't delete this setting.");
+        }
+    };
+
+    const handleViewConfigHistory = async (setting) => {
+        setConfigHistorySetting(setting);
+        setConfigHistoryLoading(true);
+        try {
+            const { data } = await getConfigHistory(setting.id);
+            setConfigHistoryData(data);
+        } catch {
+            setConfigHistoryData([]);
+        }
+        setConfigHistoryLoading(false);
     };
 
     // ── Location actions ──────────────────────────────────────────────────────
@@ -352,6 +455,9 @@ export default function AdminDashboard() {
                     onBlacklist={handleBlacklist}
                     onSetStatus={handleSetVehicleStatus}
                     onVahanCheck={handleVahanCheck}
+                    onApproveEdit={handleApproveVehicleEdit}
+                    onRejectEdit={handleRejectVehicleEdit}
+                    onCompleteReverification={handleCompleteReverification}
                     setVehiclePhotoLightbox={setVehiclePhotoLightbox}
                 />
             )}
@@ -366,6 +472,14 @@ export default function AdminDashboard() {
                     photos={vehiclePhotoLightbox.photos}
                     initialIndex={vehiclePhotoLightbox.index}
                     onClose={() => setVehiclePhotoLightbox(null)}
+                />
+            )}
+            {configHistorySetting && (
+                <ConfigHistoryModal
+                    setting={configHistorySetting}
+                    history={configHistoryData}
+                    loading={configHistoryLoading}
+                    onClose={() => setConfigHistorySetting(null)}
                 />
             )}
 
@@ -485,10 +599,17 @@ export default function AdminDashboard() {
                         <ConfigTab
                             configs={configs}
                             segments={segments}
+                            categories={configCategories}
                             setConfigs={setConfigs}
                             setSegments={setSegments}
                             onConfigSave={handleConfigSave}
                             onSegmentSave={handleSegmentSave}
+                            onAddConfig={handleAddConfigSetting}
+                            onArchiveConfig={handleArchiveConfigSetting}
+                            onRestoreConfig={handleRestoreConfigSetting}
+                            onDeleteConfig={handleDeleteConfigSetting}
+                            onViewHistory={handleViewConfigHistory}
+                            formLoading={formLoading}
                         />
                     )}
 
@@ -521,6 +642,8 @@ export default function AdminDashboard() {
                             <AssignmentsTab myProfile={myProfile} />
                         </div>
                     )}
+
+                    {!loading && tab === "notifications" && <NotificationsTab />}
                 </div>
             </div>
         </div>

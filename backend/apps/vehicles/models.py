@@ -93,6 +93,28 @@ class Vehicle(models.Model):
     # Timestamps
     created_at  = models.DateTimeField(auto_now_add=True)
     updated_at  = models.DateTimeField(auto_now=True)
+
+    # ── Odometer tracking / re-verification ───────────────────────────
+    current_odometer       = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Latest odometer reading reported by the vendor."
+    )
+    last_verified_odometer = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Odometer reading recorded at the last admin verification."
+    )
+    needs_reverification   = models.BooleanField(default=False)
+
+    # ── Vendor-edit tracking (admin visibility) ────────────────────────
+    needs_review           = models.BooleanField(
+        default=False,
+        help_text="True when the vendor edited details after the vehicle was already reviewed/live."
+    )
+    last_edited_at         = models.DateTimeField(null=True, blank=True)
+    last_edit_summary      = models.TextField(blank=True)
+    admin_reviewed_edit_at = models.DateTimeField(null=True, blank=True)
+    pending_changes         = models.JSONField(default=dict, blank=True)
+    pending_submitted_at    = models.DateTimeField(null=True, blank=True)
  
     class Meta:
         db_table = 'vehicles_vehicle'

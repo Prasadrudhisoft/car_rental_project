@@ -1,15 +1,3 @@
-/**
- * AgreementModal.jsx
- *
- * Self-contained, dynamic agreement modal system.
- * T&C content is always fetched from the backend — never hardcoded.
- *
- * Exports:
- *   AgreementSignModal    → shown BEFORE signing (loads active version)
- *   AgreementViewModal    → shown AFTER signing (loads the exact signed version)
- *   AgreementHistoryTab   → customer's full acceptance history list
- */
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     getActiveAgreement,

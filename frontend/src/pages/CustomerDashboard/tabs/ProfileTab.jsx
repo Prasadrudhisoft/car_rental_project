@@ -1,8 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// tabs/ProfileTab.jsx
-// Customer personal info editor, KYC status display, and OTP verification
-// rows for phone and email.
-// ─────────────────────────────────────────────────────────────────────────────
 import React, { useState } from 'react';
 import { updateCustomerProfile } from '../../../services/api';
 

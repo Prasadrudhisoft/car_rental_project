@@ -1,9 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// tabs/BookingsTab.jsx
-// Customer bookings list rendered as a DataTable on desktop.
-// On mobile (≤768px): renders compact tappable cards instead — no horizontal
-// scroll. Full details are available in BookingDetailModal via onViewBooking.
-// ─────────────────────────────────────────────────────────────────────────────
 import React, { useState, useMemo } from 'react';
 import DataTable from '../../../components/common/DataTable';
 import { StatusBadge } from '../cdShared';

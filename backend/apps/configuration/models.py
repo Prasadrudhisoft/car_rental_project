@@ -48,6 +48,15 @@ class ConfigSetting(models.Model):
     description  = models.TextField(blank=True)
     is_active    = models.BooleanField(default=True)
     is_editable  = models.BooleanField(default=True)
+    is_system    = models.BooleanField(
+        default=False,
+        help_text=(
+            "System settings are read directly by platform code (pricing, cancellations, "
+            "loyalty, etc.). They can be edited but never archived or deleted — removing "
+            "one would silently break live bookings. Settings an admin creates through the "
+            "UI are never system settings."
+        ),
+    )
     updated_at   = models.DateTimeField(auto_now=True)
     created_at   = models.DateTimeField(auto_now_add=True)
  

@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Sidebar }  from '../../components/common/Navbar';
+import NotificationsPanel from '../../components/notifications/NotificationsPanel';
 import Navbar        from '../../components/common/Navbar';
 
 // ── API ───────────────────────────────────────────────────────────────────────
@@ -58,7 +60,8 @@ export default function CustomerDashboard() {
     const [selectedPendingReview,  setSelectedPendingReview]  = useState(null);
     const [selectedSubmittedReview,setSelectedSubmittedReview]= useState(null);
     const [kycModal,               setKycModal]               = useState(null);
-    // { type: 'phone'|'email', value: string }
+    const [searchParams, setSearchParams] = useSearchParams();
+    const highlightRef = useRef(null);
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     const showToast = useCallback((msg, type = 'success') => {
@@ -130,6 +133,25 @@ export default function CustomerDashboard() {
             })
             .catch(() => {});
     }, []);
+
+    useEffect(() => {
+        const tabParam = searchParams.get('tab');
+        if (tabParam && tabParam !== tab) setTab(tabParam);
+        const highlight = searchParams.get('highlight');
+        if (highlight) highlightRef.current = highlight;
+    }, [searchParams]);
+
+
+    useEffect(() => {
+        if (tab === 'bookings' && highlightRef.current && bookings.length > 0) {
+            const match = bookings.find((b) => String(b.id) === String(highlightRef.current));
+            if (match) openBookingDetail(match);
+            highlightRef.current = null;
+            const next = new URLSearchParams(searchParams);
+            next.delete('highlight');
+            setSearchParams(next, { replace: true });
+        }
+    }, [bookings, tab]);
 
     // ── Open booking detail (with caching) ───────────────────────────────────
     const openBookingDetail = async booking => {
@@ -327,6 +349,8 @@ export default function CustomerDashboard() {
                             showToast={showToast}
                         />
                     )}
+
+                    {tab === 'notifications' && <NotificationsPanel />}
                 </div>
             </div>
         </div>

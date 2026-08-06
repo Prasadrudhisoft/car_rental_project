@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
+    AdminApproveVehicleEditView,
     VendorVehicleViewSet,
     VehicleDocUploadView,
     VehiclePhotoUploadView,
@@ -17,6 +18,8 @@ from .views import (
     AvailabilityView,
     VehicleAdminStatsView,
     VAHANCheckView,
+    AdminCompleteReverificationView,
+    AdminRejectVehicleEditView,
 )
  
 router = DefaultRouter()
@@ -45,6 +48,11 @@ urlpatterns = [
     path('admin/<int:vehicle_id>/set-status/',         AdminVehicleSetStatusView.as_view(), name='admin-set-status'),
     path('admin/<int:vehicle_id>/flag-qr/',            VehicleQRTamperFlagView.as_view(), name='admin-flag-qr'),
     path('admin/<int:vehicle_id>/vahan-check/',        VAHANCheckView.as_view(), name='admin-vahan-check'),
-    
+    path('admin/<int:vehicle_id>/approve-edit/',
+         AdminApproveVehicleEditView.as_view(),       name='admin-approve-edit'),
+    path('admin/<int:vehicle_id>/reject-edit/',
+         AdminRejectVehicleEditView.as_view(),        name='admin-reject-edit'),
+    path('admin/<int:vehicle_id>/complete-reverification/',
+         AdminCompleteReverificationView.as_view(),   name='admin-complete-reverify'),
 ]
 

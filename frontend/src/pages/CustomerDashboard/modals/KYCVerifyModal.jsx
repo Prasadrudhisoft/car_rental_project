@@ -1,7 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// modals/KYCVerifyModal.jsx
-// OTP-based phone / email KYC verification for customers.
-// ─────────────────────────────────────────────────────────────────────────────
 import React, { useState } from 'react';
 import {
     sendKYCPhoneOTP, verifyKYCPhoneOTP,

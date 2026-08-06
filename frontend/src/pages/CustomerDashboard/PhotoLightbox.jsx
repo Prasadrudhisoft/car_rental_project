@@ -1,7 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// PhotoLightbox.jsx
-// Full-screen image carousel.  Keyboard: ← → Escape.
-// ─────────────────────────────────────────────────────────────────────────────
 import React, { useState, useEffect } from 'react';
 
 export default function PhotoLightbox({ photos, initialIndex, onClose }) {

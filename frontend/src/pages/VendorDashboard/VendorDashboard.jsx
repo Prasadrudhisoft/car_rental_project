@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Sidebar }  from '../../components/common/Navbar';
 import Navbar        from '../../components/common/Navbar';
 import DataTable     from '../../components/common/DataTable';
+import NotificationsPanel from '../../components/notifications/NotificationsPanel';
 import '../../components/common/DataTable.css';
 
 // ── API ───────────────────────────────────────────────────────────────────────
 import {
     getVendorBookings, getVendorProfile, updateVendorProfile, uploadVendorKYC,
-    getVendorAnalytics, getMyVehicles, createVehicle,
+    getVendorAnalytics, getMyVehicles, createVehicle, updateVehicle,
     toggleVehicleStatus, blockAvailability, unblockAvailability, getVehicleAvailability,
     getVendorNetwork, joinNetwork, leaveNetwork, getCities, getCityLocations,
     getMyHandovers, getVendorBookingDetail, fetchVendorReviews,
@@ -117,6 +119,9 @@ export default function VendorDashboard() {
         } catch { setCityLocations([]); }
     }, []);
 
+    const [searchParams, setSearchParams] = useSearchParams();
+    const highlightRef = useRef(null);
+
     useEffect(() => {
         if (vehicleForm.city) loadCityLocations(vehicleForm.city);
     }, [vehicleForm.city, loadCityLocations]);
@@ -189,7 +194,7 @@ export default function VendorDashboard() {
         setLoading(false);
     }, [bookingStatusFilter, user?.id]);
 
-    useEffect(() => { loadTab(tab); }, [tab]);  // eslint-disable-line
+    useEffect(() => { loadTab(tab); }, [tab]);
 
     // Load profile silently on mount (for KYC gate and hero badges)
     useEffect(() => {
@@ -205,7 +210,37 @@ export default function VendorDashboard() {
                 .then(({ data }) => setBookings(data.results || data))
                 .catch(() => {});
         }
-    }, [bookingStatusFilter]); // eslint-disable-line
+    }, [bookingStatusFilter]);
+
+
+    useEffect(() => {
+        const tabParam = searchParams.get('tab');
+        if (tabParam && tabParam !== tab) setTab(tabParam);
+        const highlight = searchParams.get('highlight');
+        if (highlight) highlightRef.current = highlight;
+    }, [searchParams]);
+
+    useEffect(() => {
+        if (tab === 'bookings' && highlightRef.current && bookings.length > 0) {
+            const match = bookings.find((b) => String(b.id) === String(highlightRef.current));
+            if (match) openBookingDetail(match);
+            highlightRef.current = null;
+            const next = new URLSearchParams(searchParams);
+            next.delete('highlight');
+            setSearchParams(next, { replace: true });
+        }
+    }, [bookings, tab]);
+
+    useEffect(() => {
+        if (tab === 'fleet' && highlightRef.current && vehicles.length > 0) {
+            const match = vehicles.find((v) => String(v.id) === String(highlightRef.current));
+            if (match) setSelectedVehicle(match);
+            highlightRef.current = null;
+            const next = new URLSearchParams(searchParams);
+            next.delete('highlight');
+            setSearchParams(next, { replace: true });
+        }
+    }, [vehicles, tab]);
 
     // ── Booking actions ───────────────────────────────────────────────────────
     const openBookingDetail = async (booking) => {
@@ -234,8 +269,9 @@ export default function VendorDashboard() {
         try {
             const fd = new FormData();
             Object.entries(vehicleForm).forEach(([k, v]) => { if (v !== '') fd.append(k, v); });
-            const { data } = await createVehicle(fd);
-            setVehicles(p => [data, ...p]);
+            await createVehicle(fd);
+            const { data } = await getMyVehicles();      // re-fetch the authoritative list
+            setVehicles(data.results || data);
             setShowAddVehicle(false);
             showToast('Vehicle registered! Upload RC, Insurance, PUC and 10+ photos to go LIVE.');
         } catch (e) {
@@ -249,6 +285,19 @@ export default function VendorDashboard() {
             setVehicles(p => p.map(v => v.id === vehicleId ? { ...v, status: data.status } : v));
             showToast(`Vehicle ${data.status}.`);
         } catch (e) { showToast(e.response?.data?.error || 'Toggle failed.', 'error'); }
+    };
+
+    const handleUpdateVehicle = async (vehicleId, form) => {
+        const { data: updated } = await updateVehicle(vehicleId, form);
+        const { data: list } = await getMyVehicles();
+        const freshVehicles = list.results || list;
+        setVehicles(freshVehicles);
+        setSelectedVehicle((prev) =>
+            prev?.id === vehicleId
+                ? (freshVehicles.find(v => v.id === vehicleId) || updated || prev)
+                : prev
+        );
+        return updated;
     };
 
     const loadAvailability = async (vehicleId) => {
@@ -369,6 +418,7 @@ export default function VendorDashboard() {
                     onBlock={handleBlock}
                     onUnblock={handleUnblock}
                     onStatusToggle={() => handleToggleVehicle(selectedVehicle.id)}
+                    onUpdateVehicle={handleUpdateVehicle}
                 />
             )}
 
@@ -540,6 +590,7 @@ export default function VendorDashboard() {
                                             kycComplete={kycComplete}
                                         />
                                     )}
+                                    {tab === 'notifications' && <NotificationsPanel />}
                                 </>
                             )}
                         </div>

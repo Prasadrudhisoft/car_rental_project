@@ -73,10 +73,34 @@ class VehicleDetailSerializer(serializers.ModelSerializer):
     transmission_display = serializers.CharField(
         source="get_transmission_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
- 
+
     class Meta:
         model  = Vehicle
         fields = '__all__'
+
+    _PENDING_FIELD_LABELS = {
+        'make': 'Make', 'model': 'Model', 'year': 'Year', 'colour': 'Colour',
+        'segment': 'Segment', 'fuel_type': 'Fuel Type', 'transmission': 'Transmission',
+        'capacity': 'Seats', 'daily_rate': 'Daily Rate (₹)', 'city': 'City',
+        'pickup_location': 'Pickup Location', 'current_odometer': 'Odometer (km)',
+    }
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        pending = instance.pending_changes or {}
+        readable = []
+        for field, new_value in pending.items():
+            old_value = getattr(instance, field, None)
+            if hasattr(old_value, 'pk'):
+                old_value = str(old_value)
+            readable.append({
+                'field':     field,
+                'label':     self._PENDING_FIELD_LABELS.get(field, field),
+                'old_value': old_value,
+                'new_value': new_value,
+            })
+        data['pending_changes_readable'] = readable
+        return data
  
  
 class VehicleCreateSerializer(serializers.ModelSerializer):
@@ -109,3 +133,40 @@ class VehicleAvailabilitySerializer(serializers.ModelSerializer):
         model  = VehicleAvailability
         fields = ['id', 'blocked_date', 'reason']
         read_only_fields = ['reason']
+
+
+class VehicleVendorUpdateSerializer(serializers.ModelSerializer):
+    """
+    Used when a vendor edits an existing listing (PATCH /vehicles/vendor/{id}/).
+    Unlike VehicleCreateSerializer:
+      - plate_number is excluded — it's tied to the QR/vehicle_id_code once
+        certified and must never silently change under an existing sticker.
+      - current_odometer is exposed so vendors keep mileage current, which
+        drives the automatic re-verification flag.
+    """
+    class Meta:
+        model  = Vehicle
+        fields = ['make', 'model', 'year', 'colour', 'segment', 'fuel_type',
+                  'transmission', 'capacity', 'daily_rate', 'city',
+                  'pickup_location', 'current_odometer']
+
+    def validate_year(self, value):
+        import datetime
+        current_year = datetime.date.today().year
+        if value < 2000 or value > current_year + 1:
+            raise serializers.ValidationError(f'Year must be between 2000 and {current_year + 1}.')
+        return value
+
+    def validate_daily_rate(self, value):
+        from apps.configuration.utils import get_config
+        from decimal import Decimal
+        min_rate = get_config("min_daily_rate", Decimal("300"))
+        if value < min_rate:
+            raise serializers.ValidationError(f'Daily rate must be at least INR {min_rate}.')
+        return value
+
+    def validate_current_odometer(self, value):
+        if self.instance and value is not None and self.instance.current_odometer:
+            if value < self.instance.current_odometer:
+                raise serializers.ValidationError('Odometer reading cannot decrease.')
+        return value

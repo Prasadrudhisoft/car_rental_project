@@ -1,8 +1,3 @@
-/**
- * DataTable.jsx — Shared reusable table component
- * Provides: column definitions, sorting, search, filters, pagination, row actions
- * Used by AdminDashboard, VendorDashboard, CustomerDashboard
- */
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 
 // ── Sort icon ─────────────────────────────────────────────────────────────

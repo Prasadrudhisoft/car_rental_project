@@ -1,19 +1,3 @@
-/**
- * AssignmentsTab.jsx
- * 
- * Full vendor-to-admin assignment management UI.
- * Renders inside AdminDashboard as tab='assignments'.
- * 
- * Features:
- *  - Scope badge (superadmin vs assigned_admin)
- *  - Assignment matrix: all admins with their vendor counts + vendor list
- *  - Drag-to-assign: click vendor → pick admin → assign
- *  - Bulk assign: multi-select vendors → assign to one admin
- *  - Unassigned vendors alert
- *  - Assignment history modal
- *  - Admin profile scope editor (superadmin can promote/demote admins)
- */
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     getAdminList,

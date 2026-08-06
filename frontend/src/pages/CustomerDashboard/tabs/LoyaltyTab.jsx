@@ -1,7 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// tabs/LoyaltyTab.jsx
-// Loyalty points balance card, tier indicator, and redemption form.
-// ─────────────────────────────────────────────────────────────────────────────
 import React, { useState } from 'react';
 import { redeemLoyalty } from '../../../services/api';
 

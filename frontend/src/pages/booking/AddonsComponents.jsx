@@ -100,42 +100,37 @@ export function PromoSection({ promoCode, onCodeChange, onApply, loading, messag
  * @param {Function} onCTA           - called when the main CTA is clicked
  */
 export function PriceSummary({
-    pricing,
-    loadingPrice,
-    priceError,
-    nights,
-    vehicle,
-    addons,
-    promoDiscount,
-    isLoggedIn,
-    ctaDisabled,
-    onCTA,
+    pricing, loadingPrice, priceError, nights, vehicle, addons,
+    promoDiscount, isLoggedIn, ctaDisabled, onCTA,
 }) {
+    const belowMinRental = pricing?.min_rental_days > 1 && nights < pricing.min_rental_days;
+
     return (
         <div className="price-summary">
             <h3>Price Breakdown</h3>
 
             {priceError && <div className="price-summary__error">{priceError}</div>}
 
+            {belowMinRental && (
+                <div className="price-summary__error">
+                    ⚠ This vehicle type requires a minimum rental of {pricing.min_rental_days} days.
+                    Please go back and adjust your dates.
+                </div>
+            )}
+
             <div className="price-summary__breakdown">
                 {loadingPrice ? (
-                    <div className="price-summary__loading">
-                        <div className="wz-spinner" /> Recalculating…
-                    </div>
+                    <div className="price-summary__loading"><div className="wz-spinner" /> Recalculating…</div>
                 ) : pricing ? (
                     <>
-                        {/* Base */}
                         <div className="price-summary__line">
                             <span>Base rental</span>
                             <span>₹{parseFloat(pricing.base_amount).toLocaleString('en-IN')}</span>
                         </div>
                         <div className="price-summary__line price-summary__line--sub">
-                            <span>
-                                {nights} day{nights > 1 ? 's' : ''} × ₹{parseInt(vehicle.daily_rate).toLocaleString('en-IN')}/day
-                            </span>
+                            <span>{nights} day{nights > 1 ? 's' : ''} × ₹{parseInt(vehicle.daily_rate).toLocaleString('en-IN')}/day</span>
                         </div>
 
-                        {/* Add-ons */}
                         {parseFloat(pricing.addon_amount || 0) > 0 && (
                             <div className="price-summary__line">
                                 <span>Add-ons ({addons.length})</span>
@@ -143,7 +138,6 @@ export function PriceSummary({
                             </div>
                         )}
 
-                        {/* One-way fee */}
                         {parseFloat(pricing.one_way_fee || 0) > 0 && (
                             <div className="price-summary__line">
                                 <span>One-way fee</span>
@@ -151,15 +145,14 @@ export function PriceSummary({
                             </div>
                         )}
 
-                        {/* GST */}
                         {parseFloat(pricing.gst_amount || 0) > 0 && (
                             <div className="price-summary__line">
-                                <span>GST (18%)</span>
+                                {/* ← was hardcoded "GST (18%)" — now reflects the live gst_rate setting */}
+                                <span>GST ({Math.round(parseFloat(pricing.gst_rate ?? 0.18) * 100)}%)</span>
                                 <span>₹{parseFloat(pricing.gst_amount).toLocaleString('en-IN')}</span>
                             </div>
                         )}
 
-                        {/* Promo */}
                         {promoDiscount > 0 && (
                             <div className="price-summary__line price-summary__line--discount">
                                 <span>Promo discount</span>
@@ -167,21 +160,16 @@ export function PriceSummary({
                             </div>
                         )}
 
-                        {/* Total */}
                         <div className="price-summary__line price-summary__line--total">
                             <span>Grand Total</span>
-                            <span>
-                                ₹{(parseFloat(pricing.grand_total) - (promoDiscount || 0)).toLocaleString('en-IN')}
-                            </span>
+                            <span>₹{(parseFloat(pricing.grand_total) - (promoDiscount || 0)).toLocaleString('en-IN')}</span>
                         </div>
 
-                        {/* Deposit */}
                         <div className="price-summary__deposit">
                             🔒 Refundable security deposit: ₹{parseFloat(pricing.security_deposit).toLocaleString('en-IN')}
                             <small> — collected separately, returned after vehicle return</small>
                         </div>
 
-                        {/* Vendor hours */}
                         {pricing.vendor_opening_time && (
                             <div className="price-summary__hours">
                                 🕐 Vendor hours: {pricing.vendor_opening_time} – {pricing.vendor_closing_time}
@@ -191,7 +179,6 @@ export function PriceSummary({
                 ) : null}
             </div>
 
-            {/* Login prompt */}
             {!isLoggedIn && (
                 <div className="price-summary__login-prompt">
                     <span>🔐</span>
@@ -199,18 +186,13 @@ export function PriceSummary({
                 </div>
             )}
 
-            {/* CTA */}
-            <button
-                className="price-summary__cta"
-                onClick={onCTA}
-                disabled={ctaDisabled}
-            >
+            <button className="price-summary__cta" onClick={onCTA} disabled={ctaDisabled || belowMinRental}>
                 {isLoggedIn ? 'Confirm Booking →' : 'Sign In to Continue →'}
             </button>
 
-            {/* Reassurance */}
             <div className="price-summary__reassurance">
-                <span>✓ Free cancellation 48h before pickup</span>
+                {/* ← was hardcoded "48h" — now reflects cancellation_free_hours */}
+                <span>✓ Free cancellation {pricing?.cancellation_free_hours ?? 48}h before pickup</span>
                 <span>✓ Transparent GST-inclusive pricing</span>
                 <span>✓ Secure Razorpay payment</span>
             </div>

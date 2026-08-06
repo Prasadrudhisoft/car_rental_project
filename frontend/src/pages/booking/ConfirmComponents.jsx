@@ -11,7 +11,7 @@ import { segIcon } from './bookingConstants';
 /**
  * Renders the full left-column booking detail card on the confirm page.
  */
-export function BookingReviewCard({ booking, vehicle: v, user, nights }) {
+export function BookingReviewCard({ booking, vehicle: v, user, nights, pricing }) {
     return (
         <div className="confirm-card">
 
@@ -24,6 +24,11 @@ export function BookingReviewCard({ booking, vehicle: v, user, nights }) {
                         <strong>{v.year} {v.make} {v.model}</strong>
                         <p>⛽ {v.fuel_type} · ⚙️ {v.transmission} · 💺 {v.capacity} seats</p>
                         <p>🏪 {v.vendor_profile?.business_name || 'Vendor'}</p>
+                        {pricing?.min_driver_age && (
+                            <p style={{ fontSize: 11, color: 'var(--wz-muted)', marginTop: 2 }}>
+                                Minimum driver age: {pricing.min_driver_age}+
+                            </p>
+                        )}
                     </div>
                     {v.is_certified && <span className="confirm-cert">🏅 Certified</span>}
                 </div>
@@ -86,18 +91,9 @@ export function BookingReviewCard({ booking, vehicle: v, user, nights }) {
  * type (advance vs full) and method (online vs cash) selectors.
  */
 export function PaymentSummary({
-    pricing,
-    grandTotal,
-    advanceAmount,
-    remainingAmount,
-    paymentType,
-    setPaymentType,
-    paymentMethod,
-    setPaymentMethod,
-    payableNow,
-    loading,
-    error,
-    onConfirm,
+    pricing, grandTotal, advanceAmount, remainingAmount,
+    paymentType, setPaymentType, paymentMethod, setPaymentMethod,
+    payableNow, loading, error, onConfirm,
 }) {
     return (
         <aside className="confirm-summary">
@@ -171,15 +167,14 @@ export function PaymentSummary({
 
             <button className="confirm-cta" onClick={onConfirm} disabled={loading}>
                 {loading ? (
-                    <span className="confirm-cta__loading">
-                        <span className="confirm-cta__spinner" /> Processing Payment...
-                    </span>
+                    <span className="confirm-cta__loading"><span className="confirm-cta__spinner" /> Processing Payment...</span>
                 ) : `Pay ₹${payableNow.toLocaleString('en-IN')} & Confirm Booking`}
             </button>
 
             <p className="confirm-terms">
                 By confirming you agree to the rental agreement terms.
-                Free cancellation up to 48 hours before pickup.
+                {/* ← was hardcoded "48 hours" — now reflects cancellation_free_hours */}
+                Free cancellation up to {pricing?.cancellation_free_hours ?? 48} hours before pickup.
             </p>
         </aside>
     );

@@ -1,7 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// modals/WriteReviewModal.jsx
-// Star-rating form for submitting a new review against a completed booking.
-// ─────────────────────────────────────────────────────────────────────────────
 import React, { useState } from 'react';
 import { submitReview } from '../../../services/api';
 import { StarRating } from '../cdShared';

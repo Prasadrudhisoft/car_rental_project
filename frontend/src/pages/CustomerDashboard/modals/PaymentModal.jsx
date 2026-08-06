@@ -1,7 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// modals/PaymentModal.jsx
-// Handles advance + remaining payment selection and dummy-payment processing.
-// ─────────────────────────────────────────────────────────────────────────────
 import React, { useState } from 'react';
 import { dummyPayment } from '../../../services/api';
 

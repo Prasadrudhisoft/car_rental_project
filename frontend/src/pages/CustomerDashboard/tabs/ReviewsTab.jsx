@@ -1,8 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// tabs/ReviewsTab.jsx
-// Pending reviews — bookings the customer can still leave a review for.
-// Desktop: DataTable. Mobile (≤768px): tappable cards, no horizontal scroll.
-// ─────────────────────────────────────────────────────────────────────────────
 import React, { useState, useMemo } from 'react';
 import DataTable from '../../../components/common/DataTable';
 

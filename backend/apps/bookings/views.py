@@ -9,7 +9,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
  
-from apps.configuration.utils import get_config
+from apps.configuration.utils import get_config, get_segment_config
 from apps.vehicles.models import Vehicle, VehicleAvailability
  
 from .models import Booking, AddOn, InspectionRecord, InspectionPhoto, Invoice, PaymentEvent
@@ -106,6 +106,8 @@ class BookingCreateView(APIView):
     permission_classes = [IsCustomerRole]
  
     def post(self, request):
+        from apps.notifications.utils import notify
+
         vehicle_id     = request.data.get('vehicle_id')
         pickup_date_s  = request.data.get('pickup_date')
         return_date_s  = request.data.get('return_date')
@@ -123,6 +125,33 @@ class BookingCreateView(APIView):
         p_date    = datetime.date.fromisoformat(pickup_date_s)
         r_date    = datetime.date.fromisoformat(return_date_s)
         days      = (r_date - p_date).days
+
+        seg_cfg         = get_segment_config(vehicle.segment)
+        min_rental_days = seg_cfg.get('min_rental_days', 1)
+        min_driver_age  = seg_cfg.get('min_driver_age', 21)
+
+        effective_days = max(days, 1)
+        if effective_days < min_rental_days:
+            return Response({
+                'error': (
+                    f'{vehicle.get_segment_display()} vehicles require a minimum rental of '
+                    f'{min_rental_days} day{"s" if min_rental_days != 1 else ""}. '
+                    f'Please select a longer rental period.'
+                )
+            }, status=400)
+
+        dob = getattr(getattr(request.user, 'customer_profile', None), 'date_of_birth', None)
+        if dob:
+            today = datetime.date.today()
+            age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+            if age < min_driver_age:
+                return Response({
+                    'error': (
+                        f'You must be at least {min_driver_age} years old to rent this '
+                        f'{vehicle.get_segment_display()}. Please update your date of birth in your '
+                        f'profile if this is incorrect.'
+                    )
+                }, status=400)
 
         if days < 0:
             return Response({'error': 'Return date cannot be before pickup date.'}, status=400)
@@ -203,6 +232,17 @@ class BookingCreateView(APIView):
         razorpay_order = _create_razorpay_order(booking)
         booking.razorpay_order_id = razorpay_order.get("id", "")
         booking.save()
+
+        notify(
+            booking.vendor,
+            title="New booking received",
+            message=(
+                f"{request.user.full_name} booked your {vehicle.year} {vehicle.make} {vehicle.model} "
+                f"from {p_date} to {r_date}."
+            ),
+            notification_type='booking_created',
+            link_url=f'/vendor?tab=bookings&highlight={booking.id}',
+        )
 
         return Response({
             'booking_id':     booking.id,

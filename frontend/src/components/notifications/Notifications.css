@@ -1,0 +1,387 @@
+/* ═══════════════════════════════════════════════
+   Notifications.css — shared across bell dropdown,
+   dashboard tabs (Admin/Vendor/Customer), and the
+   admin "send notification" form.
+   ═══════════════════════════════════════════════ */
+
+.ntf {
+    --ntf-bg: var(--vs, #FFFFFF);
+    --ntf-bg2: var(--vs2, #F8FAFB);
+    --ntf-bdr: var(--vbdr, #E8EDF2);
+    --ntf-bdr2: var(--vbdr2, #D5DEE8);
+    --ntf-txt: var(--vt, #111827);
+    --ntf-txt2: var(--vt2, #4B5563);
+    --ntf-muted: var(--vm, #9CA3AF);
+    --ntf-acc: var(--teal-primary, #0DB89E);
+    --ntf-acc-l: var(--teal-light, #E6F7F5);
+    --ntf-acc-d: var(--teal-dark, #0A9E87);
+    --ntf-red: #EF4444;
+    font-family: 'Inter', -apple-system, sans-serif;
+}
+
+/* ── Bell button (lives inside navbar__right) ── */
+.ntf-bell {
+    position: relative;
+    background: var(--c-surface2, #F8FAFB);
+    border: 1px solid var(--c-border, #E8EDF2);
+    border-radius: var(--r-md, 8px);
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color .18s, background .18s, transform .15s;
+    flex-shrink: 0;
+}
+
+.ntf-bell:hover {
+    border-color: var(--c-teal, #0DB89E);
+    background: var(--c-teal-light, #E6F7F5);
+}
+
+.ntf-bell--pulse {
+    transform: scale(1.12);
+}
+
+.ntf-bell svg {
+    width: 17px;
+    height: 17px;
+    color: var(--c-text2, #4B5563);
+}
+
+.ntf-bell:hover svg {
+    color: var(--c-teal, #0DB89E);
+}
+
+.ntf-bell__badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #EF4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    border: 2px solid #002b36;
+    line-height: 1;
+}
+
+/* ── Dropdown ── */
+.ntf-dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 340px;
+    max-height: 440px;
+    overflow-y: auto;
+    background: var(--ntf-bg);
+    border: 1px solid var(--ntf-bdr2);
+    border-radius: 14px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .18);
+    z-index: 5000;
+    animation: ntf-drop-in .16s cubic-bezier(.16, 1, .3, 1);
+}
+
+@keyframes ntf-drop-in {
+    from { opacity: 0; transform: translateY(-6px) scale(.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ntf-dropdown__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--ntf-bdr);
+    position: sticky;
+    top: 0;
+    background: var(--ntf-bg);
+}
+
+.ntf-dropdown__head strong {
+    font-size: 13px;
+    color: var(--ntf-txt);
+}
+
+.ntf-dropdown__markall {
+    background: none;
+    border: none;
+    color: var(--ntf-acc);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.ntf-dropdown__empty,
+.ntf-dropdown__loading {
+    padding: 28px;
+    text-align: center;
+    color: var(--ntf-muted);
+    font-size: 13px;
+}
+
+.ntf-dropdown__item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 11px 14px;
+    border: none;
+    border-bottom: 1px solid var(--ntf-bg2);
+    cursor: pointer;
+    background: var(--ntf-bg);
+    font-family: inherit;
+    transition: background .12s;
+}
+
+.ntf-dropdown__item:hover {
+    background: var(--ntf-bg2);
+}
+
+.ntf-dropdown__item--unread {
+    background: var(--ntf-acc-l);
+}
+
+.ntf-dropdown__item--unread:hover {
+    background: var(--ntf-acc-l);
+    filter: brightness(0.98);
+}
+
+.ntf-item__row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ntf-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ntf-acc);
+    flex-shrink: 0;
+}
+
+.ntf-item__title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ntf-txt);
+}
+
+.ntf-item__msg {
+    font-size: 12px;
+    color: var(--ntf-txt2);
+    margin: 3px 0 0;
+    line-height: 1.45;
+}
+
+.ntf-item__time {
+    font-size: 10.5px;
+    color: var(--ntf-muted);
+    margin-top: 4px;
+    display: block;
+}
+
+/* ── Full panel (dashboard tab) ── */
+.ntf-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.ntf-panel__toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.ntf-panel__pills {
+    display: flex;
+    gap: 6px;
+}
+
+.ntf-pill {
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--ntf-bdr2);
+    cursor: pointer;
+    background: var(--ntf-bg);
+    color: var(--ntf-txt2);
+    font-family: inherit;
+    transition: all .13s;
+}
+
+.ntf-pill--active {
+    background: var(--ntf-acc);
+    border-color: var(--ntf-acc-d);
+    color: #fff;
+}
+
+.ntf-panel__markall {
+    background: none;
+    border: none;
+    color: var(--ntf-acc);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.ntf-panel__empty {
+    text-align: center;
+    padding: 60px 24px;
+    border: 1px dashed var(--ntf-bdr2);
+    border-radius: 14px;
+    color: var(--ntf-muted);
+    font-size: 13px;
+}
+
+.ntf-panel__empty-icon {
+    font-size: 32px;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.ntf-panel__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ntf-card {
+    display: flex;
+    gap: 12px;
+    text-align: left;
+    padding: 14px 16px;
+    border: 1px solid var(--ntf-bdr);
+    border-radius: 12px;
+    cursor: pointer;
+    background: var(--ntf-bg);
+    font-family: inherit;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.ntf-card:hover {
+    border-color: rgba(13, 184, 158, .3);
+    box-shadow: 0 4px 14px rgba(13, 184, 158, .08);
+}
+
+.ntf-card--unread {
+    background: var(--ntf-acc-l);
+}
+
+.ntf-card__icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.ntf-card__body {
+    flex: 1;
+    min-width: 0;
+}
+
+.ntf-card__head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.ntf-card__title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--ntf-txt);
+}
+
+.ntf-card__msg {
+    font-size: 12.5px;
+    color: var(--ntf-txt2);
+    margin: 4px 0;
+    line-height: 1.55;
+}
+
+.ntf-card__meta {
+    font-size: 11px;
+    color: var(--ntf-muted);
+}
+
+/* ── Admin send-form ── */
+.ntf-send-form {
+    background: var(--ntf-bg2);
+    border: 1px solid var(--ntf-bdr);
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ntf-send-form__label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--ntf-acc);
+}
+
+.ntf-send-form__row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.ntf-send-form select,
+.ntf-send-form input,
+.ntf-send-form textarea {
+    background: var(--ntf-bg);
+    border: 1px solid var(--ntf-bdr2);
+    border-radius: 8px;
+    color: var(--ntf-txt);
+    padding: 9px 12px;
+    font-size: 13px;
+    outline: none;
+    font-family: inherit;
+    transition: border-color .15s;
+}
+
+.ntf-send-form select:focus,
+.ntf-send-form input:focus,
+.ntf-send-form textarea:focus {
+    border-color: var(--ntf-acc);
+}
+
+.ntf-send-form textarea {
+    resize: vertical;
+}
+
+.ntf-send-form__submit {
+    background: var(--ntf-acc);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    width: fit-content;
+    font-family: inherit;
+    transition: background .14s;
+}
+
+.ntf-send-form__submit:hover {
+    background: var(--ntf-acc-d);
+}
+
+.ntf-send-form__submit:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}

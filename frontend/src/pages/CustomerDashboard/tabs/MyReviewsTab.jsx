@@ -1,8 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// tabs/MyReviewsTab.jsx
-// All reviews the customer has already submitted.
-// Desktop: DataTable. Mobile (≤768px): star-rating cards, no horizontal scroll.
-// ─────────────────────────────────────────────────────────────────────────────
 import React, { useState, useMemo } from 'react';
 import DataTable from '../../../components/common/DataTable';
 import { fmtDate } from '../cdConstants';

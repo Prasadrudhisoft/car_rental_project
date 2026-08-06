@@ -185,7 +185,7 @@ export default function AddonsPage() {
                         addons={addons}
                         promoDiscount={booking.promoDiscount || 0}
                         isLoggedIn={!!user}
-                        ctaDisabled={loadingPrice || !pricing}
+                        ctaDisabled={loadingPrice || !pricing || (pricing?.min_rental_days > 1 && nights < pricing.min_rental_days)}
                         onCTA={handleConfirm}
                     />
                 </aside>
