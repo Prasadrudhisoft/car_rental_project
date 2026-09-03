@@ -40,6 +40,11 @@ class CustomerRegisterView(generics.CreateAPIView):
         user = s.save()
         # Issue tokens immediately so the user is logged in after registering
         refresh = RefreshToken.for_user(user)
+
+        from apps.personalization.engine import run_event_rules
+        run_event_rules(user, 'signup')
+
+        
         return Response({
             'message': 'Customer account created.',
             'access':  str(refresh.access_token),

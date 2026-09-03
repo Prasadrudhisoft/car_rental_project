@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 from decouple import config
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -30,7 +31,7 @@ SECRET_KEY = 'django-insecure-n0+#uj908j8@=%$4+4(_82v!qkm=9ya0lr-3h-qx4os29udtnl
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
-    'django.contrib.contenttypes',
+    'django.contrib.contenttypes',  
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
@@ -52,6 +53,7 @@ INSTALLED_APPS = [
     'apps.promotions',
     'apps.agreements',
     'apps.notifications',
+    'apps.personalization',
 
 ]
 
@@ -172,3 +174,12 @@ MEDIA_ROOT  = BASE_DIR / 'media'
 
 RAZORPAY_KEY_ID     = config('RAZORPAY_KEY_ID', default='rzp_test_placeholder')
 RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET', default='placeholder_secret')
+
+
+
+CELERY_BEAT_SCHEDULE = {
+    'evaluate-targeting-rules-nightly': {
+        'task': 'apps.personalization.tasks.evaluate_scheduled_targeting_rules',
+        'schedule': crontab(hour=3, minute=0),  # 3 AM daily
+    },
+}

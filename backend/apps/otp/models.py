@@ -20,6 +20,7 @@ class OTPRecord(models.Model):
     PURPOSES = [
         ('login',           'Login'),
         ('phone_verify',    'Phone Verification'),
+        ('email_verify',    'Email Verification'),
         ('agreement_sign',  'Agreement Sign-Off'),
         ('inspection_sign', 'Inspection Sign-Off'),
     ]

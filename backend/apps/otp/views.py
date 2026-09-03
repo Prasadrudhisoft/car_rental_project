@@ -23,6 +23,20 @@ def _send_otp(user, code, purpose):
     )
     # In dev, the OTP will appear in the VS Code terminal running Django.
  
+def _maybe_promote_kyc_status(user):
+    """
+    A customer's stored kyc_status only flips to 'verified' once both
+    phone and email are confirmed AND identity documents are on file.
+    Admin can still manually override to 'rejected' separately.
+    """
+    profile = getattr(user, 'customer_profile', None)
+    if not profile or profile.kyc_status == 'verified':
+        return
+    has_identity = bool(profile.aadhaar_number or profile.pan_number)
+    has_licence  = bool(profile.driving_licence)
+    if user.is_phone_verified and user.is_email_verified and has_identity and has_licence:
+        profile.kyc_status = 'verified'
+        profile.save(update_fields=['kyc_status'])
  
 class SendOTPView(APIView):
     """
@@ -60,6 +74,8 @@ class VerifyOTPView(APIView):
     Returns { 'valid': true } or 400 error.
     """
     permission_classes = [permissions.AllowAny]
+
+
  
     def post(self, request):
         email   = request.data.get('email')
@@ -87,5 +103,11 @@ class VerifyOTPView(APIView):
         if purpose == 'phone_verify':
             user.is_phone_verified = True
             user.save(update_fields=['is_phone_verified'])
+            _maybe_promote_kyc_status(user)
+
+        if purpose == 'email_verify':
+            user.is_email_verified = True
+            user.save(update_fields=['is_email_verified'])
+            _maybe_promote_kyc_status(user)
  
         return Response({'valid': True, 'message':'OTP verified successfully.'})

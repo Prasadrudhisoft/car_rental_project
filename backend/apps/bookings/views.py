@@ -107,6 +107,7 @@ class BookingCreateView(APIView):
  
     def post(self, request):
         from apps.notifications.utils import notify
+        from apps.personalization.engine import run_event_rules
 
         vehicle_id     = request.data.get('vehicle_id')
         pickup_date_s  = request.data.get('pickup_date')
@@ -244,6 +245,8 @@ class BookingCreateView(APIView):
             link_url=f'/vendor?tab=bookings&highlight={booking.id}',
         )
 
+        run_event_rules(request.user, 'payment_pending')
+
         return Response({
             'booking_id':     booking.id,
             'booking_ref':    booking.booking_ref,
@@ -282,6 +285,9 @@ class BookingCancelView(APIView):
         booking.cancellation_reason = request.data.get('reason', '')
         booking.cancelled_by       = request.user
         booking.save()
+
+        from apps.personalization.engine import run_event_rules
+        run_event_rules(booking.customer, 'booking_cancelled')
  
         # Unblock dates in availability
         VehicleAvailability.objects.filter(
@@ -1058,6 +1064,10 @@ class InspectionSignView(APIView):
                     pass
  
             booking.save()
+
+            from apps.personalization.engine import run_event_rules
+            run_event_rules(booking.customer, 'booking_completed')
+
             record.save()
  
             return Response({

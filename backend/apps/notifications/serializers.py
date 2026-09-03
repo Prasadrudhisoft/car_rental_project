@@ -16,15 +16,16 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 class AdminSendNotificationSerializer(serializers.Serializer):
     """
-    Input for admin-authored broadcasts.
-    target_type:
-      'user' -> requires user_id
-      'role' -> requires role ('customer'|'vendor'|'admin')
-      'all'  -> everyone
-    """
-    target_type = serializers.ChoiceField(choices=['user', 'role', 'all'])
+        Input for admin-authored broadcasts.
+        target_type:
+          'user' -> requires user_id
+          'role' -> requires role ('customer'|'vendor'|'admin')
+          'all'  -> everyone
+        """
+    target_type = serializers.ChoiceField(choices=['user', 'role', 'all', 'segment'])
     user_id     = serializers.IntegerField(required=False)
     role        = serializers.ChoiceField(choices=['customer', 'vendor', 'admin'], required=False)
+    segment_id  = serializers.IntegerField(required=False)
     title       = serializers.CharField(max_length=200)
     message     = serializers.CharField()
     link_url    = serializers.CharField(max_length=255, required=False, allow_blank=True, default='')
@@ -34,4 +35,6 @@ class AdminSendNotificationSerializer(serializers.Serializer):
             raise serializers.ValidationError({'user_id': 'Required when target_type is "user".'})
         if attrs['target_type'] == 'role' and not attrs.get('role'):
             raise serializers.ValidationError({'role': 'Required when target_type is "role".'})
+        if attrs['target_type'] == 'segment' and not attrs.get('segment_id'):
+            raise serializers.ValidationError({'segment_id': 'Required when target_type is "segment".'})
         return attrs

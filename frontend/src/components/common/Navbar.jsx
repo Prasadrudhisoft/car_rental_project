@@ -134,6 +134,8 @@ const SIDEBAR_ITEMS = {
         { id: 'reviews',      icon: ICONS.starIcon,     tip: 'Reviews' },
         { id: 'assignments',  icon: ICONS.assignments,  tip: 'Assignments' },
         { id: 'notifications',icon: ICONS.notifications,tip: 'Notifications' },
+        { id: 'personalization', icon: ICONS.config, tip: 'Personalization' },
+        
     ],
     vendor: [
         { id: 'overview',  icon: ICONS.overview,   tip: 'Overview' },

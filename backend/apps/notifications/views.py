@@ -95,6 +95,16 @@ class AdminSendNotificationView(APIView):
             recipients = User.objects.filter(role=v['role'])
             count = notify_bulk(recipients, v['title'], v['message'], 'admin_broadcast',
                                  v.get('link_url', ''), created_by=request.user)
+
+        elif v['target_type'] == 'segment':
+            from apps.personalization.models import Segment
+            from apps.personalization.facts import build_customer_facts
+            from apps.personalization.engine import user_matches_segment
+            segment = get_object_or_404(Segment, pk=v['segment_id'])
+            customers = User.objects.filter(role='customer', is_active=True)
+            recipients = [u for u in customers.iterator() if user_matches_segment(segment, build_customer_facts(u))]
+            count = notify_bulk(recipients, v['title'], v['message'], 'admin_broadcast', v.get('link_url', ''), created_by=request.user)
+            
         else:  # 'all'
             recipients = User.objects.all()
             count = notify_bulk(recipients, v['title'], v['message'], 'admin_broadcast',

@@ -53,6 +53,9 @@ class SubmitReviewView(APIView):
             vehicle_rating = vehicle_rating,
             review_text    = review_text,
         )
+
+        from apps.personalization.engine import run_event_rules
+        run_event_rules(request.user, 'review_submitted')
  
         # Recalculate vendor rating after every new review
         _recalculate_vendor_rating(booking.vendor)

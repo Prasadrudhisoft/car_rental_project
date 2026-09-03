@@ -400,11 +400,16 @@ export const verifyKYCPhoneOTP = async (email, code) => {
  * DEV: Always succeeds, OTP is "123456" (logged to console).
  * @param {string} email - The email address to verify
  */
-export const sendKYCEmailOTP = async (email) => {
-  console.log(`[DEV] KYC Email OTP → ${email}. Use 123456`);
-  await new Promise(r => setTimeout(r, 400));
-  return { data: { message: `OTP sent to ${email}. Use 123456 in development.` } };
-};
+// export const sendKYCEmailOTP = async (email) => {
+//   console.log(`[DEV] KYC Email OTP → ${email}. Use 123456`);
+//   await new Promise(r => setTimeout(r, 400));
+//   return { data: { message: `OTP sent to ${email}. Use 123456 in development.` } };
+// };
+export const sendKYCEmailOTP = (email) =>
+  api.post("/otp/send/", { email, purpose: "email_verify" });   // was reusing phone_verify
+
+export const verifyKYCEmailOTP = (email, code) =>
+  api.post("/otp/verify/", { email, code, purpose: "email_verify" });
 
 /**
  * Verify OTP entered by customer for email KYC.
@@ -412,15 +417,15 @@ export const sendKYCEmailOTP = async (email) => {
  * @param {string} email - The email address being verified
  * @param {string} code - The 6-digit OTP entered by the user
  */
-export const verifyKYCEmailOTP = async (email, code) => {
-  await new Promise(r => setTimeout(r, 400));
-  if (code === "123456") {
-    return { data: { valid: true, message: "Email address verified successfully." } };
-  }
-  const err = new Error("Invalid OTP");
-  err.response = { data: { error: "Invalid OTP. In development, use 123456." } };
-  throw err;
-};
+// export const verifyKYCEmailOTP = async (email, code) => {
+//   await new Promise(r => setTimeout(r, 400));
+//   if (code === "123456") {
+//     return { data: { valid: true, message: "Email address verified successfully." } };
+//   }
+//   const err = new Error("Invalid OTP");
+//   err.response = { data: { error: "Invalid OTP. In development, use 123456." } };
+//   throw err;
+// };
 
 
 // ── REAL (PRODUCTION) — COMMENT OUT DEV BLOCK ABOVE AND UNCOMMENT THIS ───
@@ -561,5 +566,22 @@ export const markNotificationRead      = (id)   => api.post(`/notifications/${id
 export const markAllNotificationsRead  = ()     => api.post('/notifications/mark-all-read/');
 export const adminSendNotification     = (data) => api.post('/notifications/admin/send/', data);
 export const getAdminSentNotifications = ()     => api.get('/notifications/admin/sent/');
+
+
+// ── Personalization ────────────────────────────────────────────────────────
+export const getSegments        = ()       => api.get('/personalization/segments/');
+export const createSegment      = (data)   => api.post('/personalization/segments/', data);
+export const updateSegment      = (id, d)  => api.patch(`/personalization/segments/${id}/`, d);
+export const deleteSegment      = (id)     => api.delete(`/personalization/segments/${id}/`);
+export const previewSegment     = (id)     => api.get(`/personalization/segments/${id}/preview/`);
+
+export const getTargetingRules  = ()       => api.get('/personalization/rules/');
+export const createTargetingRule= (data)   => api.post('/personalization/rules/', data);
+export const updateTargetingRule= (id, d)  => api.patch(`/personalization/rules/${id}/`, d);
+export const deleteTargetingRule= (id)     => api.delete(`/personalization/rules/${id}/`);
+export const runRuleNow         = (id)     => api.post(`/personalization/rules/${id}/run-now/`);
+
+export const getRuleExecutionLogs = (params) => api.get('/personalization/logs/', { params });
+export const runScheduledSweep    = ()       => api.post('/personalization/run-scheduled-sweep/');
 
 export default api;
