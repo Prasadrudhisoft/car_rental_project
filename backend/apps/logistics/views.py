@@ -30,15 +30,27 @@ class IsVendorRole(permissions.BasePermission):
 # RETURN POINT DIRECTORY
 # ════════════════════════════════════════════════════════════════════════
  
-class ReturnPointListView(generics.ListAPIView):
+class ReturnPointListView(generics.ListCreateAPIView):
     """
-    GET /api/logistics/return-points/?city=2
-    Public — called during booking wizard when customer picks a return city.
-    Returns all active return points in the requested city.
+    GET  /api/logistics/return-points/?city=2   — public, called during booking wizard
+    POST /api/logistics/return-points/          — admin only, registers a new parking lot
+
+    Body for POST: {
+        "city": <id>, "name": "...", "point_type": "parking",
+        "address": "...", "latitude": ..., "longitude": ...,
+        "contact_phone": "..."
+    }
+    point_type='partner_vendor' entries are auto-created by the system when
+    a vendor opts into VendorNetwork for a city (see VendorNetworkOptInView) —
+    admins should only ever create point_type='parking' entries manually here.
     """
-    serializer_class   = ReturnPointSerializer
-    permission_classes = [permissions.AllowAny]
- 
+    serializer_class = ReturnPointSerializer
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAdminRole()]
+        return [permissions.AllowAny()]
+
     def get_queryset(self):
         qs   = ReturnPoint.objects.filter(is_active=True).select_related(
             'city', 'vendor_network_member__vendor__vendor_profile')
@@ -46,6 +58,9 @@ class ReturnPointListView(generics.ListAPIView):
         if city:
             qs = qs.filter(city_id=city)
         return qs
+
+    def perform_create(self, serializer):
+        serializer.save(point_type='parking')  # admin lots are always this type
  
  
 class ReturnPointDetailView(generics.RetrieveAPIView):
@@ -128,18 +143,17 @@ def auto_match_return_partner(booking) -> HandoverRecord | None:
     """
     if not booking.is_one_way or not booking.return_location:
         return None
- 
+
     return_city = booking.return_location.city
- 
-    # Find all active network members in the return city
+
+    # ── Try vendor-network partners first (Option: vendor-provided parking) ──
     candidates = VendorNetwork.objects.filter(
         city=return_city,
         is_active=True,
-    ).exclude(vendor=booking.vendor)   # exclude originating vendor
- 
-    best    = None
+    ).exclude(vendor=booking.vendor)
+
+    best = None
     best_capacity = -1
- 
     for member in candidates:
         currently_held = HandoverRecord.objects.filter(
             receiving_vendor = member.vendor,
@@ -149,37 +163,42 @@ def auto_match_return_partner(booking) -> HandoverRecord | None:
         if available > 0 and available > best_capacity:
             best          = member
             best_capacity = available
- 
-    if not best:
-        return None
- 
-    # Find or create a ReturnPoint for this vendor in the return city
-    return_point, _ = ReturnPoint.objects.get_or_create(
-        vendor_network_member = best,
-        city                  = return_city,
-        defaults = {
-            'name':       f'{best.vendor.vendor_profile.business_name} Lot',
-            'point_type': 'partner_vendor',
-            'address':    'To be confirmed with vendor.',
-        }
-    )
- 
-    # Calculate deposit hold extension (24h for remote inspection)
+
+    if best:
+        return_point, _ = ReturnPoint.objects.get_or_create(
+            vendor_network_member = best,
+            city                  = return_city,
+            defaults = {
+                'name':       f'{best.vendor.vendor_profile.business_name} Lot',
+                'point_type': 'partner_vendor',
+                'address':    'To be confirmed with vendor.',
+            }
+        )
+        receiving_vendor = best.vendor
+    else:
+        # ── NEW fallback: no vendor capacity available — use an admin parking lot ──
+        return_point = ReturnPoint.objects.filter(
+            city=return_city, point_type='parking', is_active=True,
+        ).first()
+        if not return_point:
+            return None  # nothing available at all — admin should manually match
+        receiving_vendor = None  # parking lots have no receiving vendor to pay
+
     from datetime import timedelta
     inspection_due = timezone.now() + timedelta(hours=24)
- 
+
     handover = HandoverRecord.objects.create(
-        booking               = booking,
-        return_point          = return_point,
-        receiving_vendor      = best.vendor,
-        status                = 'EXPECTED',
+        booking                = booking,
+        return_point           = return_point,
+        receiving_vendor       = receiving_vendor,
+        status                 = 'EXPECTED',
         full_inspection_due_by = inspection_due,
         deposit_hold_extended  = True,
     )
- 
-    # Calculate and store revenue share
-    _calculate_revenue_share(booking, best)
- 
+
+    if best:
+        _calculate_revenue_share(booking, best)
+
     return handover
  
  
@@ -298,20 +317,22 @@ class HandoverInspectionCompleteView(APIView):
  
     def post(self, request, handover_id):
         handover = get_object_or_404(
-            HandoverRecord,
-            pk               = handover_id,
-            receiving_vendor = request.user,
+            HandoverRecord, pk=handover_id, receiving_vendor=request.user,
         )
         handover.status               = 'HELD'
         handover.full_inspection_done = True
         handover.save()
- 
-        # Extend deposit hold cleared after successful inspection
+
+        # ── NEW: vehicle has physically arrived — update its searchable location ──
+        vehicle = handover.booking.vehicle
+        vehicle.current_city = handover.return_point.city
+        vehicle.save(update_fields=['current_city'])
+
         booking = handover.booking
         if not handover.booking.deposit_released:
             booking.deposit_released = True
             booking.save(update_fields=["deposit_released"])
- 
+
         return Response({'message': 'Full inspection complete. Vehicle marked as HELD.'})
  
  
@@ -337,39 +358,49 @@ class HandoverRetrievalArrangedView(APIView):
 def _calculate_revenue_share(booking, network_member: VendorNetwork) -> RevenueShare:
     """
     Calculate and store the revenue share for a cross-city booking.
-    Called automatically after auto_match_return_partner().
- 
-    All rates are read from the config table:
-      platform_commission         — platform percentage
-      cross_city_handling_fee_min — base handling fee for partner
-      cross_city_partner_sublisting_pct — additional % if partner sub-lists
+
+    Two separate platform cuts now apply:
+      1. platform_commission        — the normal cut on the base rental, same as any booking
+      2. parking_facilitation_commission_pct — a SEPARATE cut taken specifically off the
+         handling fee paid to the receiving vendor, since the platform is actively
+         brokering that vendor-to-vendor transaction.
     """
     total = booking.total_amount
- 
-    # Read from config — never hardcoded
-    platform_pct    = get_config('platform_commission', Decimal('0.18'))
-    handling_fee    = Decimal(str(
+
+    platform_pct = get_config('platform_commission', Decimal('0.18'))
+    handling_fee_gross = Decimal(str(
         network_member.handling_fee_override
         if network_member.handling_fee_override
         else get_config('cross_city_handling_fee_min', Decimal('300'))
     ))
-    sublisting_pct  = get_config('cross_city_partner_sublisting_pct', Decimal('0.05'))
- 
-    platform_amt     = total * platform_pct
-    # Originating vendor gets everything except platform fee and handling fee
-    originating_amt  = total - platform_amt - handling_fee
- 
+    facilitation_pct = Decimal(str(get_config('parking_facilitation_commission_pct', Decimal('0.15'))))
+    sublisting_pct   = get_config('cross_city_partner_sublisting_pct', Decimal('0.05'))
+
+    # Platform's cut of the handling fee itself
+    platform_facilitation_cut = (handling_fee_gross * facilitation_pct).quantize(Decimal('0.01'))
+    # What the receiving vendor actually keeps
+    receiving_vendor_net = handling_fee_gross - platform_facilitation_cut
+
+    # Platform's total take: normal rental commission + the facilitation cut
+    platform_rental_amt = total * platform_pct
+    platform_amt         = platform_rental_amt + platform_facilitation_cut
+
+    # Originating vendor gets everything except the platform's full take and
+    # the GROSS handling fee (they're paying the full fee; the split of who
+    # gets what from that fee is between the platform and the receiving vendor)
+    originating_amt = total - platform_amt - handling_fee_gross
+
     rev_share, _ = RevenueShare.objects.update_or_create(
         booking=booking,
         defaults={
             'total_revenue':          total,
             'originating_vendor_pct': (originating_amt / total * 100).quantize(Decimal('0.01')),
             'originating_vendor_amt': originating_amt,
-            'platform_pct':           platform_pct * 100,
+            'platform_pct':           (platform_amt / total * 100).quantize(Decimal('0.01')),
             'platform_amt':           platform_amt,
-            'partner_handling_fee':   handling_fee,
+            'partner_handling_fee':   receiving_vendor_net,  # ← what B actually receives, net of platform's cut
             'partner_sublisting_pct': sublisting_pct * 100,
-            'partner_sublisting_amt': Decimal('0'),  # Updated if vehicle is sub-listed
+            'partner_sublisting_amt': Decimal('0'),
         }
     )
     return rev_share
@@ -413,6 +444,11 @@ class ParkingPartnerConfirmView(APIView):
         handover.handover_confirmed_at = timezone.now()
         handover.deposit_hold_extended = True
         handover.save()
+
+        # ── Mark the vehicle as now physically at this parking lot's city ──
+        vehicle = handover.booking.vehicle
+        vehicle.current_city = handover.return_point.city
+        vehicle.save(update_fields=['current_city'])
  
         # Upload photos if provided
         for img in request.FILES.getlist("photos"):
@@ -451,21 +487,19 @@ class GrantSublistPermissionView(APIView):
  
     def post(self, request, handover_id):
         handover = get_object_or_404(
-            HandoverRecord,
-            pk              = handover_id,
-            booking__vendor = request.user,
+            HandoverRecord, pk=handover_id, booking__vendor=request.user,
         )
         if handover.status not in ['HELD', 'INSPECTED']:
             return Response({'error': 'Vehicle must be HELD before sub-listing can be granted.'}, status=400)
- 
+
         handover.status = 'SUBLISTED'
         handover.save()
- 
-        # Set vehicle status to LIVE so it appears in search
+
         vehicle = handover.booking.vehicle
         vehicle.status = 'LIVE'
-        vehicle.save(update_fields=["status"])
- 
+        vehicle.current_city = handover.return_point.city   # ← NEW, safety net
+        vehicle.save(update_fields=["status", "current_city"])
+
         return Response({'message': 'Sub-listing permission granted. Vehicle is now LIVE in the return city.'})
  
  

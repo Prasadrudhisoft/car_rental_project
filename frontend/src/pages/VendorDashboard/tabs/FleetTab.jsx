@@ -61,6 +61,9 @@ function MobileVehicleCard({ vehicle: v, onSelectVehicle }) {
                         Photos {photoCount}
                         {photoCount >= 10 ? ' ✓' : ' ⚠'}
                     </span>
+                    {v.current_city_name && v.city_name && v.current_city_name !== v.city_name && (
+                        <span style={{ color: '#D97706', fontWeight: 700 }}> · 📍 Away in {v.current_city_name}</span>
+                    )}
                     {v.is_certified && ' · ✅ Cert'}
                 </span>
                 <span className="cd-mob-booking-card__chevron" aria-hidden="true">›</span>
@@ -161,6 +164,19 @@ const columns = [
     {
         key: 'segment', label: 'Segment', sortable: true, width: 100,
         render: v => <span style={{ textTransform: 'capitalize' }}>{v || '—'}</span>,
+    },
+        {
+        key: 'current_city_name', label: 'Current Location', sortable: true, width: 140,
+        render: (v, row) => {
+            const isAway = v && row.city_name && v !== row.city_name;
+            return isAway ? (
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#D97706' }}>
+                    📍 {v} <span style={{ fontWeight: 400, color: 'var(--vm)' }}>(away)</span>
+                </span>
+            ) : (
+                <span style={{ fontSize: 12, color: 'var(--vt2)' }}>{v || row.city_name || '—'}</span>
+            );
+        },
     },
     {
         key: 'fuel_type', label: 'Fuel', sortable: true, width: 80,

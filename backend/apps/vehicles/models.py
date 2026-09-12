@@ -68,6 +68,21 @@ class Vehicle(models.Model):
     pickup_location  = models.ForeignKey(
         'locations.Location', on_delete=models.SET_NULL, null=True, blank=True
     )
+
+    # ── NEW: where the vehicle physically is right now, vs. its home city ──
+    current_city = models.ForeignKey(
+        'locations.City', on_delete=models.PROTECT,
+        related_name='vehicles_currently_here',
+        null=True, blank=True,
+        help_text=(
+            "Vehicle's real-time location. Defaults to `city` at listing time. "
+            "Updated after a one-way trip completes a handover — this is what "
+            "customer search filters on, NOT `city`."
+        ),
+    )
+    pickup_location  = models.ForeignKey(
+        'locations.Location', on_delete=models.SET_NULL, null=True, blank=True
+    )
  
     # Odometer
     odometer_at_listing = models.PositiveIntegerField(default=0)

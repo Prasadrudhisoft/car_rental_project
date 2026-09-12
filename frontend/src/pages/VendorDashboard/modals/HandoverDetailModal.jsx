@@ -1,7 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // HandoverDetailModal.jsx
+// Adds a Revenue Share panel showing the actual split for this handover's
+// booking, fetched from /logistics/revenue-share/{booking_id}/.
 // ─────────────────────────────────────────────────────────────────────────────
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { InfoRow, Field } from '../VendorShared';
 import { HANDOVER_STATUS_CLR } from '../vendorConstants';
 import {
@@ -11,6 +13,7 @@ import {
     arrangeHandoverRetrieval,
     grantSublistPermission,
     revokeSublistPermission,
+    getRevenueShare,
 } from '../../../services/api';
 
 export default function HandoverDetailModal({
@@ -23,6 +26,17 @@ export default function HandoverDetailModal({
     handoverPhotoFile,
     setHandoverPhotoFile,
 }) {
+    const [revenueShare, setRevenueShare] = useState(null);
+    const [revenueLoading, setRevenueLoading] = useState(true);
+
+    useEffect(() => {
+        setRevenueLoading(true);
+        getRevenueShare(h.booking)
+            .then(({ data }) => setRevenueShare(data))
+            .catch(() => setRevenueShare(null))
+            .finally(() => setRevenueLoading(false));
+    }, [h.booking]);
+
     const handleAction = async (action) => {
         try {
             const notes = handoverNotes[h.id] || '';
@@ -49,6 +63,11 @@ export default function HandoverDetailModal({
 
     const s = HANDOVER_STATUS_CLR[h.status] || { bg: '#F3F4F6', color: '#6B7280' };
 
+    // Is the current vendor the one RECEIVING this handover (i.e. offering parking)?
+    // If so, their earning is partner_handling_fee. If they're the ORIGINATING
+    // vendor (the one whose car this is), their share is originating_vendor_amt.
+    const isReceivingVendor = !!h.receiving_vendor_name;
+
     return (
         <div className="vd-modal-overlay" onClick={onClose}>
             <div className="vd-modal" style={{ maxWidth: 600 }} onClick={e => e.stopPropagation()}>
@@ -73,6 +92,45 @@ export default function HandoverDetailModal({
                             ['Photos Uploaded',    h.handover_photos_uploaded ? 'Yes' : 'No'],
                             ['Full Inspection',    h.full_inspection_done ? 'Done' : 'Pending'],
                         ].map(([l, v]) => <InfoRow key={l} label={l} value={v} />)}
+                    </div>
+
+                    {/* ── NEW: Revenue Share panel ── */}
+                    <div className="vd-info-group" style={{ background: '#F0FDF4', borderColor: '#86EFAC' }}>
+                        <div className="vd-info-group__title" style={{ color: '#059669', borderBottomColor: '#059669' }}>
+                            💰 Revenue Share
+                        </div>
+                        {revenueLoading ? (
+                            <p style={{ fontSize: 12, color: 'var(--vm)' }}>Loading…</p>
+                        ) : !revenueShare ? (
+                            <p style={{ fontSize: 12, color: 'var(--vm)' }}>Not yet calculated for this booking.</p>
+                        ) : (
+                            <>
+                                <InfoRow label="Total Booking Value" value={`₹${parseFloat(revenueShare.total_revenue).toLocaleString('en-IN')}`} />
+                                {isReceivingVendor ? (
+                                    <>
+                                        <InfoRow
+                                            label="You Earn (Handling Fee)"
+                                            value={<strong style={{ color: '#059669' }}>₹{parseFloat(revenueShare.partner_handling_fee).toLocaleString('en-IN')}</strong>}
+                                        />
+                                        <p style={{ fontSize: 11, color: 'var(--vm)', marginTop: 4 }}>
+                                            Shown after the platform's facilitation commission has already been deducted.
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <InfoRow
+                                            label="You Earn (Originating Vendor)"
+                                            value={<strong style={{ color: '#059669' }}>₹{parseFloat(revenueShare.originating_vendor_amt).toLocaleString('en-IN')} ({revenueShare.originating_vendor_pct}%)</strong>}
+                                        />
+                                        <InfoRow
+                                            label="Handling Fee Paid to Partner"
+                                            value={`₹${parseFloat(revenueShare.partner_handling_fee).toLocaleString('en-IN')}`}
+                                        />
+                                    </>
+                                )}
+                                <InfoRow label="Platform Commission" value={`${revenueShare.platform_pct}%`} />
+                            </>
+                        )}
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

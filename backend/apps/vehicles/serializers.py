@@ -39,6 +39,7 @@ class VehicleListSerializer(serializers.ModelSerializer):
     """Used in search results — minimal fields for performance."""
     cover_photo  = serializers.SerializerMethodField()
     city_name    = serializers.CharField(source="city.name", read_only=True)
+    current_city_name = serializers.CharField(source="current_city.name", read_only=True)
     vendor_name  = serializers.CharField(source="vendor.vendor_profile.business_name",
                                          read_only=True)
     segment_display = serializers.CharField(source="get_segment_display", read_only=True)
@@ -50,7 +51,7 @@ class VehicleListSerializer(serializers.ModelSerializer):
         model  = Vehicle
         fields = ['id', 'make', 'model', 'year', 'segment', 'segment_display',
                   'fuel_type', 'fuel_display', 'transmission', 'transmission_display',
-                  'capacity', 'daily_rate', 'city_name', 'status',
+                  'capacity', 'daily_rate', 'city_name', 'current_city_name', 'status',
                   'is_certified', 'cover_photo', 'vendor_name', 'vehicle_id_code']
  
     def get_cover_photo(self, obj):

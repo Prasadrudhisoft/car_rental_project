@@ -413,7 +413,7 @@ class VehicleSearchView(generics.ListAPIView):
         # Base queryset: LIVE, in the requested city, not blocked, not blacklisted
         qs = Vehicle.objects.filter(
             status='LIVE',
-            city_id=city,
+            current_city_id=city,
             is_blacklisted=False,
         ).exclude(id__in=blocked_ids).select_related(
             'city', 'vendor__vendor_profile'
@@ -1028,6 +1028,7 @@ class VendorVehicleViewSet(viewsets.ModelViewSet):
             vendor=self.request.user,
             current_odometer=serializer.validated_data.get('odometer_at_listing', 0),
             last_verified_odometer=serializer.validated_data.get('odometer_at_listing', 0),
+            current_city=serializer.validated_data.get('city'),   # ← NEW: starts at home city
         )
         
         suggested_name    = self.request.data.get('suggested_location_name')

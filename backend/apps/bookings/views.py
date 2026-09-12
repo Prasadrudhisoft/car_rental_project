@@ -504,6 +504,10 @@ class PaymentVerifyView(APIView):
                 blocked_date=date,
                 defaults={'reason': 'booking', 'booking_ref': booking.booking_ref}
             )
+
+        if booking.is_one_way:
+            from apps.logistics.views import auto_match_return_partner
+            auto_match_return_partner(booking)
  
         # Generate agreement PDF and send confirmation notification
         from .pdf_generator import generate_agreement_pdf
@@ -1500,6 +1504,11 @@ class DummyPaymentView(APIView):
                     blocked_date=date,
                     defaults={'reason': 'booking', 'booking_ref': booking.booking_ref}
                 )
+
+                    # ── NEW: one-way trips need a destination handover arranged ──
+            if booking.is_one_way:
+                from apps.logistics.views import auto_match_return_partner
+                auto_match_return_partner(booking)
  
         # Send confirmation notification if just confirmed
         try:

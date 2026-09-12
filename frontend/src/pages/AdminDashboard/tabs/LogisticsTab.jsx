@@ -1,6 +1,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // tabs/LogisticsTab.jsx
-// Handovers DataTable gets a mobile card treatment; stats + forms unchanged.
+// Handovers DataTable gets a mobile card treatment; stats + forms unchanged
+// except: Return Points form now clearly explains it creates admin-managed
+// parking lots (vendor-provided parking capacity comes from VendorNetwork,
+// shown read-only below for visibility).
 // ─────────────────────────────────────────────────────────────────────────────
 import React, { useState, useMemo } from "react";
 import DataTable from "../../../components/common/DataTable";
@@ -95,6 +98,9 @@ const handoverColumns = [
 ];
 
 export default function LogisticsTab({ handovers, logisticsStats, network, cities, returnPoints, formLoading, onAddReturnPoint }) {
+    const parkingLots     = (returnPoints || []).filter(rp => rp.point_type === "parking");
+    const vendorLots      = (returnPoints || []).filter(rp => rp.point_type === "partner_vendor");
+
     return (
         <div className="admin-section">
             {logisticsStats && (
@@ -116,44 +122,85 @@ export default function LogisticsTab({ handovers, logisticsStats, network, citie
                 </div>
             )}
 
-            <SectionCard title="Return Points" subtitle="Designated drop-off points for one-way returns.">
+            {/* ── Explainer banner ── */}
+            <div className="admin-config-notice" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <strong>How one-way vehicle handovers work</strong>
+                <span style={{ fontWeight: 400 }}>
+                    When a customer books a one-way trip, the platform automatically looks for somewhere in the
+                    destination city to drop the car: first, any vendor who has opted into the{" "}
+                    <strong>Vendor Network</strong> for that city (they set their own capacity and handling fee,
+                    shown read-only below) — and if none has room, an <strong>admin-managed parking lot</strong>{" "}
+                    you create here. The platform takes a facilitation commission on top of any vendor-to-vendor
+                    handling fee, configurable in the Config tab under "Logistics".
+                </span>
+            </div>
+
+            <SectionCard title="Register a Parking Lot" subtitle="Admin-managed drop-off points — used automatically when no vendor in the destination city has spare capacity.">
                 <InlineForm
                     fields={[
-                        {key:"name",       label:"Name",    required:true},
+                        {key:"name",       label:"Name",    required:true, placeholder:"e.g. Pune Station Parking"},
                         {key:"city",       label:"City",    type:"select", required:true, options:cities.map(c=>({value:c.id,label:c.name}))},
-                        {key:"point_type", label:"Type",    type:"select", required:true, options:[{value:"partner_vendor",label:"Partner Vendor Lot"},{value:"parking",label:"Paid Parking"}]},
-                        {key:"address",    label:"Address"},
+                        {key:"address",    label:"Address", required:true},
+                        {key:"contact_phone", label:"Contact Phone"},
+                        {key:"latitude",   label:"Latitude",  type:"number", step:"0.000001"},
+                        {key:"longitude",  label:"Longitude", type:"number", step:"0.000001"},
                     ]}
-                    onSubmit={onAddReturnPoint} submitLabel="+ Add Return Point" loading={formLoading}/>
+                    onSubmit={onAddReturnPoint} submitLabel="+ Register Parking Lot" loading={formLoading}/>
             </SectionCard>
 
-            {/* Handovers — DataTable on desktop, cards on mobile */}
-            <div className="adm-desktop">
-                <DataTable columns={handoverColumns} data={handovers} searchable
-                    searchKeys={["vehicle_display","booking_ref","originating_vendor_name"]}
-                    searchPlaceholder="Search handovers…"
-                    filters={[{key:"status",label:"Status",colorMap:HANDOVER_STATUS_CLR,options:H_STATUS_OPTIONS}]}
-                    emptyIcon="🔄" emptyMessage="No active handovers." pageSize={15}/>
-            </div>
-            <div className="adm-mobile">
-                <MobileHandoverList handovers={handovers}/>
-            </div>
+            <SectionCard title={`Admin Parking Lots (${parkingLots.length})`} subtitle="Available as a fallback drop-off point when no vendor has capacity.">
+                {parkingLots.length === 0 ? (
+                    <div style={{ padding: "20px 0", textAlign: "center", color: "var(--vm)", fontSize: 13 }}>
+                        No parking lots registered yet.
+                    </div>
+                ) : (
+                    <div className="admin-data-table">
+                        <div className="admin-data-table__header"><span>Name</span><span>City</span><span>Address</span><span>Contact</span></div>
+                        {parkingLots.map((rp) => (
+                            <div key={rp.id} className="admin-data-table__row">
+                                <span><strong>{rp.name}</strong></span>
+                                <span>{rp.city_name}</span>
+                                <span style={{ fontSize: 12, color: "var(--vm)" }}>{rp.address || "—"}</span>
+                                <span>{rp.contact_phone || "—"}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </SectionCard>
 
-            {network.length>0 && (
-                <SectionCard title="Vendor Network">
+            <SectionCard title={`Vendor-Offered Parking (${network.length})`} subtitle="Vendors who've opted in to receive other vendors' one-way drop-offs — managed by vendors themselves in their Network tab.">
+                {network.length === 0 ? (
+                    <div style={{ padding: "20px 0", textAlign: "center", color: "var(--vm)", fontSize: 13 }}>
+                        No vendors currently offering parking to other vendors.
+                    </div>
+                ) : (
                     <DataTable
                         columns={[
                             {key:"business_name",       label:"Vendor", sortable:true},
                             {key:"city_name",           label:"City",   sortable:true, width:120},
-                            {key:"max_vehicles",        label:"Max",    sortable:true, width:70, align:"center"},
+                            {key:"max_vehicles",        label:"Capacity", sortable:true, width:80, align:"center"},
                             {key:"current_held_count",  label:"Held",   sortable:true, width:70, align:"center",
                              render:(v,row)=><span className={`admin-badge ${v>=row.max_vehicles?"admin-badge--red":"admin-badge--blue"}`}>{v}/{row.max_vehicles}</span>},
                             {key:"is_active", label:"Status", sortable:true, width:90,
                              render:(v)=><span className={`admin-badge ${v?"admin-badge--green":"admin-badge--gray"}`}>{v?"Active":"Inactive"}</span>},
                         ]}
                         data={network} searchable={false} emptyIcon="🤝" emptyMessage="No network vendors." pageSize={10}/>
-                </SectionCard>
-            )}
+                )}
+            </SectionCard>
+
+            {/* Handovers — DataTable on desktop, cards on mobile */}
+            <SectionCard title="Active Handovers" subtitle="Vehicles currently in transit or being held at a destination.">
+                <div className="adm-desktop">
+                    <DataTable columns={handoverColumns} data={handovers} searchable
+                        searchKeys={["vehicle_display","booking_ref","originating_vendor_name"]}
+                        searchPlaceholder="Search handovers…"
+                        filters={[{key:"status",label:"Status",colorMap:HANDOVER_STATUS_CLR,options:H_STATUS_OPTIONS}]}
+                        emptyIcon="🔄" emptyMessage="No active handovers." pageSize={15}/>
+                </div>
+                <div className="adm-mobile">
+                    <MobileHandoverList handovers={handovers}/>
+                </div>
+            </SectionCard>
         </div>
     );
 }
