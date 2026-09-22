@@ -1,7 +1,7 @@
 from decimal import Decimal
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -12,7 +12,8 @@ from apps.bookings.models import Booking
 from .models import VendorNetwork, ReturnPoint, HandoverRecord, HandoverPhoto, RevenueShare
 from .serializers import (
     VendorNetworkSerializer, ReturnPointSerializer,
-    HandoverRecordSerializer, HandoverPhotoSerializer, RevenueShareSerializer,
+    HandoverRecordSerializer, HandoverPhotoSerializer, RevenueShareSerializer, VendorCommissionOverrideSerializer, CityParkingRateSerializer,
+    CityParkingRate, VendorCommissionOverride,
 )
  
  
@@ -74,31 +75,33 @@ class VendorNetworkOptInView(APIView):
     """
     GET  /api/logistics/network/my/      — list my current network memberships
     POST /api/logistics/network/opt-in/  — join the network for a city
-    Body: { "city": city_id, "max_vehicles": 3, "handling_fee_override": null }
+    Body: { "city": city_id, "max_vehicles": 3 }
+          NOTE: no fee field — pricing is set exclusively by admin via
+          CityParkingRate + VendorCommissionOverride. Any fee-related keys
+          in the request body are ignored.
     DELETE /api/logistics/network/{id}/  — leave the network for a city
     """
     permission_classes = [IsVendorRole]
- 
+
     def get(self, request):
         qs = VendorNetwork.objects.filter(
             vendor=request.user).select_related("city")
         return Response(VendorNetworkSerializer(qs, many=True).data)
- 
+
     def post(self, request):
-        city_id   = request.data.get("city")
-        max_v     = request.data.get("max_vehicles", 3)
-        fee_override = request.data.get("handling_fee_override")
- 
+        city_id = request.data.get("city")
+        max_v   = request.data.get("max_vehicles", 3)
+
         if not city_id:
             return Response({'error': 'city is required.'}, status=400)
- 
+
         membership, created = VendorNetwork.objects.update_or_create(
             vendor  = request.user,
             city_id = city_id,
             defaults={
-                'is_active':              True,
-                'max_vehicles':           max_v,
-                'handling_fee_override':  fee_override,
+                'is_active':    True,
+                'max_vehicles': max_v,
+                # handling_fee_override intentionally never set here
             }
         )
         msg = "Joined the network." if created else "Network membership updated."
@@ -357,38 +360,44 @@ class HandoverRetrievalArrangedView(APIView):
 
 def _calculate_revenue_share(booking, network_member: VendorNetwork) -> RevenueShare:
     """
-    Calculate and store the revenue share for a cross-city booking.
+    Revenue split for a cross-city (one-way) booking.
 
-    Two separate platform cuts now apply:
-      1. platform_commission        — the normal cut on the base rental, same as any booking
-      2. parking_facilitation_commission_pct — a SEPARATE cut taken specifically off the
-         handling fee paid to the receiving vendor, since the platform is actively
-         brokering that vendor-to-vendor transaction.
+    The parking/handling amount is now ENTIRELY admin-controlled:
+      - CityParkingRate.amount = the fixed price for parking in this city,
+        same for every vendor — vendors cannot set or change it.
+      - VendorCommissionOverride (if present for this vendor+city) or the
+        platform-wide default (parking_default_vendor_share_pct) decides
+        what % of that fixed amount the receiving vendor keeps. The rest
+        is the platform's cut of the parking transaction, on top of the
+        platform's normal rental commission.
     """
     total = booking.total_amount
+    city  = network_member.city
 
     platform_pct = get_config('platform_commission', Decimal('0.18'))
-    handling_fee_gross = Decimal(str(
-        network_member.handling_fee_override
-        if network_member.handling_fee_override
-        else get_config('cross_city_handling_fee_min', Decimal('300'))
-    ))
-    facilitation_pct = Decimal(str(get_config('parking_facilitation_commission_pct', Decimal('0.15'))))
-    sublisting_pct   = get_config('cross_city_partner_sublisting_pct', Decimal('0.05'))
 
-    # Platform's cut of the handling fee itself
-    platform_facilitation_cut = (handling_fee_gross * facilitation_pct).quantize(Decimal('0.01'))
-    # What the receiving vendor actually keeps
-    receiving_vendor_net = handling_fee_gross - platform_facilitation_cut
+    try:
+        city_rate = city.parking_rate
+        handling_fee_gross = city_rate.amount if city_rate.is_active else Decimal(str(
+            get_config('cross_city_handling_fee_min', Decimal('300'))))
+    except CityParkingRate.DoesNotExist:
+        handling_fee_gross = Decimal(str(get_config('cross_city_handling_fee_min', Decimal('300'))))
 
-    # Platform's total take: normal rental commission + the facilitation cut
+    override = VendorCommissionOverride.objects.filter(
+        vendor=network_member.vendor, city=city, is_active=True).first()
+    vendor_share_pct = (
+        override.vendor_share_pct if override
+        else Decimal(str(get_config('parking_default_vendor_share_pct', Decimal('70'))))
+    )
+
+    receiving_vendor_net = (handling_fee_gross * vendor_share_pct / 100).quantize(Decimal('0.01'))
+    platform_parking_cut = handling_fee_gross - receiving_vendor_net
+
     platform_rental_amt = total * platform_pct
-    platform_amt         = platform_rental_amt + platform_facilitation_cut
+    platform_amt         = platform_rental_amt + platform_parking_cut
+    originating_amt      = total - platform_amt - handling_fee_gross
 
-    # Originating vendor gets everything except the platform's full take and
-    # the GROSS handling fee (they're paying the full fee; the split of who
-    # gets what from that fee is between the platform and the receiving vendor)
-    originating_amt = total - platform_amt - handling_fee_gross
+    sublisting_pct = get_config('cross_city_partner_sublisting_pct', Decimal('0.05'))
 
     rev_share, _ = RevenueShare.objects.update_or_create(
         booking=booking,
@@ -398,7 +407,7 @@ def _calculate_revenue_share(booking, network_member: VendorNetwork) -> RevenueS
             'originating_vendor_amt': originating_amt,
             'platform_pct':           (platform_amt / total * 100).quantize(Decimal('0.01')),
             'platform_amt':           platform_amt,
-            'partner_handling_fee':   receiving_vendor_net,  # ← what B actually receives, net of platform's cut
+            'partner_handling_fee':   receiving_vendor_net,
             'partner_sublisting_pct': sublisting_pct * 100,
             'partner_sublisting_amt': Decimal('0'),
         }
@@ -594,3 +603,49 @@ class PartnerVendorHandoverListView(generics.ListAPIView):
             'booking__vendor__vendor_profile',
             'return_point',
         ).prefetch_related("photos")
+
+
+class AdminCityParkingRateViewSet(viewsets.ModelViewSet):
+    """
+    GET    /api/logistics/admin/parking-rates/          — list all city rates
+    POST   /api/logistics/admin/parking-rates/          — set a new city's rate
+    PATCH  /api/logistics/admin/parking-rates/{id}/      — change the rate
+    DELETE /api/logistics/admin/parking-rates/{id}/      — remove (city has no fixed rate)
+    """
+    queryset           = CityParkingRate.objects.select_related('city').all()
+    serializer_class   = CityParkingRateSerializer
+    permission_classes = [IsAdminRole]
+
+    def perform_create(self, serializer):
+        serializer.save(updated_by=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(updated_by=self.request.user)
+
+
+class AdminVendorCommissionOverrideViewSet(viewsets.ModelViewSet):
+    """
+    GET    /api/logistics/admin/vendor-commissions/                — list all overrides
+    GET    /api/logistics/admin/vendor-commissions/?city=2          — filter by city
+    GET    /api/logistics/admin/vendor-commissions/?vendor=5        — filter by vendor
+    POST   /api/logistics/admin/vendor-commissions/                — set a vendor-specific split
+    PATCH  /api/logistics/admin/vendor-commissions/{id}/            — change it
+    DELETE /api/logistics/admin/vendor-commissions/{id}/            — revert vendor to platform default
+    """
+    serializer_class   = VendorCommissionOverrideSerializer
+    permission_classes = [IsAdminRole]
+
+    def get_queryset(self):
+        qs = VendorCommissionOverride.objects.select_related(
+            'vendor__vendor_profile', 'city').all()
+        city   = self.request.query_params.get('city')
+        vendor = self.request.query_params.get('vendor')
+        if city:   qs = qs.filter(city_id=city)
+        if vendor: qs = qs.filter(vendor_id=vendor)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(set_by=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(set_by=self.request.user)

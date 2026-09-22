@@ -357,7 +357,7 @@ export default function VendorDashboard() {
         e.preventDefault();
         if (!networkForm.city) { showToast('Select a city.', 'error'); return; }
         try {
-            await joinNetwork({ city: networkForm.city, max_vehicles: networkForm.max_vehicles, handling_fee_override: networkForm.handling_fee_override || null });
+            await joinNetwork({ city: networkForm.city, max_vehicles: networkForm.max_vehicles });
             showToast('Joined!');
             await loadTab('network');
         } catch (e) { showToast(e.response?.data?.error || 'Failed.', 'error'); }

@@ -25,10 +25,10 @@ class VendorNetwork(models.Model):
         default=3,
         help_text="Maximum vehicles this vendor can hold at once for other vendors.",
     )
-    handling_fee_override = models.DecimalField(
-        max_digits=8, decimal_places=2, null=True, blank=True,
-        help_text="If set, overrides the platform default handling fee for this vendor.",
-    )
+    # handling_fee_override = models.DecimalField(
+    #     max_digits=8, decimal_places=2, null=True, blank=True,
+    #     help_text="If set, overrides the platform default handling fee for this vendor.",
+    # )
     joined_at   = models.DateTimeField(auto_now_add=True)
     updated_at  = models.DateTimeField(auto_now=True)
  
@@ -180,3 +180,70 @@ class RevenueShare(models.Model):
  
     def __str__(self):
         return f'Revenue split for {self.booking.booking_ref}'
+
+
+class CityParkingRate(models.Model):
+    """
+    Admin-set, fixed parking price for one-way drop-offs in a city.
+    ALL vendors offering parking in this city are paid based on this same
+    rate — no vendor can set their own price. One row per city.
+    SQL table: logistics_cityparkingrate
+    """
+    city   = models.OneToOneField(
+        'locations.City', on_delete=models.CASCADE, related_name='parking_rate',
+    )
+    amount = models.DecimalField(
+        max_digits=8, decimal_places=2,
+        help_text="Fixed ₹ parking fee for a one-way drop-off in this city. Set by admin only.",
+    )
+    is_active  = models.BooleanField(default=True)
+    updated_by = models.ForeignKey(
+        'users.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='parking_rates_set',
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'logistics_cityparkingrate'
+
+    def __str__(self):
+        return f'{self.city.name}: ₹{self.amount}'
+
+
+class VendorCommissionOverride(models.Model):
+    """
+    Admin-set, per-vendor split of the CityParkingRate amount for a given
+    city. If no row exists for a (vendor, city) pair, the platform-wide
+    default split (from Configuration: parking_vendor_share_pct) applies.
+    Vendors cannot create, view-edit, or influence these rows — read-only
+    to them via the network listing, if at all.
+    SQL table: logistics_vendorcommissionoverride
+    """
+    vendor   = models.ForeignKey(
+        'users.User', on_delete=models.CASCADE, related_name='parking_commission_overrides',
+        limit_choices_to={'role': 'vendor'},
+    )
+    city     = models.ForeignKey(
+        'locations.City', on_delete=models.CASCADE, related_name='vendor_commission_overrides',
+    )
+    vendor_share_pct = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        help_text="% of the CityParkingRate amount this specific vendor keeps. "
+                   "The remainder goes to the platform. E.g. 70.00 = vendor keeps 70%.",
+    )
+    reason     = models.TextField(blank=True, help_text="Internal note — why this vendor gets a different rate.")
+    is_active  = models.BooleanField(default=True)
+    set_by     = models.ForeignKey(
+        'users.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='commission_overrides_created',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'logistics_vendorcommissionoverride'
+        unique_together = ['vendor', 'city']
+
+    def __str__(self):
+        return f'{self.vendor.vendor_profile.business_name} @ {self.city.name}: {self.vendor_share_pct}%'

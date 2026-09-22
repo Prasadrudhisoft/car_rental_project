@@ -261,6 +261,17 @@ export const revokeSublistPermission = (handoverId) =>
 export const getRevenueShare = (bookingId) =>
   api.get(`/logistics/revenue-share/${bookingId}/`);
 
+// ── Logistics — Admin: Parking Pricing ───────────────────────────────
+export const getCityParkingRates    = ()           => api.get('/logistics/admin/parking-rates/');
+export const createCityParkingRate  = (data)       => api.post('/logistics/admin/parking-rates/', data);
+export const updateCityParkingRate  = (id, data)   => api.patch(`/logistics/admin/parking-rates/${id}/`, data);
+export const deleteCityParkingRate  = (id)         => api.delete(`/logistics/admin/parking-rates/${id}/`);
+
+export const getVendorCommissionOverrides   = (params) => api.get('/logistics/admin/vendor-commissions/', { params });
+export const createVendorCommissionOverride = (data)   => api.post('/logistics/admin/vendor-commissions/', data);
+export const updateVendorCommissionOverride = (id, d)  => api.patch(`/logistics/admin/vendor-commissions/${id}/`, d);
+export const deleteVendorCommissionOverride = (id)     => api.delete(`/logistics/admin/vendor-commissions/${id}/`);
+
 // ── Logistics — Admin ─────────────────────────────────────────────────────
 export const getReturnPoints = (params) =>
   api.get("/logistics/return-points/", { params });

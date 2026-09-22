@@ -1,14 +1,8 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// tabs/LogisticsTab.jsx
-// Handovers DataTable gets a mobile card treatment; stats + forms unchanged
-// except: Return Points form now clearly explains it creates admin-managed
-// parking lots (vendor-provided parking capacity comes from VendorNetwork,
-// shown read-only below for visibility).
-// ─────────────────────────────────────────────────────────────────────────────
 import React, { useState, useMemo } from "react";
 import DataTable from "../../../components/common/DataTable";
 import { SectionCard, InlineForm, StatusBadge } from "../AdminShared";
 import { HANDOVER_STATUS_CLR } from "../adminConstants";
+import ParkingPricingPanel from "./ParkingPricingPanel";
 
 const H_STATUS_OPTIONS = [
     { value:"",          label:"All"       },
@@ -97,9 +91,17 @@ const handoverColumns = [
       render:(v)=>v?<span style={{color:v>3?"#D97706":"inherit"}}>{v}d</span>:"—" },
 ];
 
-export default function LogisticsTab({ handovers, logisticsStats, network, cities, returnPoints, formLoading, onAddReturnPoint }) {
-    const parkingLots     = (returnPoints || []).filter(rp => rp.point_type === "parking");
-    const vendorLots      = (returnPoints || []).filter(rp => rp.point_type === "partner_vendor");
+export default function LogisticsTab({
+    handovers,
+    logisticsStats,
+    network,
+    cities,
+    returnPoints,
+    vendors,
+    formLoading,
+    onAddReturnPoint,
+}) {
+    const parkingLots = (returnPoints || []).filter(rp => rp.point_type === "parking");
 
     return (
         <div className="admin-section">
@@ -128,12 +130,14 @@ export default function LogisticsTab({ handovers, logisticsStats, network, citie
                 <span style={{ fontWeight: 400 }}>
                     When a customer books a one-way trip, the platform automatically looks for somewhere in the
                     destination city to drop the car: first, any vendor who has opted into the{" "}
-                    <strong>Vendor Network</strong> for that city (they set their own capacity and handling fee,
-                    shown read-only below) — and if none has room, an <strong>admin-managed parking lot</strong>{" "}
-                    you create here. The platform takes a facilitation commission on top of any vendor-to-vendor
-                    handling fee, configurable in the Config tab under "Logistics".
+                    <strong>Vendor Network</strong> for that city — and if none has room, an{" "}
+                    <strong>admin-managed parking lot</strong> you create below. Pricing for both is set
+                    exclusively by admin using the panel below; vendors cannot set or change these rates.
                 </span>
             </div>
+
+            {/* ── Admin-controlled pricing ── */}
+            <ParkingPricingPanel cities={cities} vendors={vendors} />
 
             <SectionCard title="Register a Parking Lot" subtitle="Admin-managed drop-off points — used automatically when no vendor in the destination city has spare capacity.">
                 <InlineForm

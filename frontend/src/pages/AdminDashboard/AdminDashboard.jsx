@@ -182,13 +182,15 @@ export default function AdminDashboard() {
                     break;
                 }
                 case "logistics": {
-                    const [h, ls, nw, rp, c] = await Promise.all([
+                    const [h, ls, nw, rp, c, v] = await Promise.all([
                         getAdminLogisticsOverview(), getAdminLogisticsStats(),
                         getAdminNetworkList(), getReturnPoints(), getCities(),
+                        getAdminVendors(),
                     ]);
                     setHandovers(h.data.results ?? h.data); setLogisticsStats(ls.data);
                     setNetwork(nw.data.results ?? nw.data); setReturnPoints(rp.data.results ?? rp.data);
                     setCities(c.data.results ?? c.data);
+                    setVendors(v.data.results ?? v.data);
                     break;
                 }
                 case "promos": {
@@ -591,6 +593,7 @@ const handleCompleteReverification = async (vehicleId) => {
                             network={network}
                             cities={cities}
                             returnPoints={returnPoints}
+                            vendors={vendors}
                             formLoading={formLoading}
                             onAddReturnPoint={handleAddReturnPoint}
                         />

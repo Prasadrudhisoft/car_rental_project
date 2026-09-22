@@ -1,10 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// tabs/NetworkTab.jsx
-// Vendor-facing "offer parking to other vendors" marketplace panel.
-// Joining a city here makes this vendor eligible to automatically receive
-// other vendors' one-way drop-offs in that city — earning the handling fee
-// they set here, minus the platform's facilitation commission.
-// ─────────────────────────────────────────────────────────────────────────────
 import React, { useState } from 'react';
 import DataTable from '../../../components/common/DataTable';
 import { SectionCard, FormSelect, FormInput } from '../VendorShared';
@@ -21,7 +14,7 @@ export default function NetworkTab({
 
     const networkColumns = [
         { key: 'city_name',    label: 'City',         sortable: true  },
-        { key: 'max_vehicles', label: 'Capacity',  sortable: true, width: 110, align: 'center' },
+        { key: 'max_vehicles', label: 'Your Capacity',  sortable: true, width: 110, align: 'center' },
         {
             key: 'current_held_count', label: 'Currently Holding', sortable: true, width: 150, align: 'center',
             render: (v, row) => (
@@ -31,8 +24,14 @@ export default function NetworkTab({
             ),
         },
         {
-            key: 'handling_fee_override', label: 'Your Fee', sortable: true, width: 110, align: 'right',
-            render: (v) => v ? <span style={{ fontWeight: 700, color: 'var(--vacc)' }}>₹{parseFloat(v).toLocaleString('en-IN')}</span> : <span style={{ color: 'var(--vm)' }}>Platform default</span>,
+            key: 'city_parking_rate', label: 'City Rate', sortable: false, width: 110, align: 'right',
+            render: (v) => v ? <span>₹{parseFloat(v).toLocaleString('en-IN')}</span> : <span style={{ color: 'var(--vm)', fontStyle: 'italic' }}>Not set</span>,
+        },
+        {
+            key: 'vendor_earning', label: 'You Earn / Car', sortable: false, width: 130, align: 'right',
+            render: (v, row) => v
+                ? <span style={{ fontWeight: 700, color: 'var(--vacc)' }}>₹{parseFloat(v).toLocaleString('en-IN')} <span style={{ fontSize: 10, color: 'var(--vm)', fontWeight: 400 }}>({row.vendor_share_pct}%)</span></span>
+                : <span style={{ color: 'var(--vm)' }}>—</span>,
         },
         {
             key: 'is_active', label: 'Status', sortable: true, width: 90,
@@ -51,7 +50,6 @@ export default function NetworkTab({
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            {/* ── Explainer ── */}
             {showExplainer && (
                 <div style={{
                     background: 'var(--vacc-l)', border: '1px solid rgba(13,184,158,.3)',
@@ -62,11 +60,10 @@ export default function NetworkTab({
                         <strong style={{ fontSize: 14 }}>Earn extra income by parking other vendors' cars</strong>
                         <p style={{ fontSize: 13, color: 'var(--vt2)', marginTop: 6, lineHeight: 1.6 }}>
                             When a customer books a one-way trip ending in a city where <em>you</em> operate,
-                            our system can automatically drop that car off at your lot instead of leaving the
-                            other vendor to find their own arrangement. You set how many cars you can hold and
-                            what you charge to hold them — you're only ever paid for spare capacity you choose
-                            to offer. The platform takes a small facilitation commission on the handling fee only,
-                            never on your own rental income.
+                            our system can automatically drop that car off at your lot. You choose which cities
+                            you participate in and how many cars you can hold — the parking price and your
+                            earnings share are set centrally by the platform to keep pricing fair and consistent
+                            across all vendors in the same city.
                         </p>
                     </div>
                     <button
@@ -79,10 +76,9 @@ export default function NetworkTab({
             )}
 
             <div className="vd-grid-2">
-                {/* Join form */}
                 <SectionCard
                     title="Offer Parking in a City"
-                    subtitle="Opt in per city. You can leave anytime — it only affects future matches, not cars already parked with you."
+                    subtitle="Choose a city and how many cars you can hold. Pricing is set by the platform — see your earnings per car in the table once you join."
                 >
                     <form onSubmit={onJoinNetwork}>
                         <div className="vd-fg vd-fg--2">
@@ -102,27 +98,17 @@ export default function NetworkTab({
                                 max={20}
                             />
                         </div>
-                        <div className="vd-form-field" style={{ marginTop: 10 }}>
-                            <label>Your Handling Fee (₹ per car, optional)</label>
-                            <input
-                                className="vd-input"
-                                type="number"
-                                placeholder="Leave blank to use the platform default fee"
-                                value={networkForm.handling_fee_override || ''}
-                                onChange={e => setNetworkForm(p => ({ ...p, handling_fee_override: e.target.value }))}
-                            />
-                            <p style={{ fontSize: 11, color: 'var(--vm)', marginTop: 4 }}>
-                                This is what you're paid per car received. The platform deducts its
-                                facilitation commission from this amount — you keep the rest.
-                            </p>
-                        </div>
+                        <p style={{ fontSize: 11, color: 'var(--vm)', marginTop: 10 }}>
+                            💡 Pricing and your earnings share are fixed by the platform per city — not
+                            something you set here. This keeps rates consistent for every customer regardless
+                            of which vendor happens to receive their car.
+                        </p>
                         <div style={{ marginTop: 14 }}>
                             <button type="submit" className="vd-btn vd-btn--primary">Start Offering Parking →</button>
                         </div>
                     </form>
                 </SectionCard>
 
-                {/* Memberships table */}
                 <SectionCard title="Your Active Offers">
                     <DataTable
                         columns={networkColumns}
