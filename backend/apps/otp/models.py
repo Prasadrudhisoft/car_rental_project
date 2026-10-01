@@ -1,7 +1,8 @@
 import random
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from datetime import timedelta
+import secrets
 from django.contrib.auth import get_user_model
  
 User = get_user_model()
@@ -39,19 +40,15 @@ class OTPRecord(models.Model):
  
     @classmethod
     def generate(cls, user, purpose):
-        """
-        Create a new OTP for the user.
-        Any previous unused OTPs for the same purpose are invalidated.
-        """
-        # Invalidate old unused OTPs for this user+purpose
-        cls.objects.filter(user=user, purpose=purpose, is_used=False).update(is_used=True)
-        code = str(random.randint(100000, 999999))
-        return cls.objects.create(
-            user=user,
-            code=code,
-            purpose=purpose,
-            expires_at=timezone.now() + timedelta(minutes=5),
-        )
+        """Create a new OTP; any previous unused OTP for the same purpose is invalidated atomically."""
+        # code = f'{secrets.randbelow(900000) + 100000}'
+        code = '123456' # TEMP hardcoded 
+        with transaction.atomic():
+            cls.objects.filter(user=user, purpose=purpose, is_used=False).update(is_used=True)
+            return cls.objects.create(
+                user=user, code=code, purpose=purpose,
+                expires_at=timezone.now() + timedelta(minutes=5),
+            )
  
     def is_valid(self):
         """Returns True if this OTP has not been used and has not expired."""

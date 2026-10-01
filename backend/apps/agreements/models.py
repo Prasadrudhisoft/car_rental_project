@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.core.cache import cache
+from django.db import models, transaction
 
 User = get_user_model()
 
@@ -56,14 +58,11 @@ class AgreementVersion(models.Model):
         return f'{self.version_tag} {"[ACTIVE]" if self.is_active else ""} — {self.title}'
 
     def save(self, *args, **kwargs):
-        """
-        Enforce single-active-version invariant.
-        When this version is activated, all others are deactivated atomically.
-        """
-        if self.is_active:
-            # Deactivate all other versions (exclude self for update case)
-            AgreementVersion.objects.exclude(pk=self.pk).update(is_active=False)
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            if self.is_active:
+                AgreementVersion.objects.exclude(pk=self.pk).update(is_active=False)
+            super().save(*args, **kwargs)
+        cache.delete('agreement:active')
 
     @classmethod
     def get_active(cls):

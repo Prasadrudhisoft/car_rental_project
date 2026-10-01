@@ -8,8 +8,12 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {'timeout': 20},      # wait instead of "database is locked"
     }
 }
+
+# Dev has no worker/broker: run tasks inline
+CELERY_TASK_ALWAYS_EAGER = True
  
 # Print emails to terminal instead of sending them
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

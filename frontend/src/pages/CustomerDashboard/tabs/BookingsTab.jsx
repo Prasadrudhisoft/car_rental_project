@@ -28,6 +28,21 @@ function MobileBookingCard({ booking, onViewBooking }) {
                     <span className="cd-mob-booking-card__plate">{plate}</span>
                 )}
             </div>
+            
+            {booking.pickup_address && (
+                <div className="cd-mob-booking-card__row">
+                    <span className="cd-mob-booking-card__dates" style={{ whiteSpace: 'normal' }}>
+                        📍 {booking.pickup_address}
+                    </span>
+                </div>
+            )}
+            {booking.return_address && (
+                <div className="cd-mob-booking-card__row">
+                    <span className="cd-mob-booking-card__dates" style={{ whiteSpace: 'normal' }}>
+                        🏁 {booking.return_address}
+                    </span>
+                </div>
+            )}
 
             <div className="cd-mob-booking-card__row cd-mob-booking-card__row--footer">
                 <span className="cd-mob-booking-card__dates">
@@ -164,6 +179,17 @@ export default function BookingsTab({ bookings, onViewBooking }) {
                 </div>
             ),
         },
+                {
+            key: 'pickup_address', label: 'Pickup Point', sortable: true, width: 230,
+            render: (v, row) => (
+                <div className="dt-cell-stack">
+                    <span className="dt-cell-stack__primary" style={{ fontSize: 12 }}>{v || '—'}</span>
+                    {row.return_address && (
+                        <span className="dt-cell-stack__secondary">🏁 Drop: {row.return_address}</span>
+                    )}
+                </div>
+            ),
+        },
         {
             key: 'status', label: 'Status', sortable: true, width: 110,
             render: val => <StatusBadge status={val} />,
@@ -202,7 +228,7 @@ export default function BookingsTab({ bookings, onViewBooking }) {
                     columns={columns}
                     data={bookings}
                     searchable
-                    searchKeys={['booking_ref', 'vehicle_display', 'status']}
+                    searchKeys={['booking_ref', 'vehicle_display', 'status', 'pickup_address']}
                     searchPlaceholder="Search by booking ref, vehicle…"
                     filters={[
                         {

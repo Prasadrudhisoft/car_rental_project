@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
+import re
 
 from .models import CustomerProfile, VendorProfile, SavedAddress, AdminProfile, VendorAdminAssignment
 
@@ -82,6 +83,18 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
                   'date_of_birth', 'loyalty_points', 'aadhaar_number', 'pan_number',
                   'kyc_status', 'saved_addresses']
         read_only_fields = ['loyalty_points', 'kyc_status']
+
+    def validate_aadhaar_number(self, value):
+        value = (value or '').replace(' ', '')
+        if value and not re.fullmatch(r'\d{12}', value):
+            raise serializers.ValidationError('Aadhaar must be exactly 12 digits.')
+        return value
+
+    def validate_pan_number(self, value):
+        value = (value or '').strip().upper()
+        if value and not re.fullmatch(r'[A-Z]{5}[0-9]{4}[A-Z]', value):
+            raise serializers.ValidationError('Enter a valid PAN, e.g. ABCDE1234F.')
+        return value
 
 
 # ── Vendor serializers ────────────────────────────────────────────────────
@@ -186,6 +199,17 @@ class VendorKYCSerializer(serializers.ModelSerializer):
         # Create/update the Location record from the map pin
         if instance.latitude and instance.longitude and instance.city:
             self._sync_pickup_location(instance)
+
+        from apps.logistics.models import VendorNetwork
+        mems = list(VendorNetwork.objects.filter(vendor=instance.user))
+        if mems and instance.city:
+            keep = next((m for m in mems if m.city_id == instance.city_id), mems[0])
+            for m in mems:
+                if m.pk != keep.pk:
+                    m.delete()
+            if keep.city_id != instance.city_id:
+                keep.city = instance.city
+                keep.save(update_fields=['city', 'updated_at'])
  
         return instance
  

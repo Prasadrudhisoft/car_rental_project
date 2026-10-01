@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Sidebar }  from '../../components/common/Navbar';
 import NotificationsPanel from '../../components/notifications/NotificationsPanel';
@@ -35,7 +35,7 @@ import '../../components/common/DataTable.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function CustomerDashboard() {
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
     const [tab, setTab] = useState('bookings');
 
     // ── Data ──────────────────────────────────────────────────────────────────
@@ -61,12 +61,21 @@ export default function CustomerDashboard() {
     const [selectedSubmittedReview,setSelectedSubmittedReview]= useState(null);
     const [kycModal,               setKycModal]               = useState(null);
     const [searchParams, setSearchParams] = useSearchParams();
+    const location = useLocation();
+    const navigate = useNavigate();
     const highlightRef = useRef(null);
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     const showToast = useCallback((msg, type = 'success') => {
         setToast({ msg, type });
     }, []);
+
+    useEffect(() => {
+        if (location.state?.toast) {
+            showToast(location.state.toast);
+            navigate(location.pathname + location.search, { replace: true, state: null });
+        }
+    }, []); // eslint-disable-line
 
     // ── Load submitted reviews ────────────────────────────────────────────────
     const loadSubmittedReviews = useCallback(async () => {
@@ -192,7 +201,7 @@ export default function CustomerDashboard() {
     const handleKYCVerified = async type => {
         setKycModal(null);
         try {
-            const { data } = await getCustomerProfile();
+            const [{ data }] = await Promise.all([getCustomerProfile(), refreshUser()]);
             setProfile(data);
         } catch {}
         showToast(`${type === 'phone' ? 'Phone number' : 'Email address'} verified successfully!`);

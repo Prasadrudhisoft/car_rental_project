@@ -2792,6 +2792,11 @@
     line-height: 1;
 }
 
+.cd-loc-map {
+    height: 260px; border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--cd-bdr); margin-top: 10px; isolation: isolate;
+}
+
 /* ── Small phone tweaks (≤480px) ────────────────────────────────── */
 
 @media (max-width: 480px) {
@@ -3125,3 +3130,5 @@
     letter-spacing: .4px;
     color: var(--cd-muted);
 }
+
+@media (max-width: 480px) { .cd-loc-map { height: 200px; } }

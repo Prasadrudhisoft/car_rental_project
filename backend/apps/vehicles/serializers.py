@@ -55,7 +55,8 @@ class VehicleListSerializer(serializers.ModelSerializer):
                   'is_certified', 'cover_photo', 'vendor_name', 'vehicle_id_code']
  
     def get_cover_photo(self, obj):
-        photo = obj.photos.filter(is_cover=True).first() or obj.photos.first()
+        photos = list(obj.photos.all())          # served from prefetch_related, no query
+        photo = next((p for p in photos if p.is_cover), None) or (photos[0] if photos else None)
         if photo and photo.image:
             request = self.context.get("request")
             return request.build_absolute_uri(photo.image.url) if request else photo.image.url

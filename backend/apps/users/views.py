@@ -41,8 +41,9 @@ class CustomerRegisterView(generics.CreateAPIView):
         # Issue tokens immediately so the user is logged in after registering
         refresh = RefreshToken.for_user(user)
 
-        from apps.personalization.engine import run_event_rules
-        run_event_rules(user, 'signup')
+        from apps.personalization.tasks import run_event_rules_task
+        from car_rent.async_utils import enqueue
+        enqueue(run_event_rules_task, user.id, 'signup')
 
         
         return Response({
@@ -180,23 +181,29 @@ class AdminUserListView(generics.ListAPIView):
 
 class CustomerProfileView(APIView):
     """
-    GET  /api/users/profile/  — return customer's full profile
-    PATCH /api/users/profile/ — update driving licence, KYC fields
+    GET   /api/users/profile/  — full profile (also self-heals KYC status)
+    PATCH /api/users/profile/  — update details; KYC status is re-evaluated after every save
     """
     permission_classes = [IsCustomerRole]
- 
+
     def get(self, request):
         from .serializers import CustomerProfileSerializer
+        from .kyc import evaluate_kyc
+        evaluate_kyc(request.user)
         profile = request.user.customer_profile
+        profile.refresh_from_db()
         return Response(CustomerProfileSerializer(profile).data)
- 
+
     def patch(self, request):
         from .serializers import CustomerProfileSerializer
+        from .kyc import evaluate_kyc
         profile = request.user.customer_profile
         s = CustomerProfileSerializer(profile, data=request.data, partial=True)
         s.is_valid(raise_exception=True)
         s.save()
-        return Response(s.data)
+        evaluate_kyc(request.user)
+        profile.refresh_from_db()
+        return Response(CustomerProfileSerializer(profile).data)
 
 
 class VendorKYCUploadView(APIView):

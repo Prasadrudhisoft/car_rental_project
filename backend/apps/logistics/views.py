@@ -5,15 +5,26 @@ from rest_framework import generics, permissions, status, viewsets
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from urllib3 import request
  
 from apps.configuration.utils import get_config
 from apps.bookings.models import Booking
+
+from django.db import transaction
+from django.db.models import Count
+from car_rent.async_utils import enqueue
+from .tasks import send_handover_received_email, send_inspection_due_email
  
 from .models import VendorNetwork, ReturnPoint, HandoverRecord, HandoverPhoto, RevenueShare
 from .serializers import (
     VendorNetworkSerializer, ReturnPointSerializer,
     HandoverRecordSerializer, HandoverPhotoSerializer, RevenueShareSerializer, VendorCommissionOverrideSerializer, CityParkingRateSerializer,
     CityParkingRate, VendorCommissionOverride,
+)
+from apps.vehicles.models import Vehicle
+from .capacity import (
+    ReturnCapacityConflict, occupied_count, network_member_for_location,
+    available_slots, available_return_options,
 )
  
  
@@ -71,41 +82,102 @@ class ReturnPointDetailView(generics.RetrieveAPIView):
     queryset           = ReturnPoint.objects.filter(is_active=True)
 
 
+
+class ReturnOptionsView(APIView):
+    """
+    GET /api/logistics/return-options/?city=<id>&vehicle_id=<id>
+    Drop points the customer may pick when returning to a different location: only vendors who
+    opted into the network AND still have a free slot. Full vendors are not returned.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        city = request.query_params.get('city')
+        if not city:
+            return Response({'error': 'city is required.'}, status=400)
+        exclude = None
+        vid = request.query_params.get('vehicle_id')
+        if vid:
+            exclude = Vehicle.objects.filter(pk=vid).values_list('vendor_id', flat=True).first()
+        return Response(available_return_options(city, exclude))
+
+    
+def _parse_bool(v, default=True):
+    if isinstance(v, bool):
+        return v
+    if v is None:
+        return default
+    return str(v).strip().lower() in ('true', '1', 'yes', 'on')
+
+
 class VendorNetworkOptInView(APIView):
     """
-    GET  /api/logistics/network/my/      — list my current network memberships
-    POST /api/logistics/network/opt-in/  — join the network for a city
-    Body: { "city": city_id, "max_vehicles": 3 }
-          NOTE: no fee field — pricing is set exclusively by admin via
-          CityParkingRate + VendorCommissionOverride. Any fee-related keys
-          in the request body are ignored.
-    DELETE /api/logistics/network/{id}/  — leave the network for a city
+    GET  /api/logistics/network/my/      — the vendor's network status, based on THEIR OWN location
+    POST /api/logistics/network/opt-in/  — Body: { "is_active": bool, "max_vehicles": int }
+    No city input: the location is the vendor's profile address/map pin.
     """
     permission_classes = [IsVendorRole]
 
+    @staticmethod
+    def _payload(user):
+        profile = getattr(user, 'vendor_profile', None)
+        loc = profile.pickup_location if profile else None
+        membership = VendorNetwork.objects.filter(vendor=user).select_related('city').first()
+        max_v = membership.max_vehicles if membership else 3
+        occupied = occupied_count(user.id)
+        data = {
+            'is_active':       bool(membership and membership.is_active),
+            'max_vehicles':    max_v,
+            'occupied':        occupied,
+            'available_slots': max(0, max_v - occupied),
+            'location_ready':  bool(profile and profile.city_id and loc
+                                    and loc.latitude is not None and loc.longitude is not None),
+            'city_name':       profile.city.name if profile and profile.city_id else '',
+            'location': ({
+                'name': loc.name, 'address': loc.address,
+                'latitude': str(loc.latitude), 'longitude': str(loc.longitude),
+            } if loc else None),
+        }
+        if membership:
+            ser = VendorNetworkSerializer(membership).data
+            for k in ('city_parking_rate', 'vendor_share_pct', 'vendor_earning'):
+                data[k] = ser[k]
+        return data
+
     def get(self, request):
-        qs = VendorNetwork.objects.filter(
-            vendor=request.user).select_related("city")
-        return Response(VendorNetworkSerializer(qs, many=True).data)
+        return Response(self._payload(request.user))
 
     def post(self, request):
-        city_id = request.data.get("city")
-        max_v   = request.data.get("max_vehicles", 3)
+        profile = getattr(request.user, 'vendor_profile', None)
+        loc     = profile.pickup_location if profile else None
+        enable  = _parse_bool(request.data.get('is_active'), True)
 
-        if not city_id:
-            return Response({'error': 'city is required.'}, status=400)
+        existing = VendorNetwork.objects.filter(vendor=request.user).first()
+        raw_cap  = request.data.get('max_vehicles', existing.max_vehicles if existing else 3)
+        try:
+            max_v = int(raw_cap)
+        except (TypeError, ValueError):
+            return Response({'error': 'max_vehicles must be a whole number.'}, status=400)
+        if not 0 <= max_v <= 100:
+            return Response({'error': 'max_vehicles must be between 0 and 100.'}, status=400)
 
-        membership, created = VendorNetwork.objects.update_or_create(
-            vendor  = request.user,
-            city_id = city_id,
-            defaults={
-                'is_active':    True,
-                'max_vehicles': max_v,
-                # handling_fee_override intentionally never set here
-            }
-        )
-        msg = "Joined the network." if created else "Network membership updated."
-        return Response({'message': msg, 'id': membership.id}, status=201 if created else 200)
+        if not enable:
+            VendorNetwork.objects.filter(vendor=request.user).update(is_active=False, max_vehicles=max_v)
+            return Response(self._payload(request.user))
+
+        if not (profile and profile.city_id and loc and loc.latitude is not None and loc.longitude is not None):
+            return Response(
+                {'error': 'Complete your KYC first (city, address and map pin) — your own location is used as the drop point.'},
+                status=400)
+
+        with transaction.atomic():
+            # one membership per vendor; its city always follows the vendor's own profile
+            VendorNetwork.objects.filter(vendor=request.user).exclude(city_id=profile.city_id).delete()
+            VendorNetwork.objects.update_or_create(          # row-locks, so it serialises with reservations
+                vendor=request.user, city_id=profile.city_id,
+                defaults={'is_active': True, 'max_vehicles': max_v},
+            )
+        return Response(self._payload(request.user))
  
  
 class VendorNetworkDeleteView(APIView):
@@ -133,76 +205,58 @@ class AdminNetworkListView(generics.ListAPIView):
 
 def auto_match_return_partner(booking) -> HandoverRecord | None:
     """
-    Called automatically after a cross-city booking is confirmed.
-    Finds the best available partner vendor in the return city and
-    creates a HandoverRecord.
- 
-    Selection criteria:
-    1. Network member in the return city, is_active=True
-    2. Not already at max_vehicles capacity
-    3. Vendor with the most available capacity (fewest current held vehicles)
- 
-    Returns the created HandoverRecord, or None if no partner found.
+    Reserve the return slot at the drop point the CUSTOMER chose (booking.return_location).
+    Locks the receiving vendor's VendorNetwork row, re-checks capacity, creates the
+    HandoverRecord — all in the caller's transaction, so two bookings can't take the last slot.
+    Raises ReturnCapacityConflict when the point is full / no longer accepting.
     """
-    if not booking.is_one_way or not booking.return_location:
+    if not booking.is_one_way or not booking.return_location_id:
         return None
-
-    return_city = booking.return_location.city
-
-    # ── Try vendor-network partners first (Option: vendor-provided parking) ──
-    candidates = VendorNetwork.objects.filter(
-        city=return_city,
-        is_active=True,
-    ).exclude(vendor=booking.vendor)
-
-    best = None
-    best_capacity = -1
-    for member in candidates:
-        currently_held = HandoverRecord.objects.filter(
-            receiving_vendor = member.vendor,
-            status__in       = ['RECEIVED', 'INSPECTED', 'HELD', 'SUBLISTED'],
-        ).count()
-        available = member.max_vehicles - currently_held
-        if available > 0 and available > best_capacity:
-            best          = member
-            best_capacity = available
-
-    if best:
-        return_point, _ = ReturnPoint.objects.get_or_create(
-            vendor_network_member = best,
-            city                  = return_city,
-            defaults = {
-                'name':       f'{best.vendor.vendor_profile.business_name} Lot',
-                'point_type': 'partner_vendor',
-                'address':    'To be confirmed with vendor.',
-            }
-        )
-        receiving_vendor = best.vendor
-    else:
-        # ── NEW fallback: no vendor capacity available — use an admin parking lot ──
-        return_point = ReturnPoint.objects.filter(
-            city=return_city, point_type='parking', is_active=True,
-        ).first()
-        if not return_point:
-            return None  # nothing available at all — admin should manually match
-        receiving_vendor = None  # parking lots have no receiving vendor to pay
+    existing = HandoverRecord.objects.filter(booking=booking).first()
+    if existing:
+        return existing                                   # idempotent (verify + webhook, retries)
 
     from datetime import timedelta
-    inspection_due = timezone.now() + timedelta(hours=24)
+    loc = booking.return_location
+    due = timezone.now() + timedelta(hours=24)
 
-    handover = HandoverRecord.objects.create(
-        booking                = booking,
-        return_point           = return_point,
-        receiving_vendor       = receiving_vendor,
-        status                 = 'EXPECTED',
-        full_inspection_due_by = inspection_due,
-        deposit_hold_extended  = True,
+    member = network_member_for_location(loc.id, lock=True)
+
+    if member is not None:
+        if available_slots(member) <= 0:
+            raise ReturnCapacityConflict('The selected drop point has just become full.')
+        profile = member.vendor.vendor_profile
+        return_point, _ = ReturnPoint.objects.update_or_create(
+            vendor_network_member=member, city=loc.city,
+            defaults={
+                'name':          f'{profile.business_name} Lot',
+                'point_type':    'partner_vendor',
+                'address':       loc.address or 'Address on file with vendor.',
+                'latitude':      loc.latitude,
+                'longitude':     loc.longitude,
+                'contact_phone': (member.vendor.phone or '')[:15],
+                'is_active':     True,
+            },
+        )
+        handover = HandoverRecord.objects.create(
+            booking=booking, return_point=return_point, receiving_vendor=member.vendor,
+            status='EXPECTED', full_inspection_due_by=due, deposit_hold_extended=True,
+        )
+        _calculate_revenue_share(booking, member)
+        return handover
+
+    if loc.location_type == 'vendor_lot':
+        # a vendor's own lot that is not (or no longer) in the network
+        raise ReturnCapacityConflict('The selected drop point is no longer accepting vehicles from other vendors.')
+
+    # admin-defined location: fall back to an admin parking lot in that city (unchanged behaviour)
+    lot = ReturnPoint.objects.filter(city=loc.city, point_type='parking', is_active=True).first()
+    if not lot:
+        return None
+    return HandoverRecord.objects.create(
+        booking=booking, return_point=lot, receiving_vendor=None,
+        status='EXPECTED', full_inspection_due_by=due, deposit_hold_extended=True,
     )
-
-    if best:
-        _calculate_revenue_share(booking, best)
-
-    return handover
  
  
 class AdminManualMatchView(APIView):
@@ -250,36 +304,18 @@ class HandoverConfirmView(APIView):
     parser_classes     = [MultiPartParser, FormParser]
  
     def post(self, request, handover_id):
-        handover = get_object_or_404(
-            HandoverRecord,
-            pk               = handover_id,
-            receiving_vendor = request.user,
-        )
-        if handover.status != 'EXPECTED':
-            return Response({'error': 'Handover already confirmed.'}, status=400)
- 
-        handover.status               = "RECEIVED"
-        handover.handover_notes       = request.data.get("notes", "")
-        handover.handover_confirmed_at = timezone.now()
-        handover.save()
- 
-        # Notify originating vendor
-        from django.core.mail import send_mail
-        try:
-            send_mail(
-                subject    = f'[CarRent India] Vehicle Received at {handover.return_point.name}',
-                message    = (
-                    f'Your vehicle {handover.booking.vehicle.plate_number} from booking '
-                    f'{handover.booking.booking_ref} has been received at '
-                    f'{handover.return_point.name} in {handover.return_point.city.name}.'
-                ),
-                from_email     = 'noreply@carrentindia.com',
-                recipient_list = [handover.booking.vendor.email],
-                fail_silently  = True,
+        with transaction.atomic():
+            handover = get_object_or_404(
+                HandoverRecord.objects.select_for_update(),
+                pk=handover_id, receiving_vendor=request.user,
             )
-        except Exception:
-            pass
- 
+            if handover.status != 'EXPECTED':
+                return Response({'error': 'Handover already confirmed.'}, status=400)
+            handover.status                = "RECEIVED"
+            handover.handover_notes        = request.data.get("notes", "")
+            handover.handover_confirmed_at = timezone.now()
+            handover.save(update_fields=['status', 'handover_notes', 'handover_confirmed_at', 'updated_at'])
+            enqueue(send_handover_received_email, handover.id)
         return Response({'message': 'Vehicle receipt confirmed. 24-hour inspection window started.'})
  
  
@@ -447,43 +483,24 @@ class ParkingPartnerConfirmView(APIView):
     parser_classes     = [MultiPartParser, FormParser]
  
     def post(self, request, handover_id):
-        handover = get_object_or_404(HandoverRecord, pk=handover_id)
-        handover.status               = 'RECEIVED'
-        handover.handover_notes       = request.data.get("notes", "Received by parking partner.")
-        handover.handover_confirmed_at = timezone.now()
-        handover.deposit_hold_extended = True
-        handover.save()
-
-        # ── Mark the vehicle as now physically at this parking lot's city ──
-        vehicle = handover.booking.vehicle
-        vehicle.current_city = handover.return_point.city
-        vehicle.save(update_fields=['current_city'])
- 
-        # Upload photos if provided
-        for img in request.FILES.getlist("photos"):
-            HandoverPhoto.objects.create(handover=handover, image=img)
- 
-        # Notify originating vendor: 24h to inspect
         from datetime import timedelta
-        handover.full_inspection_due_by = timezone.now() + timedelta(hours=24)
-        handover.save(update_fields=["full_inspection_due_by"])
- 
-        from django.core.mail import send_mail
-        try:
-            send_mail(
-                subject = f'[CarRent India] Vehicle at Parking — Inspection Required',
-                message = (
-                    f'Your vehicle {handover.booking.vehicle.plate_number} has been received '
-                    f'at {handover.return_point.name}. Please complete a full inspection '
-                    f'within 24 hours (by {handover.full_inspection_due_by.strftime("%d %b %Y %H:%M")} IST).'
-                ),
-                from_email     = 'noreply@carrentindia.com',
-                recipient_list = [handover.booking.vendor.email],
-                fail_silently  = True,
-            )
-        except Exception:
-            pass
- 
+        with transaction.atomic():
+            handover = get_object_or_404(HandoverRecord.objects.select_for_update(), pk=handover_id)
+            handover.status                 = 'RECEIVED'
+            handover.handover_notes         = request.data.get("notes", "Received by parking partner.")
+            handover.handover_confirmed_at  = timezone.now()
+            handover.deposit_hold_extended  = True
+            handover.full_inspection_due_by = timezone.now() + timedelta(hours=24)
+            handover.save()
+
+            vehicle = handover.booking.vehicle
+            vehicle.current_city = handover.return_point.city
+            vehicle.save(update_fields=['current_city'])
+
+            for img in request.FILES.getlist("photos"):
+                HandoverPhoto.objects.create(handover=handover, image=img)
+
+            enqueue(send_inspection_due_email, handover.id)
         return Response({'message': 'Parking partner confirmed receipt. 24h inspection window started.'})
 
 
@@ -575,11 +592,12 @@ class AdminLogisticsStatsView(APIView):
     permission_classes = [IsAdminRole]
  
     def get(self, request):
+        counts = dict(HandoverRecord.objects.order_by().values_list('status').annotate(n=Count('id')))
         return Response({
-            'expected':  HandoverRecord.objects.filter(status='EXPECTED').count(),
-            'received':  HandoverRecord.objects.filter(status='RECEIVED').count(),
-            'held':      HandoverRecord.objects.filter(status='HELD').count(),
-            'sublisted': HandoverRecord.objects.filter(status='SUBLISTED').count(),
+            'expected':  counts.get('EXPECTED', 0),
+            'received':  counts.get('RECEIVED', 0),
+            'held':      counts.get('HELD', 0),
+            'sublisted': counts.get('SUBLISTED', 0),
             'network_vendors': VendorNetwork.objects.filter(is_active=True).count(),
             'return_points':   ReturnPoint.objects.filter(is_active=True).count(),
         })

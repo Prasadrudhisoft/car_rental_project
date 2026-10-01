@@ -4,6 +4,7 @@ from .models import (
     VendorNetwork, ReturnPoint, HandoverRecord, HandoverPhoto, RevenueShare,
     CityParkingRate, VendorCommissionOverride,
 )
+from .capacity import occupied_count
 
 
 class CityParkingRateSerializer(serializers.ModelSerializer):
@@ -44,6 +45,7 @@ class VendorNetworkSerializer(serializers.ModelSerializer):
     city_name          = serializers.CharField(source="city.name", read_only=True)
     business_name      = serializers.CharField(source="vendor.vendor_profile.business_name", read_only=True)
     current_held_count = serializers.SerializerMethodField()
+    available_slots = serializers.SerializerMethodField()
     city_parking_rate  = serializers.SerializerMethodField()
     vendor_share_pct   = serializers.SerializerMethodField()
     vendor_earning     = serializers.SerializerMethodField()
@@ -51,14 +53,14 @@ class VendorNetworkSerializer(serializers.ModelSerializer):
     class Meta:
         model  = VendorNetwork
         fields = ['id', 'city', 'city_name', 'business_name', 'is_active',
-                  'max_vehicles', 'current_held_count',
+                  'max_vehicles', 'current_held_count', 'available_slots',
                   'city_parking_rate', 'vendor_share_pct', 'vendor_earning']
 
     def get_current_held_count(self, obj):
-        return HandoverRecord.objects.filter(
-            receiving_vendor=obj.vendor,
-            status__in=['RECEIVED', 'INSPECTED', 'HELD', 'SUBLISTED'],
-        ).count()
+        return occupied_count(obj.vendor_id)
+
+    def get_available_slots(self, obj):
+        return max(0, obj.max_vehicles - occupied_count(obj.vendor_id))
 
     def _rate(self, obj):
         try:

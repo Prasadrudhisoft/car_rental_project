@@ -75,10 +75,17 @@ export default function ProfileTab({
     const handleSave = async () => {
         setSaving(true);
         try {
-            await updateCustomerProfile(form);
-            onProfileSaved(form);
+            const payload = {
+                ...form,
+                dl_expiry:     form.dl_expiry     || null,
+                date_of_birth: form.date_of_birth || null,
+            };
+            const { data } = await updateCustomerProfile(payload);
+            onProfileSaved(data);            // server response, includes the fresh kyc_status
             setEditing(false);
-            showToast('Profile updated.');
+            showToast(data.kyc_status === 'verified'
+                ? 'Profile updated. KYC verified!'
+                : 'Profile updated.');
         } catch (e) {
             showToast(
                 e.response?.data ? JSON.stringify(e.response.data) : 'Save failed.',
@@ -199,16 +206,6 @@ export default function ProfileTab({
 
                     <div className={`cd-kyc-status ${kycStatusClass}`}>
                         {kycStatusText}
-                    </div>
-
-                    {/* Dev hint */}
-                    <div style={{
-                        background: '#FEF3C7', border: '1px solid #FCD34D',
-                        borderRadius: 8, padding: '8px 12px',
-                        fontSize: 11, color: '#92400E',
-                    }}>
-                        <strong>Dev mode:</strong> OTP code is{' '}
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>123456</span>.
                     </div>
                 </div>
             </div>

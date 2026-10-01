@@ -65,7 +65,7 @@ def generate_agreement_pdf(booking):
     # Signature placeholder
     c.setFont('Helvetica', 9)
     c.setFillColorRGB(0.5, 0.5, 0.5)
-    c.drawString(2 * cm, 3 * cm, 'Customer Signature (OTP verified): _______________________')
+    c.drawString(2 * cm, 3 * cm, 'Customer acceptance: accepted online at booking payment')
     c.drawString(2 * cm, 2 * cm, 'Vendor Signature:                   _______________________')
  
     c.save()

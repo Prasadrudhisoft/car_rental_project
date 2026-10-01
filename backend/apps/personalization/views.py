@@ -8,6 +8,9 @@ from .models import Segment, TargetingRule, RuleExecutionLog
 from .serializers import SegmentSerializer, TargetingRuleSerializer, RuleExecutionLogSerializer
 from .facts import build_customer_facts
 from .engine import user_matches_segment, run_rule_for_user, run_scheduled_rules
+from car_rent.async_utils import enqueue 
+from .tasks import run_rule_now_task, evaluate_scheduled_targeting_rules
+
 
 User = get_user_model()
 
@@ -29,20 +32,14 @@ class SegmentViewSet(viewsets.ModelViewSet):
         Computes live membership count + a sample so admins can see who a
         segment actually matches before wiring a rule to it.
         """
-        segment = self.get_object()
+        segment   = self.get_object()
         customers = User.objects.filter(role='customer', is_active=True)
-        matched = []
-        for u in customers.iterator():
-            facts = build_customer_facts(u)
-            if user_matches_segment(segment, facts):
-                matched.append({'id': u.id, 'full_name': u.full_name, 'email': u.email})
-                if len(matched) >= 25:
-                    break
-        # Full count (cheap enough at this scale; paginate if the user base grows large)
-        total = sum(
-            1 for u in customers.iterator()
-            if user_matches_segment(segment, build_customer_facts(u))
-        )
+        matched, total = [], 0
+        for u in customers.iterator(chunk_size=500):
+            if user_matches_segment(segment, build_customer_facts(u)):
+                total += 1
+                if len(matched) < 25:
+                    matched.append({'id': u.id, 'full_name': u.full_name, 'email': u.email})
         return Response({'total_matching': total, 'sample': matched})
 
 
@@ -62,15 +59,8 @@ class TargetingRuleViewSet(viewsets.ModelViewSet):
         used for testing a rule before trusting it to the nightly batch.
         """
         rule = self.get_object()
-        customers = User.objects.filter(role='customer', is_active=True)
-        sent = skipped = 0
-        for u in customers.iterator():
-            status = run_rule_for_user(rule, u)
-            if status == 'sent':
-                sent += 1
-            elif status == 'skipped_cooldown':
-                skipped += 1
-        return Response({'message': f'Rule evaluated. {sent} action(s) sent, {skipped} skipped (cooldown).'})
+        enqueue(run_rule_now_task, rule.id)
+        return Response({'message': 'Rule queued — it is being evaluated in the background.'}, status=202)
 
 
 class RuleExecutionLogListView(viewsets.ReadOnlyModelViewSet):
@@ -96,5 +86,6 @@ class RunScheduledSweepView(APIView):
     permission_classes = [IsAdminRole]
 
     def post(self, request):
-        results = run_scheduled_rules()
-        return Response(results)
+        # results = run_scheduled_rules()
+        enqueue(evaluate_scheduled_targeting_rules)
+        return Response({'message': 'Sweep queued — running in the background.'}, status=202)

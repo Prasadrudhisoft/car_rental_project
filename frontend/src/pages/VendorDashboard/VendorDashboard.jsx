@@ -12,7 +12,7 @@ import {
     getVendorBookings, getVendorProfile, updateVendorProfile, uploadVendorKYC,
     getVendorAnalytics, getMyVehicles, createVehicle, updateVehicle,
     toggleVehicleStatus, blockAvailability, unblockAvailability, getVehicleAvailability,
-    getVendorNetwork, joinNetwork, leaveNetwork, getCities, getCityLocations,
+    getVendorNetwork, joinNetwork, getCities, getCityLocations,
     getMyHandovers, getVendorBookingDetail, fetchVendorReviews,
 } from '../../services/api';
 
@@ -50,7 +50,7 @@ export default function VendorDashboard() {
     const [vehicles,      setVehicles]      = useState([]);
     const [analytics,     setAnalytics]     = useState(null);
     const [profile,       setProfile]       = useState(null);
-    const [network,       setNetwork]       = useState([]);
+    const [network,       setNetwork]       = useState(null);
     const [handovers,     setHandovers]     = useState([]);
     const [cities,        setCities]        = useState([]);
     const [cityLocations, setCityLocations] = useState([]);
@@ -91,7 +91,7 @@ export default function VendorDashboard() {
     const [showMap,         setShowMap]         = useState(false);
 
     // ── Network form state ────────────────────────────────────────────────────
-    const [networkForm, setNetworkForm] = useState({ city: '', max_vehicles: 3, handling_fee_override: '' });
+    // const [networkForm, setNetworkForm] = useState({ city: '', max_vehicles: 3, handling_fee_override: '' });
 
     // ── Booking status filter ─────────────────────────────────────────────────
     const [bookingStatusFilter, setBookingStatusFilter] = useState('');
@@ -178,7 +178,7 @@ export default function VendorDashboard() {
             }
             if (t === 'network') {
                 const { data } = await getVendorNetwork();
-                setNetwork(data.results || data);
+                setNetwork(data);
             }
             if (t === 'handovers') {
                 const { data } = await getMyHandovers();
@@ -353,23 +353,34 @@ export default function VendorDashboard() {
     };
 
     // ── Network actions ───────────────────────────────────────────────────────
-    const handleJoinNetwork = async (e) => {
-        e.preventDefault();
-        if (!networkForm.city) { showToast('Select a city.', 'error'); return; }
-        try {
-            await joinNetwork({ city: networkForm.city, max_vehicles: networkForm.max_vehicles });
-            showToast('Joined!');
-            await loadTab('network');
-        } catch (e) { showToast(e.response?.data?.error || 'Failed.', 'error'); }
-    };
+    // const handleJoinNetwork = async (e) => {
+    //     e.preventDefault();
+    //     if (!networkForm.city) { showToast('Select a city.', 'error'); return; }
+    //     try {
+    //         await joinNetwork({ city: networkForm.city, max_vehicles: networkForm.max_vehicles });
+    //         showToast('Joined!');
+    //         await loadTab('network');
+    //     } catch (e) { showToast(e.response?.data?.error || 'Failed.', 'error'); }
+    // };
 
-    const handleLeaveNetwork = async (id) => {
-        if (!window.confirm('Leave this city network?')) return;
+    // const handleLeaveNetwork = async (id) => {
+    //     if (!window.confirm('Leave this city network?')) return;
+    //     try {
+    //         await leaveNetwork(id);
+    //         setNetwork(p => p.filter(n => n.id !== id));
+    //         showToast('Left.');
+    //     } catch { showToast('Failed.', 'error'); }
+    // };
+
+    const handleSaveNetwork = async (payload) => {
         try {
-            await leaveNetwork(id);
-            setNetwork(p => p.filter(n => n.id !== id));
-            showToast('Left.');
-        } catch { showToast('Failed.', 'error'); }
+            await joinNetwork(payload);
+            const { data } = await getVendorNetwork();
+            setNetwork(data);
+            showToast(payload.is_active ? 'Vendor Network saved — you are accepting cars.' : 'Vendor Network disabled.');
+        } catch (e) {
+            showToast(e.response?.data?.error || 'Could not update the network.', 'error');
+        }
     };
 
     // ── Derived values ────────────────────────────────────────────────────────
@@ -551,14 +562,7 @@ export default function VendorDashboard() {
                                     )}
 
                                     {tab === 'network' && (
-                                        <NetworkTab
-                                            network={network}
-                                            cities={cities}
-                                            networkForm={networkForm}
-                                            setNetworkForm={setNetworkForm}
-                                            onJoinNetwork={handleJoinNetwork}
-                                            onLeaveNetwork={handleLeaveNetwork}
-                                        />
+                                        <NetworkTab network={network} onSaveNetwork={handleSaveNetwork} />
                                     )}
 
                                     {tab === 'reviews' && (

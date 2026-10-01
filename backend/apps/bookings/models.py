@@ -80,6 +80,12 @@ class Booking(models.Model):
     class Meta:
         db_table = 'bookings_booking'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status'],             name='bk_status_idx'),
+            models.Index(fields=['vendor', 'status'],   name='bk_vendor_status_idx'),
+            models.Index(fields=['customer', 'status'], name='bk_cust_status_idx'),
+            models.Index(fields=['pickup_date'],        name='bk_pickup_date_idx'),
+        ]
  
     def __str__(self):
         return f'BK{self.id:06d} — {self.customer} → {self.vehicle}'

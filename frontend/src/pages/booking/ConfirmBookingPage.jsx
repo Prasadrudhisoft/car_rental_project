@@ -1,13 +1,10 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// ConfirmBookingPage.jsx  (Step 4/5 — Confirm & Pay)
-// Route: /book/confirm  (RequireAuth)
-// ─────────────────────────────────────────────────────────────────────────────
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate }                from 'react-router-dom';
 import { useBooking }                 from '../../context/BookingContext';
 import { useAuth }                    from '../../context/AuthContext';
-import { createBooking, dummyPayment } from '../../services/api';
+import { createBooking, dummyPayment, getActiveAgreement } from '../../services/api';
 import Navbar                         from '../../components/common/Navbar';
+import { AgreementPreviewModal }      from '../../components/agreements/AgreementModal';
 import { WizardProgress, buildSteps } from './BookingShared';
 import { calcNights }                 from './bookingConstants';
 import { BookingReviewCard, PaymentSummary } from './ConfirmComponents';
@@ -21,13 +18,24 @@ export default function ConfirmBookingPage() {
 
     const [loading,        setLoading]        = useState(false);
     const [error,          setError]          = useState('');
-    const [success,        setSuccess]        = useState(null);
     const [paymentType,    setPaymentType]    = useState('advance');
     const [paymentMethod,  setPaymentMethod]  = useState('online');
+    const [agreement,      setAgreement]      = useState(null);
+    const [agreementError, setAgreementError] = useState('');
+    const [agreed,         setAgreed]         = useState(false);
+    const [showAgreement,  setShowAgreement]  = useState(false);
+    const completedRef = useRef(false);
 
     useEffect(() => {
+        if (completedRef.current) return;          // payment done — don't bounce to Home
         if (!booking.selectedVehicle || !user) navigate('/');
     }, [booking.selectedVehicle, user, navigate]);
+
+    useEffect(() => {
+        getActiveAgreement()
+            .then(({ data }) => setAgreement(data))
+            .catch(() => setAgreementError('Could not load the Rental Agreement. Please refresh.'));
+    }, []);
 
     if (!booking.selectedVehicle || !user) return null;
 
@@ -35,17 +43,19 @@ export default function ConfirmBookingPage() {
     const p      = booking.pricingBreakdown;
     const nights = calcNights(booking.pickupDate, booking.returnDate);
 
-    const grandTotal     = p ? parseFloat(p.grand_total) : 0;
-    const advanceAmount  = Math.round(grandTotal * 30 / 100);
+    const grandTotal      = p ? parseFloat(p.grand_total) : 0;
+    const advanceAmount   = Math.round(grandTotal * 30 / 100);
     const remainingAmount = grandTotal - advanceAmount;
-    const payableNow     = paymentType === 'full' ? grandTotal : advanceAmount;
+    const payableNow      = paymentType === 'full' ? grandTotal : advanceAmount;
 
-    // ── Confirm + pay ─────────────────────────────────────────────────────────
     const handleBookingWithPayment = async () => {
+        if (!agreed || !agreement) {
+            setError('Please accept the Rental Agreement to continue.');
+            return;
+        }
         setLoading(true);
         setError('');
         try {
-            // 1. Create booking (PENDING)
             const { data } = await createBooking({
                 vehicle_id:       v.id,
                 pickup_date:      booking.pickupDate,
@@ -57,21 +67,30 @@ export default function ConfirmBookingPage() {
                 addons:           booking.selectedAddons  || [],
                 one_way_fee:      booking.oneWayFee       || 0,
                 promo_code:       booking.promoCode       || undefined,
+                agreement_accepted:   true,
+                agreement_version_id: agreement.id,
             });
 
-            // 2. Process payment immediately
-            const paymentData = await dummyPayment(data.booking_id, {
+            await dummyPayment(data.booking_id, {
                 payment_type: paymentType,
                 method:       paymentMethod,
             });
 
-            setSuccess({ ...data, payment: paymentData.data });
+            completedRef.current = true;
+            navigate('/customer?tab=bookings', {
+                replace: true,
+                state: { toast: `Booking ${data.booking_ref} confirmed. Payment received.` },
+            });
             reset();
         } catch (err) {
             const d = err.response?.data;
+            if (d?.code === 'agreement_outdated') {
+                setAgreed(false);
+                getActiveAgreement().then(({ data }) => setAgreement(data)).catch(() => {});
+            }
             setError(
-                typeof d === 'object'
-                    ? Object.values(d).flat().join(' ')
+                typeof d === 'object' && d
+                    ? (d.error || Object.values(d).flat().join(' '))
                     : 'Booking or payment failed. Please try again.'
             );
         } finally {
@@ -79,47 +98,6 @@ export default function ConfirmBookingPage() {
         }
     };
 
-    // ── Success screen ────────────────────────────────────────────────────────
-    if (success) {
-        return (
-            <div className="confirm-page">
-                <Navbar />
-                <div className="confirm-page__inner">
-                    <div className="confirm-success">
-                        <div className="confirm-success__icon">🎉</div>
-                        <h1>Booking &amp; Payment Complete!</h1>
-                        <p>Your rental has been successfully booked and your payment has been processed.</p>
-                        <div className="confirm-success__ref">
-                            Booking Reference: {success.booking_ref}
-                        </div>
-                        <div className="confirm-success__payment">
-                            <p>Payment Details:</p>
-                            <p>Amount Paid: ₹{success.payment.amount_paid}</p>
-                            <p>Payment Method: {success.payment.payment_type} via {success.payment.method}</p>
-                            {success.payment.remaining_amount > 0 && (
-                                <p className="confirm-success__remaining">
-                                    Remaining Balance: ₹{success.payment.remaining_amount}
-                                    <small> (Payable before or at drop-off)</small>
-                                </p>
-                            )}
-                        </div>
-                        <div className="confirm-success__note">
-                            A confirmation email has been sent to <strong>{user.email}</strong>.
-                            Please carry your driving licence at pickup.
-                        </div>
-                        <button
-                            className="confirm-success__dashboard"
-                            onClick={() => navigate('/customer')}
-                        >
-                            View My Bookings →
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // ── Main confirm page ─────────────────────────────────────────────────────
     const steps = buildSteps('confirm', booking.isDifferentReturn);
 
     return (
@@ -131,7 +109,6 @@ export default function ConfirmBookingPage() {
                 <h1 className="confirm-page__title">Review &amp; Complete Payment</h1>
 
                 <div className="confirm-page__layout">
-                    {/* Left — booking details */}
                     <BookingReviewCard
                         booking={booking}
                         vehicle={v}
@@ -140,7 +117,6 @@ export default function ConfirmBookingPage() {
                         pricing={p}
                     />
 
-                    {/* Right — payment */}
                     <PaymentSummary
                         pricing={p}
                         grandTotal={grandTotal}
@@ -154,9 +130,18 @@ export default function ConfirmBookingPage() {
                         loading={loading}
                         error={error}
                         onConfirm={handleBookingWithPayment}
+                        agreement={agreement}
+                        agreementError={agreementError}
+                        agreed={agreed}
+                        setAgreed={setAgreed}
+                        onViewAgreement={() => setShowAgreement(true)}
                     />
                 </div>
             </div>
+
+            {showAgreement && agreement && (
+                <AgreementPreviewModal version={agreement} onClose={() => setShowAgreement(false)} />
+            )}
         </div>
     );
 }

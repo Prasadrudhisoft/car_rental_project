@@ -240,8 +240,9 @@ export const getVendorNetwork = () =>
   api.get("/logistics/network/my/");
 export const joinNetwork = (data) =>
   api.post("/logistics/network/opt-in/", data);
-export const leaveNetwork = (id) =>
-  api.delete(`/logistics/network/${id}/`);
+export const getReturnOptions = (cityId, vehicleId) =>
+  api.get("/logistics/return-options/", { params: { city: cityId, vehicle_id: vehicleId } });
+
 export const getMyHandovers = () =>
   api.get("/logistics/my-held/");
 export const confirmHandoverReceipt = (handoverId, notes) =>
@@ -333,8 +334,8 @@ export const dummyPayment = (bookingId, { payment_type = "advance", method = "on
 export const verifyPayment = (bookingId, data) =>
   api.post(`/bookings/${bookingId}/payment/verify/`, data);
 
-export const signAgreement = (bookingId, step, otpCode, version) =>
-  api.post(`/bookings/${bookingId}/sign/`, { step, otp_code: otpCode, version_id: version });
+// export const signAgreement = (bookingId, step, otpCode, version) =>
+//   api.post(`/bookings/${bookingId}/sign/`, { step, otp_code: otpCode, version_id: version });
 
 export const getVendorBookingDetail = (id) =>
   api.get(`/bookings/vendor/${id}/`);
@@ -359,105 +360,11 @@ export const activateAgreementVersion = (id) =>
 export const getAdminAcceptances = (params) =>
   api.get("/agreements/admin/acceptances/", { params });
 
-
-// ════════════════════════════════════════════════════════════════════════
-// NEW: KYC Phone & Email OTP Verification
-// ════════════════════════════════════════════════════════════════════════
-//
-// TWO INTERCHANGEABLE IMPLEMENTATIONS:
-//   - HARDCODED (dev): active by default, OTP is always "123456"
-//   - REAL (prod): uses backend /otp/ endpoints
-//
-// To switch to production:
-//   1. Comment out the HARDCODED block below
-//   2. Uncomment the REAL block below
-//   No other changes needed anywhere in the codebase.
-//
-// ════════════════════════════════════════════════════════════════════════
-
-// ── HARDCODED (DEV) — ACTIVE ──────────────────────────────────────────────
-
-/**
- * Send OTP to customer's phone number for KYC verification.
- * DEV: Always succeeds, OTP is "123456" (logged to console).
- * @param {string} phone - The phone number to send OTP to
- * @param {string} email - The user's email (used to look up the account)
- */
-export const sendKYCPhoneOTP = async (phone, email) => {
-  console.log(`[DEV] KYC Phone OTP → ${phone} (account: ${email}). Use 123456`);
-  // Simulate network delay
-  await new Promise(r => setTimeout(r, 400));
-  return { data: { message: `OTP sent to ${phone}. Use 123456 in development.` } };
-};
-
-/**
- * Verify OTP entered by customer for phone KYC.
- * DEV: Accepts "123456" only.
- * @param {string} email - The user's email (account identifier)
- * @param {string} code - The 6-digit OTP entered by the user
- */
-export const verifyKYCPhoneOTP = async (email, code) => {
-  await new Promise(r => setTimeout(r, 400));
-  if (code === "123456") {
-    return { data: { valid: true, message: "Phone number verified successfully." } };
-  }
-  const err = new Error("Invalid OTP");
-  err.response = { data: { error: "Invalid OTP. In development, use 123456." } };
-  throw err;
-};
-
-/**
- * Send OTP to customer's email address for KYC verification.
- * DEV: Always succeeds, OTP is "123456" (logged to console).
- * @param {string} email - The email address to verify
- */
-// export const sendKYCEmailOTP = async (email) => {
-//   console.log(`[DEV] KYC Email OTP → ${email}. Use 123456`);
-//   await new Promise(r => setTimeout(r, 400));
-//   return { data: { message: `OTP sent to ${email}. Use 123456 in development.` } };
-// };
-export const sendKYCEmailOTP = (email) =>
-  api.post("/otp/send/", { email, purpose: "email_verify" });   // was reusing phone_verify
-
-export const verifyKYCEmailOTP = (email, code) =>
-  api.post("/otp/verify/", { email, code, purpose: "email_verify" });
-
-/**
- * Verify OTP entered by customer for email KYC.
- * DEV: Accepts "123456" only.
- * @param {string} email - The email address being verified
- * @param {string} code - The 6-digit OTP entered by the user
- */
-// export const verifyKYCEmailOTP = async (email, code) => {
-//   await new Promise(r => setTimeout(r, 400));
-//   if (code === "123456") {
-//     return { data: { valid: true, message: "Email address verified successfully." } };
-//   }
-//   const err = new Error("Invalid OTP");
-//   err.response = { data: { error: "Invalid OTP. In development, use 123456." } };
-//   throw err;
-// };
-
-
-// ── REAL (PRODUCTION) — COMMENT OUT DEV BLOCK ABOVE AND UNCOMMENT THIS ───
-//
-// export const sendKYCPhoneOTP = (phone, email) =>
-//   // Uses the existing OTP infrastructure with purpose='phone_verify'.
-//   // The backend's SendOTPView looks up the user by email and sends the code.
-//   api.post("/otp/send/", { email, purpose: "phone_verify" });
-//
-// export const verifyKYCPhoneOTP = (email, code) =>
-//   // On success the backend sets user.is_phone_verified = True automatically.
-//   api.post("/otp/verify/", { email, code, purpose: "phone_verify" });
-//
-// export const sendKYCEmailOTP = (email) =>
-//   // Reuses phone_verify purpose for email OTP until a dedicated
-//   // 'email_verify' purpose is added to the backend OTPRecord model.
-//   api.post("/otp/send/", { email, purpose: "phone_verify" });
-//
-// export const verifyKYCEmailOTP = (email, code) =>
-//   api.post("/otp/verify/", { email, code, purpose: "phone_verify" });
-
+// ── KYC OTP (real delivery: SMS for phone, email for email) ───────────────
+export const sendKYCPhoneOTP   = (email)       => api.post("/otp/send/",   { email, purpose: "phone_verify" });
+export const verifyKYCPhoneOTP = (email, code) => api.post("/otp/verify/", { email, code, purpose: "phone_verify" });
+export const sendKYCEmailOTP   = (email)       => api.post("/otp/send/",   { email, purpose: "email_verify" });
+export const verifyKYCEmailOTP = (email, code) => api.post("/otp/verify/", { email, code, purpose: "email_verify" });
 
 // ════════════════════════════════════════════════════════════════════════
 // NEW: Customer submitted reviews (read-only listing of own reviews)

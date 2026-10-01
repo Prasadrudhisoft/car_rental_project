@@ -7,7 +7,6 @@ from .views import (
     AdminBookingListView,
     DummyPaymentView,          # ← NEW: replaces Razorpay for dev
     PaymentVerifyView, RazorpayWebhookView,
-    AgreementSignView,
     InspectionCreateView, InspectionPhotoUploadView, InspectionSignView,
     DamageClaimView, VendorAnalyticsView, AdminAnalyticsView,
     LoyaltyRedemptionView, LoyaltyBalanceView,
@@ -30,9 +29,6 @@ urlpatterns = [
     # Keep Razorpay endpoint available for future production use
     path('<int:booking_id>/payment/verify/',         PaymentVerifyView.as_view(),           name='payment-verify'),
     path('webhook/razorpay/',                        RazorpayWebhookView.as_view(),         name='razorpay-webhook'),
-
-    # Agreement
-    path('<int:booking_id>/sign/',                   AgreementSignView.as_view(),           name='agreement-sign'),
 
     # Inspection
     path('<int:booking_id>/inspect/<str:inspection_type>/',      InspectionCreateView.as_view(),     name='inspect-create'),

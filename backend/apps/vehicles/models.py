@@ -134,6 +134,7 @@ class Vehicle(models.Model):
     class Meta:
         db_table = 'vehicles_vehicle'
         ordering = ['-created_at']
+        indexes = [models.Index(fields=['status', 'current_city', 'is_blacklisted'], name='veh_search_idx')]
  
     def __str__(self):
         return f'{self.year} {self.make} {self.model} [{self.plate_number}]'
@@ -240,3 +241,4 @@ class VehicleAvailability(models.Model):
     class Meta:
         db_table = 'vehicles_vehicleavailability'
         unique_together = ['vehicle', 'blocked_date']
+        indexes = [models.Index(fields=['blocked_date'], name='avail_date_idx')]

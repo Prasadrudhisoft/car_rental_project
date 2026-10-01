@@ -3,6 +3,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from django.core.cache import cache
 from .models import AgreementVersion, AgreementAcceptance
 from .serializers import (
     AgreementVersionPublicSerializer,
@@ -44,13 +45,15 @@ class ActiveAgreementView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        version = AgreementVersion.get_active()
-        if not version:
-            return Response(
-                {'error': 'No active agreement version found. Please contact support.'},
-                status=404,
-            )
-        return Response(AgreementVersionPublicSerializer(version).data)
+        data = cache.get('agreement:active')
+        if data is None:
+            version = AgreementVersion.get_active()
+            if not version:
+                return Response(
+                    {'error': 'No active agreement version found. Please contact support.'}, status=404)
+            data = dict(AgreementVersionPublicSerializer(version).data)
+            cache.set('agreement:active', data, 300)
+        return Response(data)
 
 
 class AgreementVersionDetailView(generics.RetrieveAPIView):

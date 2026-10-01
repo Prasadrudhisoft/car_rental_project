@@ -1,5 +1,6 @@
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.throttling import ScopedRateThrottle
  
  
 class CarRentTokenSerializer(TokenObtainPairSerializer):
@@ -27,3 +28,5 @@ class CarRentTokenSerializer(TokenObtainPairSerializer):
  
 class CarRentTokenView(TokenObtainPairView):
     serializer_class = CarRentTokenSerializer
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope   = 'auth'

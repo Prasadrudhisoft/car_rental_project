@@ -204,7 +204,7 @@ export default function VendorSelectPage() {
                 vehicles: [selectedVehicle],
             },
             pickupLocation: {
-                id:   selectedVehicle.pickup_location?.id || selectedVehicle.id,
+                id:   selectedVehicle.pickup_location?.id ?? null,
                 name: selectedVehicle.vendor_profile?.business_name || 'Vendor Location',
                 lat:  coords[0],
                 lng:  coords[1],

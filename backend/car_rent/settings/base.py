@@ -127,6 +127,17 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+
+        'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '300/min', 'user': '1200/min',
+        'otp_send': '5/min', 'otp_verify': '10/min', 'auth': '20/min',
+    },
+    'NUM_PROXIES': config('NUM_PROXIES', default=None,
+                          cast=lambda v: int(v) if v not in (None, '') else None),
 }
  
 # ── JWT ─────────────────────────────────────────────────────────────────
@@ -176,10 +187,65 @@ RAZORPAY_KEY_ID     = config('RAZORPAY_KEY_ID', default='rzp_test_placeholder')
 RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET', default='placeholder_secret')
 
 
+# ── Email (real SMTP everywhere) ─────────────────────────────────────────
+EMAIL_BACKEND       = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST          = config('EMAIL_HOST', default='smtp.sendgrid.net')
+EMAIL_PORT          = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS       = True
+EMAIL_HOST_USER     = config('EMAIL_HOST_USER', default='apikey')
+EMAIL_HOST_PASSWORD = config('SENDGRID_API_KEY', default='')
+DEFAULT_FROM_EMAIL  = config('DEFAULT_FROM_EMAIL', default='noreply@carrentindia.com')
+
+# ── SMS (MSG91) ──────────────────────────────────────────────────────────
+MSG91_API_KEY     = config('MSG91_API_KEY', default='')
+MSG91_TEMPLATE_ID = config('MSG91_TEMPLATE_ID', default='')
+
+
+# ── Redis: shared cache (config cache, throttling, OTP lockout) ─────────
+REDIS_URL = config('REDIS_URL', default='')
+if REDIS_URL:
+    CACHES = {'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': REDIS_URL, 'KEY_PREFIX': 'carrent', 'TIMEOUT': 300,
+    }}
+else:   # single-process dev fallback
+    CACHES = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
+
+# ── Celery ───────────────────────────────────────────────────────────────
+CELERY_BROKER_URL     = config('CELERY_BROKER_URL', default='redis://localhost:6379/1')
+CELERY_TASK_ALWAYS_EAGER = config('CELERY_EAGER', default=False, cast=bool)
+CELERY_TASK_IGNORE_RESULT = True
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_SOFT_TIME_LIMIT = 120
+CELERY_TASK_TIME_LIMIT = 150
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_TRANSPORT_OPTIONS = {'socket_timeout': 3, 'socket_connect_timeout': 3,
+                                   'visibility_timeout': 3600}
+CELERY_TASK_DEFAULT_QUEUE = 'default'
+CELERY_TASK_ROUTES = {
+    'apps.otp.tasks.send_*':                  {'queue': 'messages'},
+    'apps.bookings.tasks.send_*':             {'queue': 'messages'},
+    'apps.logistics.tasks.*':                 {'queue': 'messages'},
+    'apps.bookings.tasks.generate_*':         {'queue': 'heavy'},
+    'apps.bookings.tasks.issue_*':            {'queue': 'messages'},
+    'apps.personalization.tasks.*':           {'queue': 'heavy'},
+    'apps.notifications.tasks.*':             {'queue': 'heavy'},
+}
 
 CELERY_BEAT_SCHEDULE = {
     'evaluate-targeting-rules-nightly': {
         'task': 'apps.personalization.tasks.evaluate_scheduled_targeting_rules',
-        'schedule': crontab(hour=3, minute=0),  # 3 AM daily
+        'schedule': crontab(hour=3, minute=0),
+    },
+    'cleanup-expired-otps': {
+        'task': 'apps.otp.tasks.cleanup_expired_otps',
+        'schedule': crontab(hour=3, minute=30),
+    },
+    'flush-expired-jwt-tokens': {
+        'task': 'apps.users.tasks.flush_expired_tokens',
+        'schedule': crontab(hour=4, minute=0),
     },
 }

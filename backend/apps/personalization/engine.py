@@ -137,8 +137,8 @@ def execute_action(rule, user, facts: dict):
         profile = getattr(user, 'customer_profile', None)
         if not profile or points <= 0:
             return 'error', 'No customer profile or invalid points.'
-        profile.loyalty_points += points
-        profile.save(update_fields=['loyalty_points'])
+        from django.db.models import F
+        type(profile).objects.filter(pk=profile.pk).update(loyalty_points=F('loyalty_points') + points)
         from apps.notifications.utils import notify
         notify(
             user,
@@ -196,7 +196,7 @@ def run_scheduled_rules(user_qs=None):
     from .facts import build_customer_facts
 
     User = get_user_model()
-    users = user_qs or User.objects.filter(role='customer', is_active=True)
+    users = user_qs if user_qs is not None else User.objects.filter(role='customer', is_active=True)
     rules = list(TargetingRule.objects.filter(
         is_active=True, trigger_type='scheduled'
     ).select_related('segment').order_by('priority'))
@@ -215,10 +215,14 @@ def run_scheduled_rules(user_qs=None):
 
 
 def run_event_rules(user, event_name: str):
-    """Called synchronously at the point an event happens (see hooks below)."""
+    """Runs in a Celery worker (see tasks.run_event_rules_task)."""
     from .models import TargetingRule
-    rules = TargetingRule.objects.filter(
+    from .facts import build_customer_facts
+    rules = list(TargetingRule.objects.filter(
         is_active=True, trigger_type='event', event_name=event_name
-    ).select_related('segment').order_by('priority')
+    ).select_related('segment').order_by('priority'))
+    if not rules:
+        return
+    facts = build_customer_facts(user)
     for rule in rules:
-        run_rule_for_user(rule, user)
+        run_rule_for_user(rule, user, facts)

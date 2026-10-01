@@ -14,7 +14,7 @@ export default function KYCVerifyModal({ type, value, userEmail, onClose, onVeri
     const handleSend = async () => {
         setStep('sending'); setError('');
         try {
-            if (isPhone) await sendKYCPhoneOTP(value, userEmail);
+            if (isPhone) await sendKYCPhoneOTP(userEmail);
             else         await sendKYCEmailOTP(value);
             setStep('sent');
             showToast(`OTP sent to your ${label.toLowerCase()}.`);
@@ -67,20 +67,8 @@ export default function KYCVerifyModal({ type, value, userEmail, onClose, onVeri
                         </div>
                     ) : (
                         <>
-                            {/* Dev hint */}
-                            <div style={{
-                                background: '#FEF3C7', border: '1px solid #FCD34D',
-                                borderRadius: 8, padding: '9px 12px',
-                                fontSize: 12, color: '#92400E',
-                            }}>
-                                <strong>Dev Mode:</strong> OTP is{' '}
-                                <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 13, letterSpacing: 2 }}>
-                                    123456
-                                </span>.
-                            </div>
-
                             <p style={{ fontSize: 13, color: 'var(--cd-txt2)' }}>
-                                We'll send a one-time code to your {label.toLowerCase()}.
+                                We'll send a one-time code to <strong>{value}</strong>.
                             </p>
 
                             {step === 'idle' && (

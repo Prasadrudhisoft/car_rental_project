@@ -7,17 +7,14 @@ class AgreementVersionPublicSerializer(serializers.ModelSerializer):
     Read-only serializer for customers — exposes content + metadata.
     Does NOT expose internal admin fields like created_by.
     """
-    acceptance_count = serializers.SerializerMethodField()
 
     class Meta:
         model  = AgreementVersion
         fields = [
             'id', 'version_tag', 'title', 'content', 'summary',
-            'is_active', 'effective_from', 'acceptance_count',
+            'is_active', 'effective_from',
         ]
 
-    def get_acceptance_count(self, obj):
-        return obj.acceptances.count()
 
 
 class AgreementVersionAdminSerializer(serializers.ModelSerializer):

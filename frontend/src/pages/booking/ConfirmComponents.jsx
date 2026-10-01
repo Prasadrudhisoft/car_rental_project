@@ -41,7 +41,7 @@ export function BookingReviewCard({ booking, vehicle: v, user, nights, pricing }
                     {[
                         ['📍 Pickup Vendor',  `${booking.pickupLocation?.name || '—'}, ${booking.pickupCity?.name || ''}`],
                         ...(booking.isDifferentReturn
-                            ? [['🏁 Return Vendor', `${booking.returnLocation?.name || '—'}, ${booking.returnCity?.name || ''}`]]
+                            ? [['🏁 Drop Point', `${booking.returnLocation?.name || '—'}${booking.returnLocation?.address ? ', ' + booking.returnLocation.address : ''}, ${booking.returnCity?.name || ''}`]]
                             : []),
                         ['📅 Pickup',  `${booking.pickupDate}${booking.pickupTime ? ' @ ' + booking.pickupTime : ''}`],
                         ['📅 Return',  `${booking.returnDate}${booking.returnTime ? ' @ ' + booking.returnTime : ''}`],
@@ -94,6 +94,7 @@ export function PaymentSummary({
     pricing, grandTotal, advanceAmount, remainingAmount,
     paymentType, setPaymentType, paymentMethod, setPaymentMethod,
     payableNow, loading, error, onConfirm,
+    agreement, agreementError, agreed, setAgreed, onViewAgreement
 }) {
     return (
         <aside className="confirm-summary">
@@ -163,17 +164,35 @@ export function PaymentSummary({
                 </>
             )}
 
+            <label className="confirm-agreement">
+                <input
+                    type="checkbox"
+                    checked={!!agreed}
+                    disabled={!agreement}
+                    onChange={e => setAgreed(e.target.checked)}
+                />
+                <span>
+                    I agree to the{' '}
+                    <button type="button" className="confirm-agreement__link" onClick={onViewAgreement} disabled={!agreement}>
+                        Rental Agreement and Terms &amp; Conditions
+                    </button>
+                    {agreement ? ` (${agreement.version_tag})` : ''}.
+                </span>
+            </label>
+            {agreementError && <div className="wizard-error">{agreementError}</div>}
+            {!agreed && !agreementError && (
+                <p className="confirm-agreement-hint">Please accept the agreement to enable payment.</p>
+            )}
+
             {error && <div className="wizard-error">{error}</div>}
 
-            <button className="confirm-cta" onClick={onConfirm} disabled={loading}>
+            <button className="confirm-cta" onClick={onConfirm} disabled={loading || !agreed || !agreement}>
                 {loading ? (
                     <span className="confirm-cta__loading"><span className="confirm-cta__spinner" /> Processing Payment...</span>
                 ) : `Pay ₹${payableNow.toLocaleString('en-IN')} & Confirm Booking`}
             </button>
 
             <p className="confirm-terms">
-                By confirming you agree to the rental agreement terms.
-                {/* ← was hardcoded "48 hours" — now reflects cancellation_free_hours */}
                 Free cancellation up to {pricing?.cancellation_free_hours ?? 48} hours before pickup.
             </p>
         </aside>

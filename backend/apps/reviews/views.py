@@ -10,7 +10,11 @@ from apps.configuration.utils import get_config
  
 from .models import Review, VendorRatingSnapshot
 from .serializers import ReviewSerializer, ReviewListSerializer
- 
+
+from django.db import IntegrityError
+from django.db.models import Sum, Count, Q
+from car_rent.async_utils import enqueue
+from apps.personalization.tasks import run_event_rules_task
  
 class IsCustomerRole(permissions.BasePermission):
     def has_permission(self, r, v):
@@ -44,75 +48,52 @@ class SubmitReviewView(APIView):
         if hasattr(booking, "review"):
             return Response({'error': 'You have already reviewed this booking.'}, status=400)
  
-        review = Review.objects.create(
-            booking        = booking,
-            customer       = request.user,
-            vendor         = booking.vendor,
-            vehicle        = booking.vehicle,
-            vendor_rating  = vendor_rating,
-            vehicle_rating = vehicle_rating,
-            review_text    = review_text,
-        )
+        try:
+            review = Review.objects.create(
+                booking=booking, customer=request.user, vendor=booking.vendor,
+                vehicle=booking.vehicle, vendor_rating=vendor_rating,
+                vehicle_rating=vehicle_rating, review_text=review_text,
+            )
+        except IntegrityError:          # two simultaneous submits (OneToOne on booking)
+            return Response({'error': 'You have already reviewed this booking.'}, status=400)
 
-        from apps.personalization.engine import run_event_rules
-        run_event_rules(request.user, 'review_submitted')
- 
-        # Recalculate vendor rating after every new review
         _recalculate_vendor_rating(booking.vendor)
+        enqueue(run_event_rules_task, request.user.id, 'review_submitted')
+
+        return Response({'message': 'Review submitted. Thank you!', 'review_id': review.id}, status=201)
  
         return Response({'message': 'Review submitted. Thank you!', 'review_id': review.id},
                         status=201)
  
  
 def _recalculate_vendor_rating(vendor):
-    """
-    Weighted rating algorithm.
-    Recent reviews (last 3 months) carry 2x weight.
-    Older reviews carry 1x weight.
-    Minimum rating thresholds read from config.
-    """
     from django.utils import timezone
     from datetime import timedelta
- 
+    from apps.users.models import VendorProfile
+
     cutoff = timezone.now() - timedelta(days=90)
-    recent = Review.objects.filter(vendor=vendor, is_visible=True,
-                                    created_at__gte=cutoff)
-    older  = Review.objects.filter(vendor=vendor, is_visible=True,
-                                    created_at__lt=cutoff)
- 
-    recent_scores = list(recent.values_list("vendor_rating", flat=True))
-    older_scores  = list(older.values_list("vendor_rating", flat=True))
- 
-    # Double-weight recent reviews
-    all_scores = recent_scores * 2 + older_scores
- 
-    if not all_scores:
-        weighted = Decimal("0")
-    else:
-        weighted = Decimal(str(sum(all_scores) / len(all_scores))).quantize(Decimal("0.01"))
- 
-    total = Review.objects.filter(vendor=vendor, is_visible=True).count()
- 
+    agg = Review.objects.filter(vendor=vendor, is_visible=True).aggregate(
+        recent_sum=Sum('vendor_rating', filter=Q(created_at__gte=cutoff)),
+        recent_n=Count('id',            filter=Q(created_at__gte=cutoff)),
+        old_sum=Sum('vendor_rating',    filter=Q(created_at__lt=cutoff)),
+        old_n=Count('id',               filter=Q(created_at__lt=cutoff)),
+    )
+    recent_sum, recent_n = agg['recent_sum'] or 0, agg['recent_n'] or 0
+    old_sum,    old_n    = agg['old_sum'] or 0,    agg['old_n'] or 0
+
+    weight = 2 * recent_n + old_n
+    weighted = (Decimal(2 * recent_sum + old_sum) / Decimal(weight)).quantize(Decimal("0.01")) \
+               if weight else Decimal("0")
+    total = recent_n + old_n
+
     suspend_threshold = get_config('vendor_suspend_rating', Decimal('3.5'))
     is_flagged = weighted < suspend_threshold and total >= 3
- 
+
     snapshot, _ = VendorRatingSnapshot.objects.update_or_create(
         vendor=vendor,
-        defaults={
-            'weighted_score': weighted,
-            'total_reviews':  total,
-            'is_flagged':     is_flagged,
-        }
+        defaults={'weighted_score': weighted, 'total_reviews': total, 'is_flagged': is_flagged},
     )
- 
-    # Also update vendor profile rating for display
-    try:
-        vendor.vendor_profile.rating       = weighted
-        vendor.vendor_profile.total_reviews = total
-        vendor.vendor_profile.save(update_fields=["rating", "total_reviews"])
-    except Exception:
-        pass
- 
+    VendorProfile.objects.filter(user=vendor).update(rating=weighted, total_reviews=total)
     return snapshot
  
  

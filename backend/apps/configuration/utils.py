@@ -9,17 +9,14 @@ logger = logging.getLogger(__name__)
 CACHE_TTL = 300   # 5 minutes
  
  
+_MISSING = '__cfg_missing__'
+
+
 def get_config(key: str, default=None):
-    """
-    Read one business-rule value by its key.
- 
-    Usage in other apps:
-        from apps.configuration.utils import get_config
-        gst      = get_config('gst_rate')          # returns Decimal('0.18')
-        free_hrs = get_config('cancellation_free_hours')  # returns int 48
-    """
     cache_key = f'cfg:{key}'
     cached = cache.get(cache_key)
+    if isinstance(cached, str) and cached == _MISSING:
+        return default
     if cached is not None:
         return cached
     try:
@@ -29,6 +26,7 @@ def get_config(key: str, default=None):
         return val
     except ConfigSetting.DoesNotExist:
         logger.warning(f'Config key not found: {key}. Using default: {default}')
+        cache.set(cache_key, _MISSING, 60)
         return default
  
  

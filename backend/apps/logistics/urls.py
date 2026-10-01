@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    ReturnPointListView, ReturnPointDetailView,
+    ReturnOptionsView, ReturnPointListView, ReturnPointDetailView,
     VendorNetworkOptInView, VendorNetworkDeleteView, AdminNetworkListView,
     AdminManualMatchView,
     HandoverConfirmView, HandoverPhotoUploadView,
@@ -44,4 +44,5 @@ urlpatterns = [
     path('admin/manual-match/',                     AdminManualMatchView.as_view(),             name='admin-manual-match'),
 
     path('revenue-share/<int:booking_id>/',         RevenueShareDetailView.as_view(),           name='revenue-share'),
+    path('return-options/', ReturnOptionsView.as_view(), name='return-options'),
 ]

@@ -7,6 +7,11 @@ from rest_framework.views import APIView
 
 from .models import Notification
 from .serializers import NotificationSerializer, AdminSendNotificationSerializer
+from django.db.models import Count, Max, Min, Q
+from django.db.models.functions import TruncMinute
+from datetime import timezone as dt_utc
+from car_rent.async_utils import enqueue
+from .tasks import broadcast_notification
 from .utils import notify, notify_bulk
 
 User = get_user_model()
@@ -42,13 +47,9 @@ class UnreadCountView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        count = Notification.objects.filter(recipient=request.user, is_read=False).count()
-        latest = Notification.objects.filter(recipient=request.user).order_by('-created_at').first()
-        return Response({
-            'unread_count': count,
-            'latest_id':    latest.id if latest else None,
-        })
-
+        agg = Notification.objects.filter(recipient=request.user).aggregate(
+            unread=Count('id', filter=Q(is_read=False)), latest=Max('id'))
+        return Response({'unread_count': agg['unread'] or 0, 'latest_id': agg['latest']})
 
 class MarkReadView(APIView):
     """POST /api/notifications/{id}/read/"""
@@ -90,27 +91,23 @@ class AdminSendNotificationView(APIView):
             recipient = get_object_or_404(User, pk=v['user_id'])
             notify(recipient, v['title'], v['message'], 'admin_broadcast',
                    v.get('link_url', ''), created_by=request.user)
-            count = 1
-        elif v['target_type'] == 'role':
-            recipients = User.objects.filter(role=v['role'])
-            count = notify_bulk(recipients, v['title'], v['message'], 'admin_broadcast',
-                                 v.get('link_url', ''), created_by=request.user)
+            return Response({'message': 'Notification sent to 1 user(s).', 'recipient_count': 1}, status=201)
 
-        elif v['target_type'] == 'segment':
+        count = None
+        if v['target_type'] == 'segment':
             from apps.personalization.models import Segment
-            from apps.personalization.facts import build_customer_facts
-            from apps.personalization.engine import user_matches_segment
-            segment = get_object_or_404(Segment, pk=v['segment_id'])
-            customers = User.objects.filter(role='customer', is_active=True)
-            recipients = [u for u in customers.iterator() if user_matches_segment(segment, build_customer_facts(u))]
-            count = notify_bulk(recipients, v['title'], v['message'], 'admin_broadcast', v.get('link_url', ''), created_by=request.user)
-            
-        else:  # 'all'
-            recipients = User.objects.all()
-            count = notify_bulk(recipients, v['title'], v['message'], 'admin_broadcast',
-                                 v.get('link_url', ''), created_by=request.user)
+            get_object_or_404(Segment, pk=v['segment_id'])
+        elif v['target_type'] == 'role':
+            count = User.objects.filter(role=v['role']).count()
+        else:
+            count = User.objects.count()
 
-        return Response({'message': f'Notification sent to {count} user(s).', 'recipient_count': count}, status=201)
+        # Fan-out happens in a worker: one request must never insert 100k rows inline.
+        enqueue(broadcast_notification, v['target_type'], v['title'], v['message'],
+                v.get('link_url', ''), request.user.id, v.get('role'), v.get('segment_id'))
+        msg = f'Notification queued for {count} user(s).' if count is not None \
+              else 'Notification queued for all matching customers.'
+        return Response({'message': msg, 'recipient_count': count}, status=202)
 
 
 class AdminSentListView(generics.ListAPIView):
@@ -121,18 +118,13 @@ class AdminSentListView(generics.ListAPIView):
     """
     permission_classes = [IsAdminRole]
     serializer_class   = NotificationSerializer
-
+    
     def get_queryset(self):
-        # Show one representative row per broadcast "batch" rather than
-        # every recipient row, so the admin sees a clean send-log.
-        seen = set()
-        result_ids = []
-        qs = Notification.objects.filter(
-            notification_type='admin_broadcast'
-        ).order_by('-created_at')
-        for n in qs:
-            key = (n.title, n.message, n.created_at.replace(microsecond=0))
-            if key not in seen:
-                seen.add(key)
-                result_ids.append(n.id)
-        return Notification.objects.filter(id__in=result_ids).order_by('-created_at')
+        first_ids = (
+            Notification.objects.filter(notification_type='admin_broadcast')
+            .annotate(batch=TruncMinute('created_at', tzinfo=dt_utc.utc))
+            .values('title', 'message', 'batch')
+            .annotate(first_id=Min('id'))
+            .values_list('first_id', flat=True)
+        )
+        return Notification.objects.filter(id__in=first_ids).order_by('-created_at')

@@ -32,6 +32,12 @@ export function AuthProvider({ children }) {
         }
     }, []);
 
+    const refreshUser = useCallback(async () => {
+        const { data } = await getMe();
+        setUser(data);
+        return data;
+    }, []);
+
     useEffect(() => { fetchMe(); }, [fetchMe]);
 
     const login = async (email, password) => {
@@ -55,7 +61,7 @@ export function AuthProvider({ children }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout, fetchMe }}>
+        <AuthContext.Provider value={{ user, loading, login, logout, fetchMe, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );

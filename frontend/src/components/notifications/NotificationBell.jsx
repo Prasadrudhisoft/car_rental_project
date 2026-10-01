@@ -1,9 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// NotificationBell.jsx
-// Lives in the top Navbar (navbar__right). Polls unread count every 20s
-// ("real-time" via short polling — this stack has no websocket layer), shows
-// a badge, and a dropdown with the most recent notifications.
-// ─────────────────────────────────────────────────────────────────────────────
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -12,7 +6,7 @@ import {
 } from '../../services/api';
 import './Notifications.css';
 
-const POLL_MS = 20000;
+const POLL_MS = 30000;
 
 export default function NotificationBell() {
     const navigate = useNavigate();
@@ -23,6 +17,8 @@ export default function NotificationBell() {
     const [pulse, setPulse] = useState(false);
     const lastSeenIdRef = useRef(null);
     const wrapRef = useRef(null);
+
+    if (document.hidden) return;
 
     const pollCount = useCallback(async () => {
         try {

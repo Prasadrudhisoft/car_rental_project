@@ -31,7 +31,7 @@ def notify_bulk(recipients, title, message, notification_type='system', link_url
         )
         for r in recipients
     ]
-    Notification.objects.bulk_create(objs)
+    Notification.objects.bulk_create(objs, batch_size=1000)
     return len(objs)
 
 

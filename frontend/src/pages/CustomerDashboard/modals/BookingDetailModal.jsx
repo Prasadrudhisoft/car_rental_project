@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { cancelBooking } from '../../../services/api';
-import {
-    AgreementSignModal,
-    AgreementViewModal,
-} from '../../../components/agreements/AgreementModal';
+import { AgreementViewModal, AgreementPreviewModal } from '../../../components/agreements/AgreementModal';
+import BookingLocationMap from '../../../components/common/BookingLocationMap';
 import { StatusBadge, InfoRow } from '../cdShared';
 import { fmtDatetime } from '../cdConstants';
 import InspectionPanel from '../InspectionPanel';
@@ -19,9 +17,7 @@ export default function BookingDetailModal({
 }) {
     const [showPayment,   setShowPayment]   = useState(false);
     const [showInvoice,   setShowInvoice]   = useState(false);
-    const [showSignModal, setShowSignModal] = useState(false);
     const [showViewModal, setShowViewModal] = useState(false);
-    const [latestAcceptance, setLatestAcceptance] = useState(null);
     const [cancelConfirm, setCancelConfirm] = useState(false);
     const [cancelReason,  setCancelReason]  = useState('');
     const [cancelLoading, setCancelLoading] = useState(false);
@@ -38,7 +34,8 @@ export default function BookingDetailModal({
     const fullPaid      = pricing.full_payment_paid || (advancePaid && remainingPaid);
     const deposit       = parseFloat(pricing.security_deposit || detail?.deposit_amount || 0);
 
-    const canSign    = booking.status === 'CONFIRMED' && !detail?.agreement_signed;
+    const fmtLoc  = l => (l ? [l.name, l.address].filter(Boolean).join(', ') : '');
+    const hasDrop = !!(detail?.is_one_way && detail?.return_location_detail);
     const canPayNow  = !fullPaid && advancePaid && !remainingPaid;
     const canCancel  = ['PENDING', 'CONFIRMED'].includes(booking.status);
 
@@ -163,9 +160,8 @@ export default function BookingDetailModal({
                                     />
                                     <InfoRow label="Duration" value={`${detail.rental_days} day(s)`} />
                                     <InfoRow label="Pickup At"  value={detail.pickup_location_detail?.name || '—'} />
-                                    {detail.is_one_way && (
-                                        <InfoRow label="Return At" value={detail.return_location_detail?.name || '—'} />
-                                    )}
+                                        {detail.is_one_way && (
+                                        <InfoRow label="Return At" value={detail.return_location_detail?.name || '—'} />)}
                                 </div>
 
                                 {/* Payment status */}
@@ -206,21 +202,19 @@ export default function BookingDetailModal({
                                 {/* Agreement */}
                                 <div className="cd-info-group">
                                     <div className="cd-info-group__title">Rental Agreement</div>
-                                    <InfoRow
-                                        label="Status"
-                                        value={detail.agreement_signed ? 'Signed' : 'Not Signed'}
-                                    />
+                                    <InfoRow label="Status" value={detail.agreement_signed ? 'Accepted' : 'Not Accepted'} />
                                     {detail.agreement_signed_at && (
-                                        <InfoRow label="Signed On" value={fmtDatetime(detail.agreement_signed_at)} />
+                                        <InfoRow label="Accepted On" value={fmtDatetime(detail.agreement_signed_at)} />
                                     )}
-                                    {detail.agreement_signed && (
-                                        <button
-                                            className="cd-btn cd-btn--ghost cd-btn--sm"
-                                            onClick={() => setShowViewModal(true)}
-                                        >
-                                            View Signed Agreement
-                                        </button>
+                                    {detail.agreement_acceptance?.version_tag && (
+                                        <InfoRow label="Version" value={detail.agreement_acceptance.version_tag} />
                                     )}
+                                    <button
+                                        className="cd-btn cd-btn--ghost cd-btn--sm"
+                                        onClick={() => setShowViewModal(true)}
+                                    >
+                                        View Agreement
+                                    </button>
                                 </div>
 
                                 {/* Pricing breakdown */}
@@ -237,6 +231,19 @@ export default function BookingDetailModal({
                                     <InfoRow
                                         label="GST (18%)"
                                         value={`₹${parseFloat(pricing.gst_amount || 0).toLocaleString('en-IN')}`}
+                                    />
+                                </div>
+                                <div className="cd-info-group">
+                                    <div className="cd-info-group__title">
+                                        {hasDrop ? 'Pickup & Drop Points' : 'Pickup & Return Point'}
+                                    </div>
+                                    <InfoRow label="Pickup Point" value={fmtLoc(detail.pickup_location_detail)} />
+                                    {hasDrop && (
+                                        <InfoRow label="Drop Point" value={fmtLoc(detail.return_location_detail)} />
+                                    )}
+                                    <BookingLocationMap
+                                        pickup={detail.pickup_location_detail}
+                                        drop={hasDrop ? detail.return_location_detail : null}
                                     />
                                 </div>
                             </div>
@@ -274,17 +281,6 @@ export default function BookingDetailModal({
 
                             {/* Action bar */}
                             <div className="cd-booking-actions">
-                                {canSign && (
-                                    <div className="cd-action-block">
-                                        <p className="cd-action-label">Sign Agreement</p>
-                                        <button
-                                            className="cd-btn cd-btn--primary cd-btn--sm"
-                                            onClick={() => setShowSignModal(true)}
-                                        >
-                                            View & Sign Agreement
-                                        </button>
-                                    </div>
-                                )}
                                 {canPayNow && (
                                     <div className="cd-action-block">
                                         <p className="cd-action-label">Outstanding Balance</p>
@@ -339,37 +335,22 @@ export default function BookingDetailModal({
                 </div>
 
                 {/* Nested modals */}
-                {showSignModal && (
-                    <AgreementSignModal
-                        booking={booking}
-                        showToast={showToast}
-                        onSigned={info => {
-                            setLatestAcceptance({
-                                agreement_version_id: info.versionId,
-                                version_tag:  info.versionTag,
-                                accepted_at:  info.acceptedAt,
+                {showViewModal && (detail?.agreement_signed
+                    ? (
+                        <AgreementViewModal
+                            booking={booking}
+                            acceptance={detail.agreement_acceptance || {
+                                agreement_version_id: null,
+                                accepted_at:  detail.agreement_signed_at,
                                 otp_verified: true,
                                 booking_ref:  booking.booking_ref,
-                            });
-                            setShowSignModal(false);
-                            onRefresh();
-                        }}
-                        onClose={() => setShowSignModal(false)}
-                    />
-                )}
-                {showViewModal && (
-                    <AgreementViewModal
-                        booking={booking}
-                        acceptance={latestAcceptance || {
-                            agreement_version_id: null,
-                            version_tag:  null,
-                            accepted_at:  detail?.agreement_signed_at,
-                            otp_verified: true,
-                            booking_ref:  booking.booking_ref,
-                            user_email:   null,
-                        }}
-                        onClose={() => setShowViewModal(false)}
-                    />
+                                user_email:   null,
+                            }}
+                            onClose={() => setShowViewModal(false)}
+                        />
+                    ) : (
+                        <AgreementPreviewModal onClose={() => setShowViewModal(false)} />
+                    )
                 )}
                 {showPayment && (
                     <PaymentModal

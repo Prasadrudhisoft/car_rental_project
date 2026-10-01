@@ -1,113 +1,106 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
-from rest_framework import permissions, status
+from django.core.cache import cache
+from rest_framework import permissions
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
- 
+
+from car_rent.async_utils import enqueue
+from apps.users.kyc import evaluate_kyc
 from .models import OTPRecord
- 
+from .tasks import send_otp_email, send_otp_sms
+
 User = get_user_model()
- 
- 
-def _send_otp(user, code, purpose):
-    """
-    In development: prints OTP to terminal (console email backend).
-    In production: replace this with MSG91 API call.
-    """
-    from django.core.mail import send_mail
-    send_mail(
-        subject = f'CarRent India OTP: {code}',
-        message = f'Your OTP for {purpose} is: {code}. Valid for 5 minutes.',
-        from_email = 'noreply@carrentindia.com',
-        recipient_list = [user.email],
-        fail_silently = True,
-    )
-    # In dev, the OTP will appear in the VS Code terminal running Django.
- 
-def _maybe_promote_kyc_status(user):
-    """
-    A customer's stored kyc_status only flips to 'verified' once both
-    phone and email are confirmed AND identity documents are on file.
-    Admin can still manually override to 'rejected' separately.
-    """
-    profile = getattr(user, 'customer_profile', None)
-    if not profile or profile.kyc_status == 'verified':
-        return
-    has_identity = bool(profile.aadhaar_number or profile.pan_number)
-    has_licence  = bool(profile.driving_licence)
-    if user.is_phone_verified and user.is_email_verified and has_identity and has_licence:
-        profile.kyc_status = 'verified'
-        profile.save(update_fields=['kyc_status'])
- 
+KYC_PURPOSES = ('phone_verify', 'email_verify')
+MAX_FAILED_ATTEMPTS = 5
+LOCKOUT_SECONDS = 600
+
+
+def _kyc_forbidden(request, email):
+    """KYC OTPs may only be requested/verified by the logged-in owner of the email."""
+    return (not request.user.is_authenticated
+            or (email or '').lower() != request.user.email.lower())
+
+
 class SendOTPView(APIView):
-    """
-    POST /api/otp/send/
-    Body: { 'email': 'user@example.com', 'purpose': 'login' }
-    Generates and sends a 6-digit OTP to the user's email/phone.
-    """
+    """POST /api/otp/send/  Body: { email, purpose }
+    phone_verify -> SMS to the account's phone (MSG91); everything else -> email."""
     permission_classes = [permissions.AllowAny]
- 
+    throttle_classes   = [ScopedRateThrottle]
+    throttle_scope     = 'otp_send'
+
     def post(self, request):
         email   = request.data.get('email')
         purpose = request.data.get('purpose')
-        valid_purposes = ['login','phone_verify','agreement_sign','inspection_sign']
- 
+        valid_purposes = ['login', 'phone_verify', 'email_verify', 'inspection_sign']
+
         if not email or not purpose:
-            return Response({'error':'email and purpose are required.'}, status=400)
+            return Response({'error': 'email and purpose are required.'}, status=400)
         if purpose not in valid_purposes:
-            return Response({'error':f'purpose must be one of {valid_purposes}.'}, status=400)
- 
+            return Response({'error': f'purpose must be one of {valid_purposes}.'}, status=400)
+        if purpose in KYC_PURPOSES and _kyc_forbidden(request, email):
+            return Response({'error': 'Not authorised.'}, status=403)
+        # if purpose == 'phone_verify' and not (settings.MSG91_API_KEY and settings.MSG91_TEMPLATE_ID):
+        #     return Response({'error': 'SMS service is not configured.'}, status=503)
+
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            # Do not reveal whether email exists
-            return Response({'message':'If this account exists, an OTP has been sent.'})
- 
+            return Response({'message': 'If this account exists, an OTP has been sent.'})
+
         otp = OTPRecord.generate(user, purpose)
-        _send_otp(user, otp.code, purpose)
-        return Response({'message':'OTP sent. Valid for 5 minutes.'})
- 
- 
+        # Delivery happens in a Celery worker — the request returns immediately.
+        enqueue(send_otp_sms if purpose == 'phone_verify' else send_otp_email, otp.id)
+
+        target = 'your registered phone number' if purpose == 'phone_verify' else 'your email'
+        return Response({'message': f'OTP sent to {target}. Valid for 5 minutes.'})
+
+
 class VerifyOTPView(APIView):
-    """
-    POST /api/otp/verify/
-    Body: { 'email': 'user@example.com', 'code': '123456', 'purpose': 'phone_verify' }
-    Returns { 'valid': true } or 400 error.
-    """
+    """POST /api/otp/verify/  Body: { email, code, purpose }"""
     permission_classes = [permissions.AllowAny]
+    throttle_classes   = [ScopedRateThrottle]
+    throttle_scope     = 'otp_verify'
 
-
- 
     def post(self, request):
         email   = request.data.get('email')
         code    = request.data.get('code')
         purpose = request.data.get('purpose')
- 
+
         if not all([email, code, purpose]):
-            return Response({'error':'email, code, and purpose are required.'}, status=400)
- 
+            return Response({'error': 'email, code, and purpose are required.'}, status=400)
+        if purpose in KYC_PURPOSES and _kyc_forbidden(request, email):
+            return Response({'error': 'Not authorised.'}, status=403)
+
+        fail_key = f'otpfail:{purpose}:{email.lower()}'
+        if cache.get(fail_key, 0) >= MAX_FAILED_ATTEMPTS:
+            return Response({'error': 'Too many wrong attempts. Please request a new OTP in a few minutes.'}, status=429)
+
         try:
             user = User.objects.get(email=email)
             otp  = OTPRecord.objects.filter(
                 user=user, code=code, purpose=purpose, is_used=False
             ).latest('created_at')
         except (User.DoesNotExist, OTPRecord.DoesNotExist):
-            return Response({'error':'Invalid OTP.'}, status=400)
- 
+            cache.add(fail_key, 0, LOCKOUT_SECONDS)
+            cache.incr(fail_key)
+            return Response({'error': 'Invalid OTP.'}, status=400)
+
         if not otp.is_valid():
-            return Response({'error':'OTP has expired. Please request a new one.'}, status=400)
- 
+            return Response({'error': 'OTP has expired. Please request a new one.'}, status=400)
+
         otp.is_used = True
-        otp.save()
- 
-        # If verifying phone, mark user phone as verified
+        otp.save(update_fields=['is_used'])
+        cache.delete(fail_key)
+
         if purpose == 'phone_verify':
             user.is_phone_verified = True
             user.save(update_fields=['is_phone_verified'])
-            _maybe_promote_kyc_status(user)
-
-        if purpose == 'email_verify':
+        elif purpose == 'email_verify':
             user.is_email_verified = True
             user.save(update_fields=['is_email_verified'])
-            _maybe_promote_kyc_status(user)
- 
-        return Response({'valid': True, 'message':'OTP verified successfully.'})
+        if purpose in KYC_PURPOSES:
+            evaluate_kyc(user)
+
+        return Response({'valid': True, 'message': 'OTP verified successfully.'})
