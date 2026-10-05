@@ -149,7 +149,7 @@ const columns = [
     {
         key: 'booking_ref', label: 'Booking Ref', sortable: true, width: 150,
         render: v => (
-            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 700, color: 'var(--vacc)' }}>{v}</span>
+            <span style={{ fontFamily: 'var(--ds-font-mono)', fontSize: 12, fontWeight: 700, color: 'var(--vacc)' }}>{v}</span>
         ),
     },
     {

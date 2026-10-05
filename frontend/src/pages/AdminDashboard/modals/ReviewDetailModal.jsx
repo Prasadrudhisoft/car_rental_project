@@ -11,7 +11,7 @@ export default function ReviewDetailModal({ review: r, onClose }) {
             <div className="admin-modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
                 <div className="admin-modal__head">
                     <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Review — {r.customer_name}</h2>
-                    <button onClick={onClose} style={{ background: "none", border: "1px solid var(--vbdr)", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: "var(--vm)", fontFamily: "Inter,sans-serif" }}>
+                    <button onClick={onClose} style={{ background: "none", border: "1px solid var(--vbdr)", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: "var(--vm)", fontFamily: 'inherit' }}>
                         ✕ Close
                     </button>
                 </div>

@@ -1,7 +1,6 @@
 /* ═══════════════════════════════════════════════
    VendorDashboard.css — Upstream-inspired light
    ═══════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
     --teal-primary: #0DB89E;
@@ -43,7 +42,7 @@
 }
 
 .vd {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--ds-font);
     background: var(--vbg);
     color: var(--vt);
     min-height: 100vh;
@@ -55,7 +54,7 @@
 
 .vd .navbar__brand-text {
     margin-left: 48px;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     font-weight: 700;
 }
 
@@ -424,7 +423,7 @@
     width: 100%;
     box-sizing: border-box;
     transition: border-color .16s, box-shadow .16s;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
 }
 
 .vd-input:focus {
@@ -458,7 +457,7 @@
     font-size: 11px;
     cursor: pointer;
     margin-right: 8px;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
 }
 
 .vd-input--ro {
@@ -499,7 +498,7 @@
     cursor: pointer;
     white-space: nowrap;
     transition: background .15s, transform .1s, box-shadow .15s;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
 }
 
 .vd-btn:active {
@@ -598,7 +597,7 @@
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: background 0.15s;
     box-shadow: 0 1px 3px rgba(13, 184, 158, .3);
 }
@@ -619,7 +618,7 @@
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: background 0.15s;
     box-shadow: 0 1px 3px rgba(13, 184, 158, .3);
 }
@@ -637,7 +636,7 @@
     padding: 7px 14px;
     border-radius: 8px;
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: border-color 0.16s, color 0.16s;
 }
 
@@ -654,7 +653,7 @@
     font-weight: 600;
     padding: 3px 6px;
     border-radius: 6px;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: background 0.14s;
 }
 
@@ -675,7 +674,7 @@
     padding: 7px 14px;
     border-radius: 8px;
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
 }
 
 .vd-close-btn:hover {
@@ -721,7 +720,7 @@
     color: var(--vt2);
     cursor: pointer;
     transition: all .14s;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
 }
 
 .vd-filter-btn.active,
@@ -775,7 +774,7 @@
     font-size: 13px;
     font-weight: 700;
     color: var(--vacc);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--ds-font-mono);
 }
 
 .vd-booking-row__meta {
@@ -989,7 +988,7 @@
     border-radius: 999px;
     cursor: pointer;
     border: 1px solid;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: opacity .14s;
 }
 
@@ -1094,7 +1093,7 @@
     color: var(--vm);
     cursor: pointer;
     transition: all .14s;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
 }
 
 .vd-subtab.active {
@@ -1438,7 +1437,7 @@
     padding: 9px 16px;
     border-radius: 8px;
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: border-color .16s, color .16s;
     margin-bottom: 4px;
 }
@@ -1762,7 +1761,7 @@
 
 .vd-kyc-hero-alert {
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: opacity .15s;
 }
 

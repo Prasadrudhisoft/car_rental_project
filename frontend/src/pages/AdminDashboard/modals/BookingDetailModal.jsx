@@ -34,7 +34,7 @@ export default function BookingDetailModal({ booking: b, onClose }) {
                             <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "#D1FAE5", color: "#059669" }}>✍ Signed</span>
                         )}
                     </div>
-                    <button onClick={onClose} style={{ background: "none", border: "1px solid var(--vbdr)", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: "var(--vm)", fontFamily: "Inter,sans-serif", flexShrink: 0 }}>
+                    <button onClick={onClose} style={{ background: "none", border: "1px solid var(--vbdr)", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: "var(--vm)", fontFamily: 'inherit', flexShrink: 0 }}>
                         ✕ Close
                     </button>
                 </div>

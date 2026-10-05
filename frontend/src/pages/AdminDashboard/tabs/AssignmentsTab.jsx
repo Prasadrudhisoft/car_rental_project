@@ -261,12 +261,12 @@ export default function AssignmentsTab({ myProfile }) {
                     </span>
                     <div style={{ display: "flex", border: "1px solid var(--vbdr2)", borderRadius: 8, overflow: "hidden" }}>
                         {[["matrix", "⊞ Matrix"], ["table", "≡ Table"]].map(([m, lbl]) => (
-                            <button key={m} onClick={() => setViewMode(m)} style={{ padding: "6px 13px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "Inter,sans-serif", borderRight: m === "matrix" ? "1px solid var(--vbdr2)" : "none", background: viewMode === m ? "var(--teal-primary)" : "var(--vs2)", color: viewMode === m ? "#fff" : "var(--vm)" }}>
+                            <button key={m} onClick={() => setViewMode(m)} style={{ padding: "6px 13px", fontSize: 12, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: 'inherit', borderRight: m === "matrix" ? "1px solid var(--vbdr2)" : "none", background: viewMode === m ? "var(--teal-primary)" : "var(--vs2)", color: viewMode === m ? "#fff" : "var(--vm)" }}>
                                 {lbl}
                             </button>
                         ))}
                     </div>
-                    <button onClick={load} disabled={busy} style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "1px solid var(--vbdr2)", background: "var(--vs2)", color: "var(--vt2)", cursor: "pointer", fontFamily: "Inter,sans-serif" }}>
+                    <button onClick={load} disabled={busy} style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "1px solid var(--vbdr2)", background: "var(--vs2)", color: "var(--vt2)", cursor: "pointer", fontFamily: 'inherit' }}>
                         ↺ Refresh
                     </button>
                 </div>
@@ -304,7 +304,7 @@ export default function AssignmentsTab({ myProfile }) {
                                 <p>Drag vendors from the list below onto a card, or use the per-row dropdown.</p>
                             </div>
                         </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 12 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(300px,100%),1fr))", gap: 12 }}>
                             {admins.map((admin) => (
                                 <AdminAssignmentCard
                                     key={admin.id}
@@ -335,12 +335,12 @@ export default function AssignmentsTab({ myProfile }) {
                                             <span style={{ fontSize: 12, fontWeight: 700, color: "var(--teal-primary)", background: "var(--teal-light)", padding: "4px 10px", borderRadius: 999, border: "1px solid rgba(13,184,158,.3)", whiteSpace: "nowrap" }}>
                                                 {selectedCount} selected
                                             </span>
-                                            <button onClick={clearSelection} style={{ padding: "5px 10px", borderRadius: 7, fontSize: 11, fontWeight: 600, border: "1px solid var(--vbdr2)", background: "var(--vs2)", color: "var(--vt2)", cursor: "pointer", fontFamily: "Inter,sans-serif", whiteSpace: "nowrap" }}>
+                                            <button onClick={clearSelection} style={{ padding: "5px 10px", borderRadius: 7, fontSize: 11, fontWeight: 600, border: "1px solid var(--vbdr2)", background: "var(--vs2)", color: "var(--vt2)", cursor: "pointer", fontFamily: 'inherit', whiteSpace: "nowrap" }}>
                                                 ✕ Clear
                                             </button>
                                         </>
                                     )}
-                                    <button onClick={selectAll} style={{ padding: "5px 10px", borderRadius: 7, fontSize: 11, fontWeight: 600, border: "1px solid var(--vbdr2)", background: "var(--vs2)", color: "var(--vt2)", cursor: "pointer", fontFamily: "Inter,sans-serif", whiteSpace: "nowrap" }}>
+                                    <button onClick={selectAll} style={{ padding: "5px 10px", borderRadius: 7, fontSize: 11, fontWeight: 600, border: "1px solid var(--vbdr2)", background: "var(--vs2)", color: "var(--vt2)", cursor: "pointer", fontFamily: 'inherit', whiteSpace: "nowrap" }}>
                                         ☑ Select All
                                     </button>
                                 </div>
@@ -351,7 +351,7 @@ export default function AssignmentsTab({ myProfile }) {
                                 placeholder="Search unassigned vendors…"
                                 value={searchQ}
                                 onChange={(e) => setSearchQ(e.target.value)}
-                                style={{ background: "var(--vs2)", border: "1px solid var(--vbdr2)", borderRadius: 8, color: "var(--vt)", padding: "7px 12px", fontSize: 12, outline: "none", fontFamily: "Inter,sans-serif", maxWidth: 320, transition: "border-color .14s" }}
+                                style={{ background: "var(--vs2)", border: "1px solid var(--vbdr2)", borderRadius: 8, color: "var(--vt)", padding: "7px 12px", fontSize: 12, outline: "none", fontFamily: 'inherit', maxWidth: 320, transition: "border-color .14s" }}
                             />
 
                             {/* Bulk-assign toolbar — visible when ≥1 vendor selected */}
@@ -363,7 +363,7 @@ export default function AssignmentsTab({ myProfile }) {
                                     <select
                                         value={bulkAdminPK}
                                         onChange={(e) => setBulkAdminPK(e.target.value)}
-                                        style={{ background: "var(--vs)", border: "1px solid var(--vbdr2)", borderRadius: 8, color: "var(--vt)", padding: "6px 10px", fontSize: 12, outline: "none", fontFamily: "Inter,sans-serif", flex: 1, minWidth: 180, cursor: "pointer" }}
+                                        style={{ background: "var(--vs)", border: "1px solid var(--vbdr2)", borderRadius: 8, color: "var(--vt)", padding: "6px 10px", fontSize: 12, outline: "none", fontFamily: 'inherit', flex: 1, minWidth: 180, cursor: "pointer" }}
                                     >
                                         <option value="">— Assign all selected to… —</option>
                                         {admins.map((a) => (
@@ -378,11 +378,11 @@ export default function AssignmentsTab({ myProfile }) {
                                             const pks = Object.keys(selectedMap).map(Number).filter((pk) => !isNaN(pk) && pk > 0);
                                             handleAssign(pks, Number(bulkAdminPK));
                                         }}
-                                        style={{ background: bulkAdminPK ? "var(--teal-primary)" : "#9CA3AF", color: "#fff", border: "none", borderRadius: 8, padding: "7px 16px", fontSize: 12, fontWeight: 700, cursor: bulkAdminPK ? "pointer" : "not-allowed", fontFamily: "Inter,sans-serif", whiteSpace: "nowrap", transition: "background .14s" }}
+                                        style={{ background: bulkAdminPK ? "var(--teal-primary)" : "#9CA3AF", color: "#fff", border: "none", borderRadius: 8, padding: "7px 16px", fontSize: 12, fontWeight: 700, cursor: bulkAdminPK ? "pointer" : "not-allowed", fontFamily: 'inherit', whiteSpace: "nowrap", transition: "background .14s" }}
                                     >
                                         {busy ? "…" : `Assign ${selectedCount} →`}
                                     </button>
-                                    <button onClick={clearSelection} style={{ padding: "6px 11px", borderRadius: 7, fontSize: 11, fontWeight: 600, border: "1px solid rgba(13,184,158,.4)", background: "transparent", color: "var(--teal-dark)", cursor: "pointer", fontFamily: "Inter,sans-serif", whiteSpace: "nowrap" }}>
+                                    <button onClick={clearSelection} style={{ padding: "6px 11px", borderRadius: 7, fontSize: 11, fontWeight: 600, border: "1px solid rgba(13,184,158,.4)", background: "transparent", color: "var(--teal-dark)", cursor: "pointer", fontFamily: 'inherit', whiteSpace: "nowrap" }}>
                                         ✕ Deselect
                                     </button>
                                 </div>
@@ -428,7 +428,7 @@ export default function AssignmentsTab({ myProfile }) {
                                                 <select
                                                     value={pick}
                                                     onChange={(e) => setPickAdmin(v, e.target.value)}
-                                                    style={{ background: "var(--vs2)", border: "1px solid var(--vbdr2)", borderRadius: 7, color: "var(--vt)", padding: "5px 8px", fontSize: 12, outline: "none", fontFamily: "Inter,sans-serif", minWidth: 160, cursor: "pointer" }}
+                                                    style={{ background: "var(--vs2)", border: "1px solid var(--vbdr2)", borderRadius: 7, color: "var(--vt)", padding: "5px 8px", fontSize: 12, outline: "none", fontFamily: 'inherit', minWidth: 160, cursor: "pointer" }}
                                                 >
                                                     <option value="">— Assign to admin —</option>
                                                     {admins.map((a) => (
@@ -440,14 +440,14 @@ export default function AssignmentsTab({ myProfile }) {
                                                 <button
                                                     disabled={!pick || busy}
                                                     onClick={() => { handleAssign([vpk], Number(pick)); clearPickAdmin(v); }}
-                                                    style={{ background: pick ? "var(--teal-primary)" : "#9CA3AF", color: "#fff", border: "none", borderRadius: 7, padding: "5px 13px", fontSize: 12, fontWeight: 700, cursor: pick ? "pointer" : "not-allowed", opacity: pick ? 1 : 0.4, fontFamily: "Inter,sans-serif", whiteSpace: "nowrap" }}
+                                                    style={{ background: pick ? "var(--teal-primary)" : "#9CA3AF", color: "#fff", border: "none", borderRadius: 7, padding: "5px 13px", fontSize: 12, fontWeight: 700, cursor: pick ? "pointer" : "not-allowed", opacity: pick ? 1 : 0.4, fontFamily: 'inherit', whiteSpace: "nowrap" }}
                                                 >
                                                     {busy ? "…" : "Assign"}
                                                 </button>
                                             </div>
 
                                             {/* History */}
-                                            <button onClick={() => showHistory(v)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, border: "1px solid var(--vbdr2)", background: "var(--vs2)", color: "var(--vt2)", cursor: "pointer", fontFamily: "Inter,sans-serif", flexShrink: 0 }}>
+                                            <button onClick={() => showHistory(v)} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, border: "1px solid var(--vbdr2)", background: "var(--vs2)", color: "var(--vt2)", cursor: "pointer", fontFamily: 'inherit', flexShrink: 0 }}>
                                                 📋 History
                                             </button>
                                         </div>
@@ -497,7 +497,7 @@ export default function AssignmentsTab({ myProfile }) {
                                 <h3 style={{ margin: "0 0 2px", fontSize: 16, fontWeight: 800 }}>Assignment History</h3>
                                 <p style={{ margin: 0, fontSize: 12, color: "var(--vm)" }}>{historyV.business_name || historyV.vendor_business || "Vendor"}</p>
                             </div>
-                            <button onClick={() => setHistoryV(null)} style={{ background: "none", border: "1px solid var(--vbdr)", borderRadius: 8, padding: "5px 12px", cursor: "pointer", fontSize: 12, color: "var(--vm)", fontFamily: "Inter,sans-serif" }}>✕ Close</button>
+                            <button onClick={() => setHistoryV(null)} style={{ background: "none", border: "1px solid var(--vbdr)", borderRadius: 8, padding: "5px 12px", cursor: "pointer", fontSize: 12, color: "var(--vm)", fontFamily: 'inherit' }}>✕ Close</button>
                         </div>
                         <div style={{ padding: "16px 22px", display: "flex", flexDirection: "column", gap: 8 }}>
                             {historyData.length === 0 ? (

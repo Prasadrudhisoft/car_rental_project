@@ -37,7 +37,7 @@ export default function InvoiceModal({ invoice, booking, onClose }) {
                             <div style={{
                                 fontSize: 18, fontWeight: 800,
                                 color: 'var(--cd-acc)',
-                                fontFamily: 'DM Mono, monospace',
+                                fontFamily: 'var(--ds-font-mono)',
                             }}>
                                 {invoice.invoice_ref}
                             </div>

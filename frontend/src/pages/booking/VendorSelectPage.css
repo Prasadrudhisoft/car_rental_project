@@ -6,7 +6,7 @@
 .vsp-page {
     min-height: 100vh;
     background: var(--wz-bg);
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--ds-font);
 }
 
 /* ── Segment recap banner ── */
@@ -28,7 +28,7 @@
 }
 
 .vsp__model-recap h2 {
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--ds-font);
     font-size: 17px;
     font-weight: 700;
     margin-bottom: 3px;
@@ -52,7 +52,7 @@
     border-radius: var(--wz-r-f);
     cursor: pointer;
     transition: border-color 0.18s, color 0.18s;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--ds-font);
 }
 
 .vsp__change-car:hover {
@@ -118,7 +118,7 @@
     color: var(--wz-txt);
     padding: 9px 12px;
     font-size: 13px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--ds-font);
     outline: none;
     cursor: pointer;
     -webkit-appearance: none;
@@ -194,7 +194,7 @@
     padding: 7px 12px;
     border-radius: var(--wz-r-f);
     cursor: pointer;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--ds-font);
     transition: border-color 0.18s, color 0.18s;
 }
 
@@ -289,7 +289,7 @@
     width: 100%;
     flex-shrink: 0;
     transition: border-color 0.18s, background 0.18s, transform 0.15s, box-shadow 0.15s;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--ds-font);
     box-shadow: var(--wz-sh-sm);
 }
 
@@ -412,14 +412,14 @@
     font-size: 13px;
     color: var(--wz-txt);
     margin-bottom: 4px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--ds-font);
 }
 
 .vsp__popup p {
     font-size: 12px;
     color: var(--wz-txt2);
     margin: 2px 0;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--ds-font);
 }
 
 .vsp__popup button {
@@ -433,7 +433,7 @@
     cursor: pointer;
     width: 100%;
     margin-top: 7px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--ds-font);
     transition: background 0.15s;
 }
 

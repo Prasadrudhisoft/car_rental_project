@@ -410,7 +410,7 @@ export default function InspectionPanel({
 
             {expanded && (
                 <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div className="ds-grid-2">
                         <div className="cd-form-field">
                             <label>Odometer Reading (km) *</label>
                             <input

@@ -322,7 +322,7 @@ export default function VehicleManageModal({
                         </h2>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
                             <span style={{
-                                fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 700,
+                                fontFamily: 'var(--ds-font-mono)', fontSize: 12, fontWeight: 700,
                                 color: 'var(--teal-dark)', background: 'var(--teal-light)',
                                 padding: '2px 8px', borderRadius: 4,
                             }}>
@@ -515,7 +515,7 @@ export default function VehicleManageModal({
                                                             gap: 5, fontSize: 11, color: 'var(--vacc)',
                                                             background: 'none', border: 'none',
                                                             cursor: 'pointer', padding: '2px 0',
-                                                            fontFamily: 'Inter, sans-serif',
+                                                            fontFamily: 'inherit',
                                                             fontWeight: 600,
                                                             marginBottom: 4,
                                                             textDecoration: 'underline',

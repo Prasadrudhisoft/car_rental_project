@@ -37,7 +37,7 @@ export default function VendorDetailModal({ vendor: v, onClose, onAction }) {
                             </div>
                         </div>
                     </div>
-                    <button onClick={onClose} style={{ background: "none", border: "1px solid var(--vbdr)", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: "var(--vm)", fontFamily: "Inter,sans-serif" }}>
+                    <button onClick={onClose} style={{ background: "none", border: "1px solid var(--vbdr)", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: "var(--vm)", fontFamily: 'inherit' }}>
                         ✕ Close
                     </button>
                 </div>

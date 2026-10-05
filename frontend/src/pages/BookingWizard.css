@@ -2,7 +2,6 @@
    BookingWizard.css — Shared wizard shell
    Upstream light theme · RudhiDrive booking flow
    ═══════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap');
 
 /* ── Design tokens (wizard scope) ── */
 :root {
@@ -41,7 +40,7 @@
 .wizard-page {
     min-height: 100vh;
     background: var(--wz-bg);
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--ds-font);
     -webkit-font-smoothing: antialiased;
     color: var(--wz-txt);
 }
@@ -194,7 +193,7 @@
     background: var(--wz-surf);
     border: 1px solid var(--wz-bdr2);
     color: var(--wz-txt2);
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--ds-font);
     font-size: 14px;
     font-weight: 600;
     padding: 13px 28px;
@@ -212,7 +211,7 @@
 .wizard-btn--next {
     background: linear-gradient(135deg, #002b36, var(--wz-teal));
     color: #fff;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--ds-font);
     font-size: 15px;
     font-weight: 700;
     padding: 13px 36px;
@@ -251,7 +250,7 @@
     color: var(--wz-txt);
     padding: 9px 13px;
     font-size: 13px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--ds-font);
     outline: none;
     width: 100%;
     box-sizing: border-box;
@@ -321,7 +320,7 @@
 .wz-cta {
     background: linear-gradient(135deg, #002b36, var(--wz-teal));
     color: #fff;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--ds-font);
     font-size: 15px;
     font-weight: 700;
     padding: 14px 28px;

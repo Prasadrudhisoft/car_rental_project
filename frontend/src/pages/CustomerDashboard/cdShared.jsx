@@ -13,7 +13,7 @@ export function StatusBadge({ status }) {
         <span style={{
             display: 'inline-flex', alignItems: 'center',
             padding: '3px 9px', borderRadius: 999,
-            fontSize: 10, fontWeight: 700,
+            fontSize: 11, fontWeight: 700,
             letterSpacing: '0.4px', textTransform: 'uppercase',
             whiteSpace: 'nowrap',
             background: s.bg, color: s.color,

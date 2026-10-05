@@ -106,7 +106,7 @@ export default function AdminAssignmentCard({
                                 <StatusBadge status={vendor.status} colorMap={VENDOR_STATUS_CLR} size="sm" />
                                 <button
                                     onClick={() => onUnassign(vpk)}
-                                    style={{ background: "none", border: "none", color: "#EF4444", fontSize: 11, cursor: "pointer", padding: 0, lineHeight: 1, opacity: 0.7, fontFamily: "Inter,sans-serif" }}
+                                    style={{ background: "none", border: "none", color: "#EF4444", fontSize: 11, cursor: "pointer", padding: 0, lineHeight: 1, opacity: 0.7, fontFamily: 'inherit' }}
                                     title="Remove assignment"
                                 >
                                     ✕

@@ -332,12 +332,9 @@ export default function Navbar({ onLoginClick, breadcrumb, hideLogo = false }) {
                 <div className="navbar__right">
                     {user && <NotificationBell />}
                     {user ? (
-                        <button
-                            className="navbar__booking-btn"
-                            onClick={() => setShowBookingWidget(v => !v)}
-                            title="Book a car"
-                        >
-                            🚗 Booking
+                        <button className="navbar__booking-btn" onClick={() => setShowBookingWidget(v => !v)} title="Book a car">
+                            <span aria-hidden="true">🚗</span>
+                            <span className="navbar__booking-label">Booking</span>
                         </button>
                     ) : (
                         <button

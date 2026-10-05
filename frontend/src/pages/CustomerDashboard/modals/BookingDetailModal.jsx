@@ -75,7 +75,7 @@ export default function BookingDetailModal({
                 <div className="cd-modal__head" style={{ flexWrap: 'wrap', gap: 10 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                         <span style={{
-                            fontFamily: 'JetBrains Mono, monospace',
+                            fontFamily: 'var(--ds-font-mono)',
                             fontSize: 15, fontWeight: 700, color: 'var(--cd-acc)',
                         }}>
                             {booking.booking_ref}

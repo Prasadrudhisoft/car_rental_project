@@ -155,7 +155,7 @@ const columns = [
         render: (_, row) => (
             <div className="dt-cell-stack">
                 <span className="dt-cell-stack__primary">{row.year} {row.make} {row.model}</span>
-                <span className="dt-cell-stack__secondary" style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10 }}>
+                <span className="dt-cell-stack__secondary" style={{ fontFamily: 'var(--ds-font-mono)', fontSize: 10 }}>
                     {row.plate_number}
                 </span>
             </div>

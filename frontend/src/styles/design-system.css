@@ -1,0 +1,1682 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   design-system.css — single source of truth for look & feel.
+   Loaded LAST so it wins ties. Sections:
+   0 Tokens · 1 Base · 2 Shell/Nav/Sidebar/Hero · 3 Components
+   4 Modals · 5 Page fixes · 6 Responsive · 7 Touch/A11y
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ─── 0. TOKENS ─────────────────────────────────────────────────────── */
+:root {
+    --ds-teal: #0DB89E;
+    --ds-teal-dark: #0A9E87;
+    --ds-teal-text: #087F6E;
+    --ds-teal-light: #E6F7F5;
+    --ds-teal-mid: #B2EDE6;
+    --ds-ink: #002b36;
+    --ds-brand-gradient: linear-gradient(135deg, #002b36 0%, #003f3a 100%);
+
+    --ds-bg: #F4F6F8;
+    --ds-surface: #FFFFFF;
+    --ds-surface-2: #F8FAFB;
+    --ds-border: #E8EDF2;
+    --ds-border-2: #D5DEE8;
+    --ds-text: #111827;
+    --ds-text-2: #4B5563;
+    --ds-muted: #6B7280;
+    --ds-placeholder: #9CA3AF;
+
+    --ds-success: #059669;
+    --ds-success-bg: #D1FAE5;
+    --ds-success-bd: #6EE7B7;
+    --ds-warning: #B45309;
+    --ds-warning-bg: #FEF3C7;
+    --ds-warning-bd: #FCD34D;
+    --ds-danger: #DC2626;
+    --ds-danger-bg: #FEE2E2;
+    --ds-danger-bd: #FCA5A5;
+    --ds-info: #1D4ED8;
+    --ds-info-bg: #DBEAFE;
+    --ds-info-bd: #93C5FD;
+    --ds-purple: #7C3AED;
+    --ds-purple-bg: #EDE9FE;
+
+    --ds-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --ds-font-display: 'Syne', 'Inter', sans-serif;
+    --ds-font-mono: 'JetBrains Mono', SFMono-Regular, Menlo, Consolas, monospace;
+
+    --ds-fs-xs: 11px;
+    --ds-fs-sm: 12px;
+    --ds-fs-base: 14px;
+    --ds-fs-md: 15px;
+    --ds-fs-lg: 17px;
+    --ds-fs-xl: 20px;
+    --ds-fs-2xl: 24px;
+    --ds-fs-3xl: 32px;
+
+    --ds-sp-1: 4px;
+    --ds-sp-2: 8px;
+    --ds-sp-3: 12px;
+    --ds-sp-4: 16px;
+    --ds-sp-5: 20px;
+    --ds-sp-6: 24px;
+    --ds-sp-8: 32px;
+
+    --ds-r-sm: 6px;
+    --ds-r-md: 8px;
+    --ds-r-lg: 14px;
+    --ds-r-xl: 16px;
+    --ds-r-pill: 999px;
+
+    --ds-shadow-sm: 0 1px 3px rgba(16, 24, 40, .06), 0 1px 2px rgba(16, 24, 40, .04);
+    --ds-shadow-md: 0 4px 14px rgba(16, 24, 40, .08);
+    --ds-shadow-lg: 0 12px 32px rgba(16, 24, 40, .12);
+    --ds-shadow-pop: 0 24px 64px rgba(0, 16, 22, .28);
+    --ds-ease: cubic-bezier(.16, 1, .3, 1);
+
+    --ds-nav-h: 56px;
+    --ds-sidebar-w: 56px;
+    --ds-page-pad: 24px;
+    --ds-max: 1440px;
+}
+
+/* ─── 0b. LEGACY TOKEN ALIASES (every old variable now reads from the system) ─── */
+:root {
+    /* index.css era */
+    --font-body: var(--ds-font);
+    --font-display: var(--ds-font-display);
+    --clr-bg: var(--ds-bg);
+    --clr-surface: var(--ds-surface);
+    --clr-surface2: var(--ds-surface-2);
+    --clr-border: var(--ds-border);
+    --clr-accent: var(--ds-teal-dark);
+    --clr-accent2: var(--ds-teal);
+    --clr-text: var(--ds-text);
+    --clr-muted: var(--ds-muted);
+    --clr-success: var(--ds-success);
+    --clr-danger: var(--ds-danger);
+    --clr-info: var(--ds-info);
+    --clr-warning: var(--ds-warning);
+    --radius-sm: var(--ds-r-sm);
+    --radius-md: var(--ds-r-md);
+    --radius-lg: var(--ds-r-lg);
+    --radius-xl: var(--ds-r-xl);
+    --shadow-glow: 0 0 40px rgba(13, 184, 158, .12);
+    --shadow-card: var(--ds-shadow-md);
+    --ease-out: var(--ds-ease);
+    --ease-in: cubic-bezier(.4, 0, 1, 1);
+    /* --c-* / --r-* era (Navbar, notifications) */
+    --c-bg: var(--ds-bg);
+    --c-surface: var(--ds-surface);
+    --c-surface2: var(--ds-surface-2);
+    --c-border: var(--ds-border);
+    --c-border2: var(--ds-border-2);
+    --c-text: var(--ds-text);
+    --c-text2: var(--ds-text-2);
+    --c-muted: var(--ds-muted);
+    --c-teal: var(--ds-teal);
+    --c-teal-light: var(--ds-teal-light);
+    --c-teal-mid: var(--ds-teal-mid);
+    --c-teal-dark: var(--ds-teal-dark);
+    --c-red: var(--ds-danger);
+    --c-red-light: var(--ds-danger-bg);
+    --c-green: var(--ds-success);
+    --c-green-light: var(--ds-success-bg);
+    --r-sm: var(--ds-r-sm);
+    --r-md: var(--ds-r-md);
+    --r-lg: var(--ds-r-lg);
+    --r-xl: var(--ds-r-xl);
+    --r-2xl: var(--ds-r-xl);
+    --r-full: var(--ds-r-pill);
+    --shadow-sm: var(--ds-shadow-sm);
+    --shadow-md: var(--ds-shadow-md);
+    --shadow-lg: var(--ds-shadow-lg);
+    --shadow-pop: var(--ds-shadow-pop);
+    --ease: var(--ds-ease);
+    --font-mono: var(--ds-font-mono);
+    --sidebar-w: var(--ds-sidebar-w);
+    /* dashboards (--v*) */
+    --teal-primary: var(--ds-teal);
+    --teal-dark: var(--ds-teal-dark);
+    --teal-light: var(--ds-teal-light);
+    --teal-mid: var(--ds-teal-mid);
+    --vt: var(--ds-text);
+    --vt2: var(--ds-text-2);
+    --vm: var(--ds-muted);
+    --vbg: var(--ds-bg);
+    --vs: var(--ds-surface);
+    --vs2: var(--ds-surface-2);
+    --vbdr: var(--ds-border);
+    --vbdr2: var(--ds-border-2);
+    /* customer (--cd-*) */
+    --cd-bg: var(--ds-bg);
+    --cd-surf: var(--ds-surface);
+    --cd-surf2: var(--ds-surface-2);
+    --cd-bdr: var(--ds-border);
+    --cd-bdr2: var(--ds-border-2);
+    --cd-txt: var(--ds-text);
+    --cd-txt2: var(--ds-text-2);
+    --cd-muted: var(--ds-muted);
+    --cd-acc: var(--ds-teal-dark);
+    --cd-acc-l: var(--ds-teal-light);
+    --cd-acc-d: var(--ds-teal-text);
+    /* wizard (--wz-*) */
+    --wz-bg: var(--ds-bg);
+    --wz-surf: var(--ds-surface);
+    --wz-surf2: var(--ds-surface-2);
+    --wz-bdr: var(--ds-border);
+    --wz-bdr2: var(--ds-border-2);
+    --wz-txt: var(--ds-text);
+    --wz-txt2: var(--ds-text-2);
+    --wz-muted: var(--ds-muted);
+    --wz-teal: var(--ds-teal-dark);
+    --wz-teal-d: var(--ds-teal-text);
+    --wz-teal-l: var(--ds-teal-light);
+    --wz-r-md: var(--ds-r-md);
+    --wz-r-lg: 12px;
+    --wz-r-xl: var(--ds-r-lg);
+    --wz-r-f: var(--ds-r-pill);
+    --wz-sh-sm: var(--ds-shadow-sm);
+    --wz-sh-md: var(--ds-shadow-md);
+    --wz-sh-lg: var(--ds-shadow-lg);
+}
+
+/* ─── 1. BASE ───────────────────────────────────────────────────────── */
+html {
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    font-family: var(--ds-font);
+    font-size: var(--ds-fs-base);
+    line-height: 1.5;
+    color: var(--ds-text);
+    background: var(--ds-bg);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: clip;
+    -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: inherit;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -.01em;
+}
+
+button,
+[role="button"],
+a,
+label,
+select {
+    touch-action: manipulation;
+}
+
+button {
+    font-family: var(--ds-font);
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+    accent-color: var(--ds-teal-dark);
+}
+
+::placeholder {
+    color: var(--ds-placeholder);
+    opacity: 1;
+}
+
+:focus-visible {
+    outline: 2px solid var(--ds-teal-dark);
+    outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: none;
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ds-border-2) transparent;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--ds-border-2);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* lock page scroll behind any open modal / drawer (no JS needed) */
+html:has(.cd-modal-backdrop, .vd-modal-overlay, .admin-modal-overlay, .agr-backdrop,
+    .am-backdrop, .asgn-modal-overlay, .navbar__booking-overlay, .sidebar--open) {
+    overflow: hidden;
+}
+
+/* long text must wrap instead of widening the page */
+.cd-info-row__val,
+.vd-info-pair strong,
+.admin-modal__row strong,
+.bk-modal__row>strong,
+.cd-mob-booking-card__vehicle,
+.adm-mob-card__primary,
+.confirm-detail-row strong {
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+/* grid children may shrink: stops wide tables/content forcing sideways page scroll */
+.vd-grid-2>*,
+.admin-two-col>*,
+.cd-profile-layout>*,
+.cd-loyalty-layout>*,
+.addons-page__layout>*,
+.confirm-page__layout>*,
+.vsp__body>*,
+.vsp__map-layout>*,
+.vcard-v2__body>*,
+.cd-detail-grid>*,
+.vd-detail-panel__grid>* {
+    min-width: 0;
+}
+
+.vsp__map-layout {
+    grid-template-columns: minmax(0, 1fr) 380px;
+}
+
+.vcard-v2__body {
+    grid-template-columns: minmax(0, 1fr) 300px;
+}
+
+/* leaflet must not paint above navbar / sidebar / modals */
+.leaflet-container {
+    position: relative;
+    z-index: 0;
+    isolation: isolate;
+    font-family: var(--ds-font);
+}
+
+.leaflet-popup-content {
+    font-family: var(--ds-font);
+    margin: 12px 14px;
+}
+
+.ds-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* ─── 2. SHELL · NAVBAR · SIDEBAR · HERO ────────────────────────────── */
+.navbar {
+    height: var(--ds-nav-h);
+    padding: 0 var(--ds-sp-5);
+    gap: var(--ds-sp-3);
+    background: var(--ds-brand-gradient);
+    border-bottom: 1px solid rgba(255, 255, 255, .06);
+}
+
+.navbar>*:not(.snow-canvas) {
+    position: relative;
+    z-index: 1;
+}
+
+.navbar__brand {
+    margin-right: 0;
+    min-width: 0;
+}
+
+.navbar__brand-text {
+    font-family: var(--ds-font-display);
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -.3px;
+    white-space: nowrap;
+    color: #fff;
+}
+
+.navbar__right {
+    gap: var(--ds-sp-2);
+    flex-shrink: 0;
+}
+
+.navbar__booking-btn {
+    width: auto;
+    height: 36px;
+    padding: 0 16px;
+    margin-right: 0;
+    gap: 6px;
+    font: 600 14px/1 var(--ds-font);
+    letter-spacing: .2px;
+    background: var(--ds-teal-dark);
+    border-radius: var(--ds-r-pill);
+}
+
+.navbar__booking-btn:hover {
+    background: var(--ds-teal-text);
+    transform: none;
+}
+
+.ntf-bell {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--ds-r-md);
+}
+
+.cd .navbar__brand-text,
+.vd .navbar__brand-text,
+.admin-dash .navbar__brand-text {
+    margin-left: 48px;
+}
+
+.page-shell,
+.cd__shell {
+    background: var(--ds-bg);
+}
+
+.vd .page-shell,
+.admin-dash .page-shell,
+.cd__shell {
+    margin: 0 0 0 var(--ds-sidebar-w);
+    padding-top: var(--ds-nav-h);
+    min-height: 100vh;
+}
+
+.cd__inner,
+.vd__inner,
+.admin-dash__inner {
+    width: 100%;
+    max-width: var(--ds-max);
+    margin-inline: auto;
+    padding: var(--ds-page-pad);
+    gap: var(--ds-sp-5);
+}
+
+.cd-section,
+.vd-section,
+.admin-section {
+    gap: var(--ds-sp-4);
+}
+
+/* sidebar: tooltips visible, short screens fit, no clipped items */
+.sidebar {
+    overflow: visible;
+    background: var(--ds-brand-gradient);
+    width: var(--ds-sidebar-w);
+}
+
+.sidebar__nav {
+    gap: 6px;
+}
+
+.sidebar__item {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+}
+
+.sidebar__item::after {
+    z-index: 500;
+    font-family: var(--ds-font);
+}
+
+.sidebar__avatar {
+    font-family: var(--ds-font);
+}
+
+@media (min-width: 769px) and (max-height: 820px) {
+    .sidebar__brand {
+        width: 34px;
+        height: 34px;
+        margin-bottom: 10px;
+        font-size: 16px;
+    }
+
+    .sidebar__item {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+    }
+
+    .sidebar__item svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .sidebar__nav {
+        gap: 4px;
+    }
+}
+
+@media (min-width: 769px) and (max-height: 640px) {
+    .sidebar {
+        overflow-y: auto;
+        scrollbar-width: none;
+    }
+
+    .sidebar__item::after {
+        display: none;
+    }
+}
+
+/* hero: one dark brand card for all three dashboards (text always legible) */
+.cd__hero,
+.vd__hero,
+.admin-dash__hero {
+    background: var(--ds-brand-gradient);
+    border: 0;
+    color: #fff;
+    border-radius: var(--ds-r-xl);
+    box-shadow: var(--ds-shadow-md);
+}
+
+.cd__hero::before,
+.vd__hero::before,
+.admin-dash__hero::before {
+    content: '';
+    position: absolute;
+    right: -70px;
+    bottom: -90px;
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(13, 184, 158, .35), transparent 70%);
+    pointer-events: none;
+}
+
+.cd__hero-banner,
+.vd__hero-banner,
+.admin-dash__hero-banner {
+    display: none;
+}
+
+.cd__hero-body,
+.vd__hero-body,
+.admin-dash__hero-body {
+    position: relative;
+    z-index: 1;
+    margin: 0;
+    padding: var(--ds-sp-5);
+    align-items: center;
+    gap: var(--ds-sp-4);
+}
+
+.cd__hero-left,
+.vd__hero-left,
+.admin-dash__hero-left {
+    align-items: center;
+    min-width: 0;
+}
+
+.cd__hero-avatar,
+.vd__hero-avatar,
+.admin-dash__hero-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--ds-r-lg);
+    border: 2px solid rgba(255, 255, 255, .28);
+    box-shadow: none;
+}
+
+.cd__hero-name,
+.vd__hero-name,
+.admin-dash__hero-title {
+    color: #fff;
+    font-size: var(--ds-fs-lg);
+    font-weight: 700;
+    letter-spacing: -.2px;
+}
+
+.cd__hero-sub,
+.admin-dash__hero-sub {
+    color: rgba(255, 255, 255, .75);
+    font-size: var(--ds-fs-sm);
+}
+
+.vd__hero-meta>span:first-child {
+    color: rgba(255, 255, 255, .8) !important;
+}
+
+/* inline #000 in JSX */
+.cd__hero-info,
+.vd__hero-info,
+.admin-dash__hero-info {
+    min-width: 0;
+}
+
+.cd__kpis,
+.vd__kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(96px, 128px));
+    justify-content: end;
+    gap: var(--ds-sp-2);
+    flex: 1 1 360px;
+    width: auto;
+    padding: 0;
+}
+
+.cd__kpi,
+.vd__kpi {
+    background: rgba(255, 255, 255, .96);
+    border: 0;
+    border-radius: var(--ds-r-md);
+    padding: 10px 12px;
+    min-width: 0;
+}
+
+.cd__kpi-lbl,
+.vd__kpi-lbl {
+    color: var(--ds-muted);
+}
+
+/* ─── 3. COMPONENTS ─────────────────────────────────────────────────── */
+/* Buttons */
+.vd-btn,
+.cd-btn,
+.admin-btn,
+.agr-btn,
+.dt-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 38px;
+    padding: 0 16px;
+    border-radius: var(--ds-r-md);
+    font: 600 13px/1 var(--ds-font);
+    letter-spacing: 0;
+    white-space: nowrap;
+    transition: background .15s, border-color .15s, color .15s, transform .1s;
+}
+
+.vd-btn--sm,
+.cd-btn--sm,
+.admin-btn--sm,
+.agr-btn--sm,
+.dt-action-btn {
+    min-height: 32px;
+    padding: 0 12px;
+    font-size: 12px;
+}
+
+.vd-btn--xs,
+.cd-btn--xs {
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 11px;
+}
+
+.admin-btn--xs {
+    min-height: 30px;
+    padding: 0;
+}
+
+.vd-btn--primary,
+.cd-btn--primary,
+.admin-btn--primary,
+.agr-btn--primary,
+.vd-btn-primary {
+    background: var(--ds-teal-dark);
+    border-color: var(--ds-teal-text);
+    color: #fff;
+}
+
+.vd-btn--primary:hover:not(:disabled),
+.cd-btn--primary:hover:not(:disabled),
+.admin-btn--primary:hover:not(:disabled),
+.agr-btn--primary:hover:not(:disabled),
+.vd-btn-primary:hover {
+    background: var(--ds-teal-text);
+}
+
+.vd-btn:disabled,
+.cd-btn:disabled,
+.admin-btn:disabled,
+.agr-btn:disabled,
+.dt-action-btn:disabled,
+.vd-upload-btn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.vd-upload-btn {
+    background: var(--ds-teal-dark);
+    min-height: 36px;
+    border-radius: var(--ds-r-md);
+    font-family: var(--ds-font);
+}
+
+.admin-form-submit {
+    min-height: 38px;
+    border-radius: var(--ds-r-md);
+    background: var(--ds-teal-dark);
+}
+
+.admin-form-submit:hover {
+    background: var(--ds-teal-text);
+}
+
+/* funnel CTAs keep their pill gradient, same palette */
+.wizard-btn--next,
+.wz-cta,
+.confirm-cta,
+.price-summary__cta,
+.am-submit,
+.seg-card__cta,
+.model-card__cta {
+    background: linear-gradient(135deg, #002b36, var(--ds-teal-dark));
+    color: #fff;
+    font-family: var(--ds-font);
+}
+
+.wizard-btn--back {
+    font-family: var(--ds-font);
+}
+
+/* Inputs */
+.vd-input,
+.cd-input,
+.wz-input,
+.admin-search-input,
+.admin-note-input,
+.admin-doc-note-input,
+.admin-form-field input,
+.admin-form-field select,
+.admin-config-edit input,
+.dt-search__input,
+.asgn-search-input,
+.ntf-send-form select,
+.ntf-send-form input,
+.ntf-send-form textarea,
+.adm-mob-search,
+.cd-mob-bookings__search {
+    min-height: 40px;
+    padding: 9px 12px;
+    border: 1px solid var(--ds-border-2);
+    border-radius: var(--ds-r-md);
+    background: var(--ds-surface);
+    color: var(--ds-text);
+    font: 400 var(--ds-fs-base)/1.4 var(--ds-font);
+}
+
+.vd-input:focus,
+.cd-input:focus,
+.wz-input:focus,
+.admin-search-input:focus,
+.admin-note-input:focus,
+.admin-form-field input:focus,
+.admin-form-field select:focus,
+.dt-search__input:focus,
+.adm-mob-search:focus,
+.cd-mob-bookings__search:focus {
+    border-color: var(--ds-teal);
+    box-shadow: 0 0 0 3px var(--ds-teal-light);
+    outline: none;
+}
+
+.vd-input:disabled,
+.cd-input:disabled,
+input:disabled,
+select:disabled {
+    background: var(--ds-surface-2);
+    color: var(--ds-muted);
+    cursor: not-allowed;
+}
+
+.vd-input.vd-textarea,
+.cd-input.cd-textarea {
+    min-height: 88px;
+}
+
+.vd-form-field label,
+.cd-form-field label,
+.admin-form-field label,
+.wz-label,
+.vd-field-label,
+.search-field__label {
+    font-size: var(--ds-fs-xs);
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    color: var(--ds-muted);
+}
+
+/* Cards */
+.vd-card,
+.cd-card,
+.admin-section-card,
+.wz-card,
+.addons-section,
+.promo-section,
+.confirm-card,
+.confirm-summary,
+.price-summary,
+.addons-recap,
+.vsp__filters,
+.cmp__sidebar,
+.vd-detail-panel,
+.agr-history {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-border);
+    border-radius: var(--ds-r-lg);
+    box-shadow: var(--ds-shadow-sm);
+}
+
+.vd-card,
+.cd-card,
+.admin-section-card {
+    padding: var(--ds-sp-5);
+    gap: var(--ds-sp-4);
+}
+
+.vd-card__title,
+.cd-card__title,
+.admin-section-card__header h3 {
+    font-size: var(--ds-fs-md);
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--ds-text);
+}
+
+.vd-card__sub,
+.admin-section-card__header p {
+    font-size: var(--ds-fs-sm);
+    color: var(--ds-muted);
+}
+
+.vd-sec-hd h2,
+.admin-sec-hd h2 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -.2px;
+}
+
+.cd-info-group,
+.vd-info-group {
+    background: var(--ds-surface-2);
+    border: 1px solid var(--ds-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+
+.cd-info-group__title,
+.vd-info-group__title,
+.admin-modal__section-label,
+.bk-modal__section-hd,
+.confirm-section h3 {
+    display: block;
+    font-size: var(--ds-fs-xs);
+    font-weight: 700;
+    letter-spacing: .7px;
+    text-transform: uppercase;
+    color: var(--ds-teal-text);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--ds-border);
+    margin-bottom: 6px;
+}
+
+.vd-info-pair,
+.cd-info-row {
+    font-size: 13px;
+    padding: 5px 0;
+}
+
+.vd-info-pair span,
+.cd-info-row__lbl {
+    color: var(--ds-text-2);
+}
+
+/* Status badges: one size everywhere */
+.vd-badge,
+.admin-status-badge,
+.dt-badge,
+.wz-badge,
+.cd-kyc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: var(--ds-r-pill);
+    font-size: var(--ds-fs-xs);
+    font-weight: 700;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.admin-status-badge--sm {
+    font-size: 10px;
+    padding: 2px 7px;
+}
+
+/* Tables */
+.dt-wrapper {
+    border-radius: var(--ds-r-lg);
+    box-shadow: var(--ds-shadow-sm);
+    max-width: 100%;
+}
+
+.dt-th {
+    font-size: var(--ds-fs-xs);
+    padding: 10px 14px;
+}
+
+.dt-td {
+    font-size: 13px;
+    padding: 12px 14px;
+}
+
+.dt-mono,
+.admin-booking-ref,
+.cd-booking-ref,
+.vd-booking-row__id,
+.bk-card__ref,
+.bk-modal__ref {
+    font-family: var(--ds-font-mono);
+}
+
+.dt-pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.dt-pagination__info {
+    white-space: normal;
+}
+
+.admin-data-table {
+    overflow-x: auto;
+}
+
+/* Filters / pills */
+.cd-filter-dropdown__trigger,
+.dt-filter-pill__btn {
+    min-height: 36px;
+    border-radius: var(--ds-r-md);
+    font-family: var(--ds-font);
+}
+
+.adm-mob-pill,
+.cd-mob-bookings__pill {
+    min-height: 34px;
+    font-family: var(--ds-font);
+}
+
+/* Empty / loading / error */
+.vd-empty,
+.cd-empty,
+.admin-empty,
+.ssp__empty,
+.cmp__empty {
+    border-radius: var(--ds-r-lg);
+    padding: 48px 24px;
+    color: var(--ds-muted);
+}
+
+.vd-loading,
+.cd-loading,
+.admin-loading {
+    border-radius: var(--ds-r-lg);
+    padding: 64px 24px;
+    color: var(--ds-muted);
+}
+
+.vd-error,
+.cd-error,
+.admin-error,
+.wizard-error,
+.am-alert--error {
+    border-radius: var(--ds-r-md);
+    font-size: 13px;
+}
+
+/* Toasts */
+.vd-toast,
+.cd-toast {
+    border-radius: 10px;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    font-family: var(--ds-font);
+}
+
+/* Config rows, forms inside admin */
+.admin-config-edit {
+    flex-wrap: wrap;
+}
+
+/* ─── 4. MODALS: one look, bottom-sheet on phones ───────────────────── */
+.vd-modal-overlay,
+.admin-modal-overlay,
+.cd-modal-backdrop,
+.agr-backdrop,
+.am-backdrop,
+.asgn-modal-overlay,
+.navbar__booking-overlay {
+    background: rgba(0, 16, 22, .62);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.vd-modal,
+.admin-modal,
+.cd-modal,
+.agr-modal,
+.am-modal,
+.asgn-modal {
+    border-radius: var(--ds-r-xl);
+    box-shadow: var(--ds-shadow-pop);
+    font-family: var(--ds-font);
+}
+
+.vd-modal__head,
+.admin-modal__head,
+.cd-modal__head,
+.agr-modal__head,
+.asgn-modal__head {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--ds-border);
+    background: var(--ds-surface);
+}
+
+.cd-modal__title,
+.agr-modal__title {
+    font-size: var(--ds-fs-lg);
+    font-weight: 700;
+}
+
+.cd-modal__body,
+.agr-modal__body {
+    min-height: 0;
+}
+
+.cd-modal__foot,
+.agr-modal__foot {
+    padding: 14px 20px;
+}
+
+.cd-modal__close,
+.agr-modal__close,
+.am-close {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--ds-r-md);
+}
+
+.vd-close-btn {
+    min-height: 34px;
+    border-radius: var(--ds-r-md);
+    font-family: var(--ds-font);
+}
+
+@supports (height: 100dvh) {
+
+    .cd-modal,
+    .agr-modal,
+    .am-modal {
+        max-height: 90dvh;
+    }
+
+    .navbar__booking-panel {
+        max-height: calc(100dvh - 100px);
+    }
+}
+
+/* ─── 5. PAGE-SPECIFIC FIXES ────────────────────────────────────────── */
+/* Home (landing): same teal accent, readable text */
+.home {
+    --h-amber: var(--ds-teal);
+    --h-amber2: var(--ds-teal-mid);
+    font-family: var(--ds-font);
+}
+
+.home__orb--amber {
+    background: radial-gradient(ellipse, rgba(13, 184, 158, .18), transparent 65%);
+}
+
+.home__btn-primary {
+    color: #fff;
+    min-height: 48px;
+    font-family: var(--ds-font);
+}
+
+.home__feature p {
+    color: var(--ds-text-2);
+}
+
+.home__footer {
+    background: var(--ds-brand-gradient);
+}
+
+.home__footer-brand p {
+    color: rgba(255, 255, 255, .7);
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.home__footer-links {
+    flex-wrap: wrap;
+    row-gap: 8px;
+}
+
+/* Search widget */
+.search-widget__toggle-label {
+    color: var(--ds-text-2);
+}
+
+.search-widget__submit {
+    color: #fff;
+    min-height: 52px;
+    font-family: var(--ds-font);
+}
+
+.search-field input,
+.search-field select {
+    min-width: 0;
+    max-width: 100%;
+    min-height: 46px;
+    font-family: var(--ds-font);
+}
+
+.search-field input:focus,
+.search-field select:focus {
+    border-color: var(--ds-teal);
+    box-shadow: 0 0 0 3px var(--ds-teal-light);
+}
+
+.search-widget__header h2 {
+    font-family: var(--ds-font-display);
+}
+
+/* Wizard shell */
+.wizard-page__inner,
+.confirm-page__inner {
+    padding-top: calc(var(--ds-nav-h) + 24px);
+}
+
+.wizard-progress__step.active {
+    background: var(--ds-teal-light);
+    color: var(--ds-teal-text);
+}
+
+.wizard-progress__step.active span {
+    background: var(--ds-teal-dark);
+}
+
+.price-summary,
+.confirm-summary,
+.vsp__filters,
+.cmp__sidebar {
+    top: calc(var(--ds-nav-h) + 16px);
+}
+
+.seg-card,
+.model-card {
+    font-family: var(--ds-font);
+}
+
+/* Confirm page: these classes had no CSS at all */
+.payment-type-section,
+.payment-method-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.payment-type-label,
+.payment-method-label {
+    margin: 0;
+    font-size: var(--ds-fs-xs);
+    font-weight: 700;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    color: var(--ds-muted);
+}
+
+.payment-type-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.payment-method-buttons {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.payment-type-btn,
+.payment-method-btn {
+    min-height: 48px;
+    padding: 10px 12px;
+    text-align: center;
+    cursor: pointer;
+    border: 1.5px solid var(--ds-border-2);
+    border-radius: var(--ds-r-md);
+    background: var(--ds-surface-2);
+    color: var(--ds-text);
+    font: 600 13px/1.3 var(--ds-font);
+    transition: border-color .15s, background .15s;
+}
+
+.payment-type-btn small {
+    display: block;
+    margin-top: 2px;
+    font-weight: 700;
+    color: var(--ds-text-2);
+}
+
+.payment-type-btn:hover,
+.payment-method-btn:hover {
+    border-color: var(--ds-teal);
+}
+
+.payment-type-btn.active,
+.payment-method-btn.active {
+    border-color: var(--ds-teal-dark);
+    background: var(--ds-teal-light);
+    box-shadow: 0 0 0 1px var(--ds-teal-dark);
+    color: var(--ds-teal-text);
+}
+
+/* Notifications dropdown */
+.ntf-dropdown {
+    border-radius: var(--ds-r-lg);
+    font-family: var(--ds-font);
+}
+
+/* ─── 6. RESPONSIVE ─────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+    :root {
+        --ds-page-pad: 20px;
+    }
+
+    .navbar {
+        padding: 0 var(--ds-sp-4);
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --ds-nav-h: 52px;
+        --ds-page-pad: 16px;
+    }
+
+    /* shells: single, consistent top offset (fixes the vendor double gap) */
+    .vd .page-shell,
+    .admin-dash .page-shell,
+    .cd__shell {
+        margin-left: 0;
+        padding-top: var(--ds-nav-h);
+        margin-top: 0;
+    }
+
+    .cd__inner,
+    .vd__inner,
+    .admin-dash__inner {
+        gap: var(--ds-sp-3);
+    }
+
+    .navbar {
+        padding: 0 var(--ds-sp-3) 0 56px;
+    }
+
+    body:not(:has(.sidebar__hamburger)) .navbar {
+        padding-left: var(--ds-sp-4);
+    }
+
+    .navbar__brand-text {
+        font-size: 18px;
+    }
+
+    .cd .navbar__brand-text,
+    .vd .navbar__brand-text,
+    .admin-dash .navbar__brand-text {
+        margin-left: 0;
+    }
+
+    .sidebar__hamburger {
+        top: calc((var(--ds-nav-h) - 40px) / 2);
+        left: 8px;
+        width: 40px;
+        height: 40px;
+    }
+
+    .sidebar {
+        width: min(280px, 82vw);
+        padding: 16px 12px calc(16px + env(safe-area-inset-bottom));
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .sidebar__nav {
+        flex: 0 0 auto;
+        gap: 4px;
+    }
+
+    .sidebar__item {
+        min-width: 230px;
+        height: 44px;
+        border-radius: 10px;
+    }
+
+    .sidebar__bottom {
+        margin-top: auto;
+        padding-top: 12px;
+    }
+
+    .sidebar--open {
+        box-shadow: var(--ds-shadow-lg);
+    }
+
+    /* hero → stacked */
+    .cd__hero-body,
+    .vd__hero-body,
+    .admin-dash__hero-body {
+        flex-direction: column;
+        align-items: stretch;
+        padding: var(--ds-sp-4);
+        gap: var(--ds-sp-3);
+    }
+
+    .cd__hero-avatar,
+    .vd__hero-avatar,
+    .admin-dash__hero-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        font-size: 16px;
+    }
+
+    .cd__kpis,
+    .vd__kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        justify-content: stretch;
+        flex: none;
+        width: 100%;
+    }
+
+    .admin-dash__hero-sub {
+        display: block;
+        font-size: 11px;
+        max-width: none;
+    }
+
+    /* cards */
+    .vd-card,
+    .cd-card,
+    .admin-section-card {
+        padding: 14px 16px;
+        gap: 12px;
+    }
+
+    .vd-sec-hd h2,
+    .admin-sec-hd h2 {
+        font-size: var(--ds-fs-md);
+    }
+
+    /* tables stay horizontally scrollable *inside* their wrapper only */
+    .dt-th,
+    .dt-td {
+        padding: 10px;
+    }
+
+    .dt-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .dt-search {
+        max-width: none;
+    }
+
+    /* wizard progress: numbers only, active step keeps its label */
+    .wizard-progress {
+        padding: 4px;
+    }
+
+    .wizard-progress__step {
+        flex: 0 0 auto;
+        padding: 8px 10px;
+        font-size: 12px;
+    }
+
+    .wizard-progress__step:not(.active) {
+        font-size: 0;
+        gap: 0;
+    }
+
+    .wizard-progress__step:not(.active) span {
+        font-size: 11px;
+    }
+
+    .wizard-page__inner,
+    .confirm-page__inner {
+        padding-left: 16px;
+        padding-right: 16px;
+        padding-bottom: calc(40px + env(safe-area-inset-bottom));
+    }
+
+    /* all inputs ≥16px so iOS never zooms; larger tap targets */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+    select,
+    textarea {
+        font-size: 16px;
+    }
+
+    input.agr-otp-input[type="text"] {
+        font-size: 20px;
+    }
+
+    .vd-input,
+    .cd-input,
+    .wz-input,
+    .admin-search-input,
+    .admin-note-input,
+    .admin-form-field input,
+    .admin-form-field select,
+    .dt-search__input {
+        min-height: 44px;
+    }
+
+    .vd-btn,
+    .cd-btn,
+    .admin-btn,
+    .agr-btn {
+        min-height: 42px;
+    }
+
+    .vd-btn--sm,
+    .cd-btn--sm,
+    .admin-btn--sm,
+    .agr-btn--sm {
+        min-height: 38px;
+    }
+
+    .vd-btn--xs,
+    .cd-btn--xs,
+    .admin-btn--xs {
+        min-height: 36px;
+    }
+
+    .admin-btn--xs {
+        min-width: 36px;
+    }
+
+    .dt-action-btn {
+        min-height: 36px;
+    }
+
+    .dt-page-btn {
+        min-width: 40px;
+        height: 40px;
+    }
+
+    .admin-form-submit {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    .ds-grid-2 {
+        gap: 10px;
+    }
+}
+
+@media (max-width: 640px) {
+
+    /* every modal becomes a bottom sheet */
+    .vd-modal-overlay,
+    .admin-modal-overlay,
+    .cd-modal-backdrop,
+    .agr-backdrop,
+    .asgn-modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .vd-modal,
+    .admin-modal,
+    .cd-modal,
+    .agr-modal,
+    .asgn-modal {
+        width: 100%;
+        max-width: 100%;
+        max-height: 92vh;
+        border-radius: var(--ds-r-xl) var(--ds-r-xl) 0 0;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    @supports (height: 100dvh) {
+
+        .vd-modal,
+        .admin-modal,
+        .cd-modal,
+        .agr-modal,
+        .asgn-modal {
+            max-height: 92dvh;
+        }
+    }
+
+    .admin-modal {
+        overflow-x: hidden;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .admin-modal__head,
+    .vd-modal__head {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        padding: 14px 16px;
+    }
+
+    .admin-modal__body,
+    .bk-modal__body,
+    .user-modal__body {
+        max-height: none;
+        overflow: visible;
+    }
+
+    /* inline max-height caps in a few JSX modals would create a second scroller */
+    .vd-modal [style*="max-height: 52vh"],
+    .vd-modal [style*="max-height: 65vh"],
+    .admin-modal [style*="max-height: 60vh"] {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .cd-modal__head,
+    .agr-modal__head,
+    .asgn-modal__head {
+        padding: 14px 16px;
+    }
+
+    .cd-modal__foot,
+    .agr-modal__foot {
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    }
+
+    .cd-modal__close,
+    .agr-modal__close,
+    .am-close {
+        width: 40px;
+        height: 40px;
+    }
+
+    /* dropdown menus → full-width sheets, never off-screen */
+    .dt-filter-pill__menu {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        top: auto;
+        min-width: 0;
+        max-height: 60vh;
+        overflow-y: auto;
+        z-index: 1000;
+    }
+
+    .ntf-dropdown {
+        position: fixed;
+        top: calc(var(--ds-nav-h) + 6px);
+        left: 8px;
+        right: 8px;
+        width: auto;
+        max-height: 70vh;
+    }
+
+    .navbar__booking-overlay {
+        padding: calc(var(--ds-nav-h) + 6px) 8px 8px;
+    }
+
+    /* legacy div-grids that can't wrap */
+    .admin-data-table__header,
+    .admin-data-table__row {
+        min-width: 520px;
+    }
+
+    .payment-type-buttons {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .agr-sig-block {
+        grid-template-columns: 1fr;
+    }
+
+    .ds-grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        --ds-page-pad: 12px;
+    }
+
+    .navbar__booking-label {
+        display: none;
+    }
+
+    .navbar__booking-btn {
+        width: 36px;
+        padding: 0;
+        justify-content: center;
+        font-size: 16px;
+    }
+
+    .ntf-bell {
+        width: 40px;
+        height: 40px;
+    }
+
+    .cd__hero-body,
+    .vd__hero-body,
+    .admin-dash__hero-body {
+        padding: 14px;
+    }
+
+    .vd-card,
+    .cd-card,
+    .admin-section-card {
+        padding: 12px 14px;
+    }
+
+    .home__stats {
+        gap: 0;
+    }
+
+    .vd-toast,
+    .cd-toast {
+        left: 12px;
+        right: 12px;
+        bottom: calc(16px + env(safe-area-inset-bottom));
+        max-width: none;
+    }
+
+    .wizard-btn--back,
+    .wizard-btn--next {
+        min-height: 48px;
+    }
+}
+
+@media (max-width: 360px) {
+    :root {
+        --ds-page-pad: 10px;
+    }
+
+    .navbar__brand-text {
+        font-size: 16px;
+    }
+
+    .cd__kpi,
+    .vd__kpi {
+        padding: 8px 10px;
+    }
+}
+
+/* short landscape phones */
+@media (max-height: 500px) and (max-width: 900px) {
+
+    .cd__hero-body,
+    .vd__hero-body,
+    .admin-dash__hero-body {
+        padding: 10px 14px;
+    }
+}
+
+/* ─── 7. TOUCH & ACCESSIBILITY ──────────────────────────────────────── */
+@media (pointer: coarse) {
+    .sidebar__item {
+        min-width: 230px;
+        min-height: 44px;
+    }
+
+    .vd-subtab,
+    .vd-filter-btn,
+    .cd-filter-btn {
+        min-height: 38px;
+    }
+
+    .cd-filter-dropdown__trigger,
+    .dt-filter-pill__btn {
+        min-height: 40px;
+    }
+
+    .adm-mob-pill,
+    .cd-mob-bookings__pill {
+        min-height: 38px;
+    }
+
+    input[type="checkbox"],
+    input[type="radio"] {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

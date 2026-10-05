@@ -16,7 +16,7 @@
     --ntf-acc-l: var(--teal-light, #E6F7F5);
     --ntf-acc-d: var(--teal-dark, #0A9E87);
     --ntf-red: #EF4444;
-    font-family: 'Inter', -apple-system, sans-serif;
+    font-family: var(--ds-font);
 }
 
 /* ── Bell button (lives inside navbar__right) ── */

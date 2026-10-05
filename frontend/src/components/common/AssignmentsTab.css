@@ -7,7 +7,7 @@
     display: flex;
     flex-direction: column;
     gap: 18px;
-    font-family: 'Inter', -apple-system, sans-serif;
+    font-family: var(--ds-font);
     font-size: 13px;
     color: var(--vt, #111827);
 }
@@ -82,7 +82,7 @@
     border-radius: 999px;
     cursor: pointer;
     font-size: 12px;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
 }
 
 /* ── Scope Pill ─────────────────────────────────────────────────────── */
@@ -127,7 +127,7 @@
     background: var(--vs2, #F8FAFB);
     color: var(--vm, #9CA3AF);
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: background 0.14s, color 0.14s;
     border-right: 1px solid var(--vbdr2, #D5DEE8);
 }
@@ -148,7 +148,7 @@
     background: var(--vs2, #F8FAFB);
     color: var(--vt2, #4B5563);
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: all 0.14s;
 }
 
@@ -334,7 +334,7 @@
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: background 0.14s;
     text-align: center;
 }
@@ -393,7 +393,7 @@
     line-height: 1;
     opacity: 0.6;
     transition: opacity 0.12s;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
 }
 
 .asgn-vendor-chip__remove:hover { opacity: 1; }
@@ -482,7 +482,7 @@
     padding: 5px 8px;
     font-size: 12px;
     outline: none;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     -webkit-appearance: none;
     cursor: pointer;
     min-width: 160px;
@@ -502,7 +502,7 @@
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: background 0.14s, opacity 0.14s;
     white-space: nowrap;
 }
@@ -531,7 +531,7 @@
     background: var(--vs2, #F8FAFB);
     color: var(--vt2, #4B5563);
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: all 0.13s;
 }
 
@@ -557,7 +557,7 @@
     padding: 7px 12px;
     font-size: 12px;
     outline: none;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: border-color 0.14s, box-shadow 0.14s;
     max-width: 320px;
 }
@@ -655,7 +655,7 @@
     background: var(--vs, #fff);
     color: var(--vt2, #4B5563);
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: all 0.13s;
     flex-shrink: 0;
 }
@@ -756,7 +756,7 @@
     font-size: 12px;
     font-weight: 600;
     color: var(--vm, #9CA3AF);
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     flex-shrink: 0;
     transition: all 0.13s;
 }
@@ -795,7 +795,7 @@
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: background 0.14s;
 }
 
@@ -811,7 +811,7 @@
     font-weight: 600;
     cursor: pointer;
     color: var(--vt2, #4B5563);
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
 }
 
 /* History rows */
@@ -884,7 +884,7 @@
     padding: 8px 11px;
     font-size: 13px;
     outline: none;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ds-font);
     transition: border-color 0.14s, box-shadow 0.14s;
     resize: vertical;
 }

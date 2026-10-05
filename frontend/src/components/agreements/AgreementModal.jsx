@@ -225,7 +225,7 @@ export function AgreementViewModal({ booking, acceptance, onClose }) {
                                         style={{
                                             fontFamily:
                                                 label === 'Agreement' || label === 'IP Address'
-                                                    ? 'DM Mono, monospace'
+                                                    ? 'var(--ds-font-mono)'
                                                     : 'inherit',
                                         }}
                                     >

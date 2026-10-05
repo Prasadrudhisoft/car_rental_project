@@ -74,7 +74,7 @@ export default function OverviewTab({
                     const s = STATUS_CLR[b.status] || { bg: '#F3F4F6', color: '#6B7280', border: '#D1D5DB' };
                     return (
                         <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--vbdr)' }}>
-                            <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 700, color: 'var(--vacc)', flex: 1 }}>
+                            <span style={{ fontFamily: 'var(--ds-font-mono)', fontSize: 12, fontWeight: 700, color: 'var(--vacc)', flex: 1 }}>
                                 {b.booking_ref}
                             </span>
                             <span className="vd-badge" style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}` }}>{b.status}</span>

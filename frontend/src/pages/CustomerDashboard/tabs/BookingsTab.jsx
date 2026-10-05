@@ -155,7 +155,7 @@ export default function BookingsTab({ bookings, onViewBooking }) {
             key: 'booking_ref', label: 'Booking Ref', sortable: true, width: 150,
             render: v => (
                 <span style={{
-                    fontFamily: 'JetBrains Mono, monospace',
+                    fontFamily: 'var(--ds-font-mono)',
                     fontSize: 12, fontWeight: 700,
                     color: 'var(--cd-acc)',
                 }}>
@@ -172,7 +172,7 @@ export default function BookingsTab({ bookings, onViewBooking }) {
                     </span>
                     <span
                         className="dt-cell-stack__secondary"
-                        style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10 }}
+                        style={{ fontFamily: 'var(--ds-font-mono)', fontSize: 10 }}
                     >
                         {row.vehicle?.plate_number || ''}
                     </span>

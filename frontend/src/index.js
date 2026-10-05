@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 import 'leaflet/dist/leaflet.css';
+import './styles/design-system.css';   // ← must stay last
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
