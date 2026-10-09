@@ -126,6 +126,10 @@ class PricePreviewView(APIView):
     permission_classes = [permissions.AllowAny]
  
     def post(self, request):
+
+        if request.user.is_authenticated and getattr(request.user, 'role', None) != 'customer':
+            return Response({'error': 'Bookings are available to customer accounts only.'}, status=403)        
+        
         vehicle_id   = request.data.get("vehicle_id")
         pickup_date  = request.data.get("pickup_date")
         return_date  = request.data.get("return_date")
@@ -162,6 +166,11 @@ class PricePreviewView(APIView):
             pickup_time     = pickup_time,
             return_time     = return_time,
         )
+
+        date_range = [p_date + datetime.timedelta(days=i) for i in range(days + 1)]
+        breakdown['available'] = not VehicleAvailability.objects.filter(
+            vehicle=vehicle, blocked_date__in=date_range).exists()      
+          
         breakdown['vendor_opening_time'] = opening
         breakdown['vendor_closing_time'] = closing
         return Response(breakdown)
@@ -1196,6 +1205,10 @@ class DummyPaymentView(APIView):
                 if request.user != booking.customer and request.user != booking.vendor \
                         and getattr(request.user, 'role', None) != 'admin':
                     return Response({'error': 'Not authorised.'}, status=403)
+                
+                if request.user == booking.customer and method != 'online':
+                    return Response({'error': 'Only online payment is accepted.'}, status=400)
+                
                 if booking.status in ('CANCELLED', 'COMPLETED'):
                     return Response({'error': f'Cannot take payment on a {booking.status.lower()} booking.'}, status=400)
 

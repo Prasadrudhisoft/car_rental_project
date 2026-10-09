@@ -415,7 +415,9 @@ class VehicleSearchView(generics.ListAPIView):
             status='LIVE',
             current_city_id=city,
             is_blacklisted=False,
-        ).exclude(id__in=blocked_ids).select_related('city', 'current_city', 'vendor__vendor_profile').prefetch_related('photos')
+        ).exclude(id__in=blocked_ids).select_related(
+            'city', 'current_city', 'pickup_location',
+            'vendor__vendor_profile__pickup_location',).prefetch_related('photos')
  
         # Optional filters
         if p.get("segment"):

@@ -42,6 +42,8 @@ class VehicleListSerializer(serializers.ModelSerializer):
     current_city_name = serializers.CharField(source="current_city.name", read_only=True)
     vendor_name  = serializers.CharField(source="vendor.vendor_profile.business_name",
                                          read_only=True)
+    vendor_profile = serializers.SerializerMethodField()
+    pickup_point   = serializers.SerializerMethodField()
     segment_display = serializers.CharField(source="get_segment_display", read_only=True)
     fuel_display    = serializers.CharField(source="get_fuel_type_display", read_only=True)
     transmission_display = serializers.CharField(
@@ -52,7 +54,37 @@ class VehicleListSerializer(serializers.ModelSerializer):
         fields = ['id', 'make', 'model', 'year', 'segment', 'segment_display',
                   'fuel_type', 'fuel_display', 'transmission', 'transmission_display',
                   'capacity', 'daily_rate', 'city_name', 'current_city_name', 'status',
-                  'is_certified', 'cover_photo', 'vendor_name', 'vehicle_id_code']
+                  'is_certified', 'cover_photo', 'vendor_name', 'vendor_profile', 'pickup_point', 'vehicle_id_code']
+
+    @staticmethod
+    def _pickup_loc(obj):
+        # same priority BookingCreateView uses, so what the customer sees is what gets booked
+        return obj.pickup_location or getattr(getattr(obj.vendor, 'vendor_profile', None), 'pickup_location', None)
+
+    def get_pickup_point(self, obj):
+        loc = self._pickup_loc(obj)
+        if not loc:
+            return None
+        return {
+            'id': loc.id, 'name': loc.name, 'address': loc.address or '',
+            'latitude':  str(loc.latitude)  if loc.latitude  is not None else None,
+            'longitude': str(loc.longitude) if loc.longitude is not None else None,
+        }
+
+    def get_vendor_profile(self, obj):
+        p = getattr(obj.vendor, 'vendor_profile', None)
+        if not p:
+            return None
+        fmt = lambda t: t.strftime('%H:%M') if t else ''
+        return {
+            'business_name':     p.business_name,
+            'rating':            str(p.rating),
+            'shop_opening_time': fmt(p.shop_opening_time),
+            'shop_closing_time': fmt(p.shop_closing_time),
+            'latitude':          p.latitude,
+            'longitude':         p.longitude,
+            'address':           ', '.join(x for x in [p.addr_line1, p.addr_line2, p.addr_line3, p.pincode] if x),
+        }
  
     def get_cover_photo(self, obj):
         photos = list(obj.photos.all())          # served from prefetch_related, no query
