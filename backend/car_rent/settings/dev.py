@@ -2,6 +2,9 @@ from .base import *
  
 DEBUG = True
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
+# THE dummy-payment switch. Set PAYMENT_DUMMY_ENABLED=False in .env to test real Razorpay locally.
+PAYMENT_DUMMY_ENABLED = config('PAYMENT_DUMMY_ENABLED', default=True, cast=bool)
  
 # SQLite — no database server needed for development
 DATABASES = {

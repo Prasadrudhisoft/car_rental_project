@@ -10,6 +10,7 @@ import { calculatePrice, validatePromo } from '../../services/api';
 import { WizardShell, WizardProgress, buildSteps, useAuthModal } from './BookingShared';
 import { calcNights, segIcon }        from './bookingConstants';
 import { AddonGrid, PromoSection, PriceSummary } from './AddonsComponents';
+import ModifyBookingModal from './ModifyBookingModal';
 import './AddonsPage.css';
 import '../BookingWizard.css';
 
@@ -26,6 +27,7 @@ export default function AddonsPage() {
     const [promoMsg,      setPromoMsg]      = useState('');
     const [promoLoading,  setPromoLoading]  = useState(false);
     const [addons,        setAddons]        = useState([]);
+    const [showModify, setShowModify] = useState(false);
 
     useEffect(() => {
         if (!booking.selectedVehicle) navigate('/');
@@ -50,6 +52,9 @@ export default function AddonsPage() {
                     one_way_fee: booking.oneWayFee   || 0,
                 });
                 setPricing(data);
+                if (data.available === false) {
+                    setPriceError('This vehicle is not available for the selected dates. Modify your booking or choose another vehicle.');
+                }                
                 update({ pricingBreakdown: data, selectedAddons: addons });
             } catch {
                 setPriceError('Could not calculate price. Please check your connection.');
@@ -57,7 +62,7 @@ export default function AddonsPage() {
             } finally { setLoadingPrice(false); }
         };
         fetchPrice();
-    }, [addons, v?.id, booking.pickupDate, booking.returnDate, booking.oneWayFee]); // eslint-disable-line
+    }, [addons, v?.id, booking.pickupDate, booking.returnDate, booking.pickupTime, booking.returnTime, booking.oneWayFee]);
 
     if (!v) return null;
 
@@ -90,6 +95,7 @@ export default function AddonsPage() {
     // ── CTA ───────────────────────────────────────────────────────────────────
     const handleConfirm = () => {
         if (!user) { openAuth(); return; }
+        if (booking.isDifferentReturn && !booking.returnLocation) { navigate('/book/return-vendor'); return; }
         navigate('/book/confirm');
     };
 
@@ -122,21 +128,23 @@ export default function AddonsPage() {
                             ← Change
                         </button>
                     </div>
+                    
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <button className="addons-recap__change" onClick={() => setShowModify(true)}>
+                            ✎ Modify booking details
+                        </button>
+                    </div>
 
                     {/* Trip recap strip */}
                     <div className="addons-trip-recap">
                         <div className="addons-trip-recap__item">
                             <span>📍 Pickup</span>
-                            <strong>
-                                {booking.pickupLocation?.name}, {booking.pickupCity?.name}
-                            </strong>
+                            <strong>{[booking.pickupLocation?.name, booking.pickupLocation?.address].filter(Boolean).join(', ') || '—'}</strong>
                         </div>
                         {booking.isDifferentReturn && booking.returnLocation && (
                             <div className="addons-trip-recap__item">
                                 <span>🏁 Return</span>
-                                <strong>
-                                    {booking.returnLocation.name}, {booking.returnCity?.name}
-                                </strong>
+                                <strong>{[booking.returnLocation.name, booking.returnLocation.address].filter(Boolean).join(', ')}</strong>
                             </div>
                         )}
                         <div className="addons-trip-recap__item">
@@ -158,11 +166,11 @@ export default function AddonsPage() {
                     </div>
 
                     {/* Add-ons grid */}
-                    <AddonGrid
+                    {/* <AddonGrid
                         addons={addons}
                         onToggle={toggleAddon}
                         addonPrices={pricing?.addon_breakdown}
-                    />
+                    /> */}
 
                     {/* Promo */}
                     <PromoSection
@@ -185,12 +193,12 @@ export default function AddonsPage() {
                         addons={addons}
                         promoDiscount={booking.promoDiscount || 0}
                         isLoggedIn={!!user}
-                        ctaDisabled={loadingPrice || !pricing || (pricing?.min_rental_days > 1 && nights < pricing.min_rental_days)}
+                        ctaDisabled={loadingPrice || !pricing || (pricing?.min_rental_days > 1 && nights < pricing.min_rental_days || pricing?.available === false)}
                         onCTA={handleConfirm}
                     />
                 </aside>
             </div>
-
+            {showModify && <ModifyBookingModal onClose={() => setShowModify(false)} />}
             {AuthModalEl}
         </WizardShell>
     );

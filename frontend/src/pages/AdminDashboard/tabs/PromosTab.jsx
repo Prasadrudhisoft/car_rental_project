@@ -50,7 +50,7 @@ export default function PromosTab({ promos, formLoading, onAddPromo, onDeletePro
                 emptyIcon="🎁"
                 emptyMessage="No promo codes yet."
                 pageSize={15}
-                extraActions={[{ label: "✕ Delete", className: "dt-action-btn--danger", onClick: (row) => onDeletePromo(row.id) }]}
+                extraActions={[{ label: "✕ Delete", className: "dt-action-btn--danger", onClick: (row) => onDeletePromo(row.id, row.code) }]}
             />
         </div>
     );

@@ -111,14 +111,12 @@ export default function PaymentModal({ booking, detail, onClose, onSuccess, show
                             Payment Method
                         </p>
                         <div className="cd-payment-modes">
-                            {[
-                                ['online', 'Online Payment', 'UPI, Cards, Net Banking'],
-                                ['cash',   'Cash',           'Pay at vendor location'],
-                            ].map(([val, label, sub]) => (
+                                {[['online', 'Online Payment', 'UPI, Cards, Net Banking']]
+                                .map(([val, label, sub]) => (
                                 <button
                                     key={val}
                                     className={`cd-payment-mode${method === val ? ' active' : ''}`}
-                                    onClick={() => setMethod(val)}
+                                    onClick={() => {}}
                                 >
                                     <span className={`payment-icon ${val}`}></span>
                                     <div>

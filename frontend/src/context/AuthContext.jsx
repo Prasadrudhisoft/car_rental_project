@@ -40,8 +40,8 @@ export function AuthProvider({ children }) {
 
     useEffect(() => { fetchMe(); }, [fetchMe]);
 
-    const login = async (email, password) => {
-        const { data } = await apiLogin(email, password);
+    const login = async (email, password, role) => {
+        const { data } = await apiLogin(email, password, role);
         localStorage.setItem('access_token', data.access);
         localStorage.setItem('refresh_token', data.refresh);
         const me = await getMe();

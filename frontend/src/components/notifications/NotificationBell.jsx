@@ -18,7 +18,7 @@ export default function NotificationBell() {
     const lastSeenIdRef = useRef(null);
     const wrapRef = useRef(null);
 
-    if (document.hidden) return;
+
 
     const pollCount = useCallback(async () => {
         try {

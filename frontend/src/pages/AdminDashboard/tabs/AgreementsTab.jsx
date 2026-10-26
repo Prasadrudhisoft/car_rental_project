@@ -186,7 +186,7 @@ export default function AgreementsTab({
                 {/* Edit form */}
                 {editingVersion && (
                     <form onSubmit={handleUpdate} style={{ background:"#FFFBEB", border:"1px solid #FCD34D", borderRadius:12, padding:"18px 20px", display:"flex", flexDirection:"column", gap:12, marginBottom:16 }}>
-                        <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", color:"#D97706" }}>Editing {editingVersion.version_tag}</div>
+                        <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", color:"#D97706" }}>Agreement {editingVersion.version_tag}</div>
                         <div className="admin-form-field">
                             <label>Title</label>
                             <input type="text" value={editingVersion.title} onChange={e=>setEditingVersion(p=>({...p,title:e.target.value}))}/>
@@ -200,7 +200,7 @@ export default function AgreementsTab({
                             <textarea rows={10} value={editingVersion.content} onChange={e=>setEditingVersion(p=>({...p,content:e.target.value}))} style={textareaStyle}/>
                         </div>
                         <div style={{ display:"flex", gap:8 }}>
-                            <button type="submit" className="admin-form-submit" disabled={agreementFormLoading}>{agreementFormLoading?"…":"Save Changes"}</button>
+                            {/* <button type="submit" className="admin-form-submit" disabled={agreementFormLoading}>{agreementFormLoading?"…":"Save Changes"}</button> */}
                             <button type="button" className="admin-btn admin-btn--ghost" onClick={()=>setEditingVersion(null)}>Cancel</button>
                         </div>
                     </form>
@@ -223,7 +223,7 @@ export default function AgreementsTab({
                             </div>
                             <div style={{ display:"flex", gap:6 }}>
                                 {!v.is_active && <button className="admin-btn admin-btn--success" onClick={()=>onActivateAgreement(v.id,v.version_tag)}>✓ Activate</button>}
-                                <button className="admin-btn admin-btn--ghost" onClick={()=>{ setEditingVersion({...v}); setShowCreate(false); }}>✏ Edit</button>
+                                <button className="admin-btn admin-btn--ghost" onClick={()=>{ setEditingVersion({...v}); setShowCreate(false); }}>View</button>
                             </div>
                         </div>
                     ))}

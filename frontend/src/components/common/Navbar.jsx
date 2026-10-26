@@ -25,9 +25,11 @@ const ICONS = {
             <path d="M7 2v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7zm12 6H5v12h14V8z" />
         </svg>
     ),
-    users: (
+    assignments: (
         <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M16 11c1.66 0 3-1.79 3-4s-1.34-4-3-4-3 1.79-3 4 1.34 4 3 4zM8 11c1.66 0 3-1.79 3-4S9.66 3 8 3 5 4.79 5 7s1.34 4 3 4zm0 2c-2.67 0-8 1.34-8 4v3h10v-3c0-2.66-5.33-4-8-4zm8 0c-.29 0-.62.02-.97.05C16.16 13.86 18 15.03 18 17v3h6v-3c0-2.66-5.33-4-8-4z" />
+            <path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <rect x="8" y="2" width="8" height="4" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+            <path d="m8 12 1.5 1.5L12 11M14 12h3M8 17h9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
     ),
     locations: (
@@ -56,7 +58,7 @@ const ICONS = {
         </svg>
     ),
     /* assignments icon — person with link/chain */
-    assignments: (
+    users: (
         <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
         </svg>
@@ -66,8 +68,7 @@ const ICONS = {
             <circle cx="12" cy="5" r="3" />
             <circle cx="5" cy="19" r="3" />
             <circle cx="19" cy="19" r="3" />
-            <path d="M12 8v4M8.5 17.5l-1.5-1.5M15.5 17.5l1.5-1.5M10 12l-3 4M14 12l3 4"
-                  stroke="currentColor" strokeWidth="1.5" fill="none" />
+            <path d="M12 8v4M8.5 17.5l-1.5-1.5M15.5 17.5l1.5-1.5M10 12l-3 4M14 12l3 4" stroke="currentColor" strokeWidth="1.5" fill="none" />
         </svg>
     ),
     profile: (
@@ -116,6 +117,14 @@ const ICONS = {
             <path d="M13.73 21a2 2 0 0 1-3.46 0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
     ),
+    personalization: (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 3a9 9 0 1 0 9 9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M12 7v5l3 2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <circle cx="18" cy="6" r="3" fill="none" stroke="currentColor" strokeWidth="1.8"/>
+        <path d="M18 4.5v3M16.5 6h3" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+    </svg>
+),
 };
 
 /* ── Sidebar items per role ──────────────────────────────────────────────── */
@@ -128,13 +137,13 @@ const SIDEBAR_ITEMS = {
         { id: 'users',        icon: ICONS.users,        tip: 'Users' },
         { id: 'locations',    icon: ICONS.locations,    tip: 'Locations' },
         { id: 'logistics',    icon: ICONS.logistics,    tip: 'Logistics' },
-        { id: 'config',       icon: ICONS.config,       tip: 'Config' },
+        { id: 'config',       icon: ICONS.config,       tip: 'Configuration' },
         { id: 'promos',       icon: ICONS.promos,       tip: 'Promos' },
         { id: 'agreements',   icon: ICONS.agreements,   tip: 'Agreements' },
         { id: 'reviews',      icon: ICONS.starIcon,     tip: 'Reviews' },
         { id: 'assignments',  icon: ICONS.assignments,  tip: 'Assignments' },
         { id: 'notifications',icon: ICONS.notifications,tip: 'Notifications' },
-        { id: 'personalization', icon: ICONS.config, tip: 'Personalization' },
+        { id: 'personalization', icon: ICONS.personalization, tip: 'Personalization' },
         
     ],
     vendor: [
@@ -308,60 +317,114 @@ export default function Navbar({ onLoginClick, breadcrumb, hideLogo = false }) {
         if (user && dashboardPath) { e.preventDefault(); navigate(dashboardPath); }
     };
 
-    return (
-        <>
-            <nav className={`navbar${scrolled ? ' navbar--scrolled' : ''}`}>
-                {breadcrumb ? (
-                    <div className="navbar__breadcrumb">
-                        {breadcrumb.map((crumb, i) => (
-                            <React.Fragment key={i}>
-                                {i > 0 && <span className="navbar__breadcrumb-sep">/</span>}
-                                {i < breadcrumb.length - 1
-                                    ? <Link to={crumb.href || '#'}>{crumb.label}</Link>
-                                    : <span className="navbar__breadcrumb-current">{crumb.label}</span>}
-                            </React.Fragment>
-                        ))}
-                    </div>
-                ) : (
-                    <Link to="/" className="navbar__brand" onClick={handleLogoClick}>
-                        {!hideLogo && <div className="navbar__brand-icon">⬡</div>}
-                        <span className="navbar__brand-text">RudhiDrive</span>
-                    </Link>
+    
+return (
+    <>
+        <nav className={`navbar${scrolled ? ' navbar--scrolled' : ''}`}>
+            {breadcrumb ? (
+                <div className="navbar__breadcrumb">
+                    {breadcrumb.map((crumb, i) => (
+                        <React.Fragment key={i}>
+                            {i > 0 && (
+                                <span className="navbar__breadcrumb-sep">/</span>
+                            )}
+                            {i < breadcrumb.length - 1 ? (
+                                <Link to={crumb.href || '#'}>
+                                    {crumb.label}
+                                </Link>
+                            ) : (
+                                <span className="navbar__breadcrumb-current">
+                                    {crumb.label}
+                                </span>
+                            )}
+                        </React.Fragment>
+                    ))}
+                </div>
+            ) : (
+                <Link
+                    to="/"
+                    className="navbar__brand"
+                    onClick={handleLogoClick}
+                >
+                    {!hideLogo && (
+                        <div className="navbar__brand-icon">⬡</div>
+                    )}
+                    <span className="navbar__brand-text">RudhiDrive</span>
+                </Link>
+            )}
+
+            <div className="navbar__right">
+                {user && <NotificationBell />}
+
+                {!user && (
+                    <button
+                        style={{
+                            background: 'var(--c-teal)',
+                            color: '#fff',
+                            border: 'none',
+                            padding: '8px 20px',
+                            borderRadius: 'var(--r-full)',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'background 0.18s',
+                            fontFamily: 'var(--font-body)',
+                        }}
+                        onMouseOver={e =>
+                            e.currentTarget.style.background =
+                                'var(--c-teal-dark)'
+                        }
+                        onMouseOut={e =>
+                            e.currentTarget.style.background = 'var(--c-teal)'
+                        }
+                        onClick={onLoginClick}
+                    >
+                        Sign In
+                    </button>
                 )}
 
-                <div className="navbar__right">
-                    {user && <NotificationBell />}
-                    {user ? (
-                        <button className="navbar__booking-btn" onClick={() => setShowBookingWidget(v => !v)} title="Book a car">
-                            <span aria-hidden="true">🚗</span>
-                            <span className="navbar__booking-label">Booking</span>
-                        </button>
-                    ) : (
-                        <button
-                            style={{ background:'var(--c-teal)', color:'#fff', border:'none', padding:'8px 20px', borderRadius:'var(--r-full)', fontSize:'13px', fontWeight:'600', cursor:'pointer', transition:'background 0.18s', fontFamily:'var(--font-body)' }}
-                            onMouseOver={e => e.currentTarget.style.background = 'var(--c-teal-dark)'}
-                            onMouseOut={e  => e.currentTarget.style.background = 'var(--c-teal)'}
-                            onClick={onLoginClick}
-                        >
-                            Sign In
-                        </button>
-                    )}
-                </div>
-            </nav>
+                {user?.role === 'customer' && (
+                    <button
+                        className="navbar__booking-btn"
+                        onClick={() =>
+                            setShowBookingWidget(v => !v)
+                        }
+                        title="Book a car"
+                    >
+                        <span aria-hidden="true">🚗</span>
+                        <span className="navbar__booking-label">
+                            Booking
+                        </span>
+                    </button>
+                )}
+            </div>
+        </nav>
 
-            {showBookingWidget && user && (
-                <div
-                    className="navbar__booking-overlay"
-                    onClick={e => { if (e.target === e.currentTarget) setShowBookingWidget(false); }}
-                >
-                    <div className="navbar__booking-panel">
-                        <div className="navbar__booking-panel-header">
-                            <span>Book a Car</span>
-                            <button className="navbar__booking-close" onClick={() => setShowBookingWidget(false)}>✕</button>
-                        </div>
-                        <SearchWidget onSearchComplete={() => setShowBookingWidget(false)} />
+        {showBookingWidget && user?.role === 'customer' && (
+            <div
+                className="navbar__booking-overlay"
+                onClick={e => {
+                    if (e.target === e.currentTarget) {
+                        setShowBookingWidget(false);
+                    }
+                }}
+            >
+                <div className="navbar__booking-panel">
+                    <div className="navbar__booking-panel-header">
+                        <span>Book a Car</span>
+                        <button
+                            className="navbar__booking-close"
+                            onClick={() => setShowBookingWidget(false)}
+                        >
+                            ✕
+                        </button>
                     </div>
+
+                    <SearchWidget
+                        onSearchComplete={() => setShowBookingWidget(false)}
+                    />
                 </div>
+            </div>
             )}
         </>
     );

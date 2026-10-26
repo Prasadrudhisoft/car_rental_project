@@ -28,6 +28,16 @@ class CustomerRegisterSerializer(serializers.ModelSerializer):
         CustomerProfile.objects.create(user=user)
         return user
 
+    def validate_email(self, value):
+        if User.objects.filter(email__iexact=value, role='customer').exists():   # 'vendor' in the vendor serializer
+            raise serializers.ValidationError('A customer account with this email already exists.')
+        return value
+
+    def validate_phone(self, value):
+        if User.objects.filter(phone=value, role='customer').exists():            # 'vendor' in the vendor serializer
+            raise serializers.ValidationError('A customer account with this phone number already exists.')
+        return value
+
 
 class VendorRegisterSerializer(serializers.ModelSerializer):
     password      = serializers.CharField(write_only=True, validators=[validate_password])
@@ -52,6 +62,16 @@ class VendorRegisterSerializer(serializers.ModelSerializer):
         VendorProfile.objects.create(user=user, business_name=business_name, gstin=gstin)
         return user
 
+    def validate_email(self, value):
+        if User.objects.filter(email__iexact=value, role='customer').exists():   # 'vendor' in the vendor serializer
+            raise serializers.ValidationError('A customer account with this email already exists.')
+        return value
+
+    def validate_phone(self, value):
+        if User.objects.filter(phone=value, role='customer').exists():            # 'vendor' in the vendor serializer
+            raise serializers.ValidationError('A customer account with this phone number already exists.')
+        return value
+
 
 # ── User (me) serializer ──────────────────────────────────────────────────
 
@@ -60,6 +80,19 @@ class UserMeSerializer(serializers.ModelSerializer):
         model  = User
         fields = ['id', 'email', 'phone', 'full_name', 'role',
                   'is_phone_verified', 'is_email_verified']
+        read_only_fields = ['role', 'is_phone_verified', 'is_email_verified']
+
+    def validate_email(self, value):
+        qs = User.objects.filter(email__iexact=value, role=self.instance.role).exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('Another account of this type already uses this email.')
+        return value
+
+    def validate_phone(self, value):
+        qs = User.objects.filter(phone=value, role=self.instance.role).exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('Another account of this type already uses this phone number.')
+        return value
 
 
 # ── Customer serializers ──────────────────────────────────────────────────

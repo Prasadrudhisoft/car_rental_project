@@ -35,8 +35,8 @@ api.interceptors.response.use(
 );
 
 // ── Auth ─────────────────────────────────────────────────────────────────
-export const login = (email, password) =>
-  api.post("/users/login/", { email, password });
+export const login = (email, password, role) =>
+  api.post("/users/login/", { email, password, ...(role ? { role } : {}) });
 export const registerCustomer = (data) =>
   api.post("/users/register/customer/", data);
 export const registerVendor = (data) =>
@@ -290,8 +290,7 @@ export const getAdminLogisticsStats = () =>
   api.get("/logistics/admin/stats/");
 
 // ── Promos ────────────────────────────────────────────────────────────────
-export const validatePromo = (code, bookingTotal) =>
-  api.post("/promos/validate/", { code, booking_total: bookingTotal });
+
 export const getAdminPromos = () =>
   api.get("/promos/admin/");
 export const createPromo = (data) =>
@@ -323,19 +322,13 @@ export const getSegmentConfigs = () =>
 export const updateSegmentConfig = (id, data) =>
   api.patch(`/configuration/segments/${id}/`, data);
 
-// ── DUMMY PAYMENT (dev) — replaces Razorpay ───────────────────────────────
-export const dummyPayment = (bookingId, { payment_type = "advance", method = "online", amount } = {}) =>
-  api.post(`/bookings/${bookingId}/payment/dummy/`, {
-    payment_type,
-    method,
-    ...(amount != null ? { amount } : {}),
-  });
+// ── Payments (orchestrated by services/payments.js) ────────────────────────
+export const getPaymentConfig  = () => api.get("/bookings/payments/config/");
+export const initiatePayment   = (bookingId, payment_type) => api.post(`/bookings/${bookingId}/payment/initiate/`, { payment_type });
+export const verifyPayment     = (bookingId, data) => api.post(`/bookings/${bookingId}/payment/verify/`, data);
+export const dummyPay          = (bookingId, payment_type) => api.post(`/bookings/${bookingId}/payment/dummy/`, { payment_type });
+export const recordOfflinePayment = (bookingId, method) => api.post(`/bookings/${bookingId}/payment/record-offline/`, { method });
 
-export const verifyPayment = (bookingId, data) =>
-  api.post(`/bookings/${bookingId}/payment/verify/`, data);
-
-// export const signAgreement = (bookingId, step, otpCode, version) =>
-//   api.post(`/bookings/${bookingId}/sign/`, { step, otp_code: otpCode, version_id: version });
 
 export const getVendorBookingDetail = (id) =>
   api.get(`/bookings/vendor/${id}/`);

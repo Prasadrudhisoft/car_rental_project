@@ -98,6 +98,11 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     vehicle_plate   = serializers.SerializerMethodField()
     vehicle_segment = serializers.SerializerMethodField()
     agreement_acceptance = serializers.SerializerMethodField()
+    payment_summary = serializers.SerializerMethodField()
+
+    def get_payment_summary(self, obj):
+        from .payments import PaymentService
+        return PaymentService.summary(obj)
  
     class Meta:
         model  = Booking

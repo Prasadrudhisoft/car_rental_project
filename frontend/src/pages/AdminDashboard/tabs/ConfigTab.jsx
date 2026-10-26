@@ -374,7 +374,7 @@ export default function ConfigTab({
                                     </div>
                                     <div style={{ display: "flex", gap: 6 }}>
                                         <button className="admin-btn admin-btn--success admin-btn--sm" onClick={() => onRestoreConfig(c.id)}>↺ Restore</button>
-                                        <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => onDeleteConfig(c.id)}>✕ Delete Permanently</button>
+                                        <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={() => onDeleteConfig(c.id, c.display_name)}>✕ Delete Permanently</button>
                                     </div>
                                 </div>
                             ))}

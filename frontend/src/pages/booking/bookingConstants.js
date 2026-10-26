@@ -1,7 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// bookingConstants.js
-// ─────────────────────────────────────────────────────────────────────────────
-
 // ── Segment icons ─────────────────────────────────────────────────────────────
 export const SEGMENT_ICONS = {
     hatchback: '🚗',
@@ -77,6 +73,10 @@ export const makePinIcon = (L, selected, emoji = '📍') =>
 
 // ── Vehicle coordinate helper ─────────────────────────────────────────────────
 export const getVehicleCoords = (vehicle, cityCenter, idx) => {
+    const pp = vehicle.pickup_point;
+    if (pp?.latitude && pp?.longitude) {
+        return [parseFloat(pp.latitude), parseFloat(pp.longitude)];
+    }
     if (vehicle.vendor_profile?.latitude && vehicle.vendor_profile?.longitude) {
         return [
             parseFloat(vehicle.vendor_profile.latitude),

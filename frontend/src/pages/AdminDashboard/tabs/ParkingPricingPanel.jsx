@@ -5,12 +5,14 @@ import {
     getVendorCommissionOverrides, createVendorCommissionOverride,
     updateVendorCommissionOverride, deleteVendorCommissionOverride,
 } from "../../../services/api";
+import { useConfirmDelete } from "../../../components/common/ConfirmDeleteModal";
 
 export default function ParkingPricingPanel({ cities, vendors }) {
     const [rates, setRates] = useState([]);
     const [overrides, setOverrides] = useState([]);
     const [editingRateId, setEditingRateId] = useState(null);
     const [editValue, setEditValue] = useState("");
+    const [askDelete, ConfirmEl] = useConfirmDelete();
 
     const load = useCallback(() => {
         getCityParkingRates().then(({ data }) => setRates(data.results || data));
@@ -109,9 +111,20 @@ export default function ParkingPricingPanel({ cities, vendors }) {
                                         Edit
                                     </button>
                                 )}
-                                <button className="admin-btn admin-btn--xs admin-btn--danger"
-                                    onClick={() => window.confirm(`Remove parking rate for ${r.city_name}?`) && deleteCityParkingRate(r.id).then(load)}>
-                                    ✕
+                                <button
+                                    className="admin-btn admin-btn--xs admin-btn--danger"
+                                    onClick={() =>
+                                        askDelete({
+                                            kind: 'city parking rate',
+                                            name: r.city_name,
+                                            onConfirm: async () => {
+                                                await deleteCityParkingRate(r.id);
+                                                load();
+                                            },
+                                        })
+                                    }
+                                >
+                                    Delete
                                 </button>
                             </div>
                         </div>
@@ -145,14 +158,27 @@ export default function ParkingPricingPanel({ cities, vendors }) {
                             <span><strong>{o.vendor_name}</strong></span>
                             <span>{o.city_name}</span>
                             <span className="admin-currency">{o.vendor_share_pct}%</span>
-                            <button className="admin-btn admin-btn--xs admin-btn--danger"
-                                onClick={() => window.confirm("Remove this override? Vendor reverts to platform default.") && deleteVendorCommissionOverride(o.id).then(load)}>
-                                Remove
+                            <button
+                                className="admin-btn admin-btn--xs admin-btn--danger"
+                                onClick={() =>
+                                    askDelete({
+                                        kind: 'commission override',
+                                        name: o.vendor_name,
+                                        detail: 'The vendor reverts to the platform default share.',
+                                        onConfirm: async () => {
+                                            await deleteVendorCommissionOverride(o.id);
+                                            load();
+                                        },
+                                    })
+                                }
+                            >
+                                Delete
                             </button>
                         </div>
                     ))}
                 </div>
             </SectionCard>
+            
         </div>
     );
 }

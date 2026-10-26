@@ -8,6 +8,7 @@ import { AgreementPreviewModal }      from '../../components/agreements/Agreemen
 import { WizardProgress, buildSteps } from './BookingShared';
 import { calcNights }                 from './bookingConstants';
 import { BookingReviewCard, PaymentSummary } from './ConfirmComponents';
+import ModifyBookingModal from './ModifyBookingModal';
 import './ConfirmBookingPage.css';
 import '../BookingWizard.css';
 
@@ -19,17 +20,21 @@ export default function ConfirmBookingPage() {
     const [loading,        setLoading]        = useState(false);
     const [error,          setError]          = useState('');
     const [paymentType,    setPaymentType]    = useState('advance');
-    const [paymentMethod,  setPaymentMethod]  = useState('online');
+    const paymentMethod = 'online';
     const [agreement,      setAgreement]      = useState(null);
     const [agreementError, setAgreementError] = useState('');
     const [agreed,         setAgreed]         = useState(false);
     const [showAgreement,  setShowAgreement]  = useState(false);
     const completedRef = useRef(false);
+    const [showModify, setShowModify] = useState(false);
 
     useEffect(() => {
-        if (completedRef.current) return;          // payment done — don't bounce to Home
+        if (completedRef.current) return;
+        if (booking.isDifferentReturn && !booking.returnLocation && booking.selectedVehicle) {
+            navigate('/book/return-vendor'); return;
+        }
         if (!booking.selectedVehicle || !user) navigate('/');
-    }, [booking.selectedVehicle, user, navigate]);
+    }, [booking.selectedVehicle, booking.isDifferentReturn, booking.returnLocation, user, navigate]);
 
     useEffect(() => {
         getActiveAgreement()
@@ -106,7 +111,10 @@ export default function ConfirmBookingPage() {
             <div className="confirm-page__inner">
                 <WizardProgress steps={steps} />
 
-                <h1 className="confirm-page__title">Review &amp; Complete Payment</h1>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <h1 className="confirm-page__title">Review &amp; Complete Payment</h1>
+                    <button className="wizard-btn--back" onClick={() => setShowModify(true)}>✎ Modify booking details</button>
+                </div>
 
                 <div className="confirm-page__layout">
                     <BookingReviewCard
@@ -123,9 +131,8 @@ export default function ConfirmBookingPage() {
                         advanceAmount={advanceAmount}
                         remainingAmount={remainingAmount}
                         paymentType={paymentType}
-                        setPaymentType={setPaymentType}
+                        unavailable={p?.available === false}
                         paymentMethod={paymentMethod}
-                        setPaymentMethod={setPaymentMethod}
                         payableNow={payableNow}
                         loading={loading}
                         error={error}
@@ -142,6 +149,7 @@ export default function ConfirmBookingPage() {
             {showAgreement && agreement && (
                 <AgreementPreviewModal version={agreement} onClose={() => setShowAgreement(false)} />
             )}
+            {showModify && <ModifyBookingModal onClose={() => setShowModify(false)} />}
         </div>
     );
 }

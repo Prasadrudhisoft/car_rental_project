@@ -73,6 +73,15 @@ function RequireAuth({ children, role }) {
   return children;
 }
 
+function BookingRoute({ children }) {
+    const { user, loading } = useAuth();
+    if (loading) return null;
+    if (user && user.role !== 'customer') {
+        return <Navigate to={user.role === 'admin' ? '/admin' : '/vendor'} replace />;
+    }
+    return children;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -101,6 +110,14 @@ export default function App() {
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />
+          
+          {/* New routes */}
+            <Route path="/book/select-car"    element={<BookingRoute><SegmentSelectPage /></BookingRoute>} />
+            <Route path="/book/select-vendor" element={<BookingRoute><VendorSelectPage /></BookingRoute>} />
+            <Route path="/book/return-vendor" element={<BookingRoute><ReturnVendorPage /></BookingRoute>} />
+            <Route path="/book/addons"        element={<BookingRoute><AddonsPage /></BookingRoute>} />
+            <Route path="/book/confirm"       element={<RequireAuth role="customer"><ConfirmBookingPage /></RequireAuth>} />
+
           </Routes>
         </BookingProvider>
       </AuthProvider>

@@ -102,6 +102,9 @@ AUTH_USER_MODEL = 'users.User'
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
+AUTHENTICATION_BACKENDS = ['apps.users.backends.EmailRoleBackend']
+SILENCED_SYSTEM_CHECKS = ['auth.W004']   # USERNAME_FIELD is unique per role, not globally
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -183,8 +186,12 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL   = '/media/'
 MEDIA_ROOT  = BASE_DIR / 'media'
 
-RAZORPAY_KEY_ID     = config('RAZORPAY_KEY_ID', default='rzp_test_placeholder')
-RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET', default='placeholder_secret')
+# ── Payments (single source of config; logic lives in apps/bookings/payments.py) ──
+RAZORPAY_KEY_ID         = config('RAZORPAY_KEY_ID', default='')
+RAZORPAY_KEY_SECRET     = config('RAZORPAY_KEY_SECRET', default='')
+RAZORPAY_WEBHOOK_SECRET = config('RAZORPAY_WEBHOOK_SECRET', default='')
+PAYMENT_ADVANCE_PCT     = 30
+PAYMENT_DUMMY_ENABLED   = True      # off by default; only dev.py may switch it on
 
 
 # ── Email (real SMTP everywhere) ─────────────────────────────────────────

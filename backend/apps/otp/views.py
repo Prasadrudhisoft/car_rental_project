@@ -22,6 +22,15 @@ def _kyc_forbidden(request, email):
     return (not request.user.is_authenticated
             or (email or '').lower() != request.user.email.lower())
 
+def _resolve_user(request, email, purpose):
+    """KYC OTPs always belong to the logged-in account; others only if the email is unambiguous."""
+    if request.user.is_authenticated and (email or '').lower() == request.user.email.lower():
+        return request.user
+    if purpose in KYC_PURPOSES:
+        return None
+    users = list(User.objects.filter(email__iexact=email)[:2])
+    return users[0] if len(users) == 1 else None
+
 
 class SendOTPView(APIView):
     """POST /api/otp/send/  Body: { email, purpose }
@@ -44,9 +53,8 @@ class SendOTPView(APIView):
         # if purpose == 'phone_verify' and not (settings.MSG91_API_KEY and settings.MSG91_TEMPLATE_ID):
         #     return Response({'error': 'SMS service is not configured.'}, status=503)
 
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
+        user = _resolve_user(request, email, purpose)
+        if user is None:
             return Response({'message': 'If this account exists, an OTP has been sent.'})
 
         otp = OTPRecord.generate(user, purpose)
@@ -77,12 +85,10 @@ class VerifyOTPView(APIView):
         if cache.get(fail_key, 0) >= MAX_FAILED_ATTEMPTS:
             return Response({'error': 'Too many wrong attempts. Please request a new OTP in a few minutes.'}, status=429)
 
-        try:
-            user = User.objects.get(email=email)
-            otp  = OTPRecord.objects.filter(
-                user=user, code=code, purpose=purpose, is_used=False
-            ).latest('created_at')
-        except (User.DoesNotExist, OTPRecord.DoesNotExist):
+        user = _resolve_user(request, email, purpose)
+        otp = (OTPRecord.objects.filter(user=user, code=code, purpose=purpose, is_used=False)
+               .order_by('-created_at').first()) if user else None
+        if otp is None:
             cache.add(fail_key, 0, LOCKOUT_SECONDS)
             cache.incr(fail_key)
             return Response({'error': 'Invalid OTP.'}, status=400)

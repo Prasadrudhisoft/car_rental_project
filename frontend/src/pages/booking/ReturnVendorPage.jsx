@@ -8,6 +8,7 @@ import { useBooking }      from '../../context/BookingContext';
 import { getReturnOptions } from '../../services/api';
 import { WizardShell, WizardProgress, buildSteps } from './BookingShared';
 import { fixLeafletIcons, makePinIcon, getCityCenter } from './bookingConstants';
+import MapFix from './MapFix';
 import './VendorSelectPage.css';
 import '../BookingWizard.css';
 
@@ -85,6 +86,7 @@ export default function ReturnVendorPage() {
                         <TileLayer attribution='&copy; OpenStreetMap contributors'
                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                         <FlyTo center={cityCenter} />
+                        <MapFix />
                         {points.filter(pt => !isNaN(pt.lat) && !isNaN(pt.lng)).map(pt => (
                             <Marker key={pt.id} position={[pt.lat, pt.lng]}
                                     icon={makePinIcon(L, selectedReturn?.id === pt.id, '🏁')}

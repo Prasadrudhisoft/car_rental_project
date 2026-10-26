@@ -58,7 +58,7 @@ def generate_agreement_pdf(booking):
     c.setFont('Helvetica', 10)
     c.drawString(2 * cm, h - 13.7 * cm, f'Base Amount:      INR {snap.get("base_amount", "0")}')
     c.drawString(2 * cm, h - 14.3 * cm, f'Add-ons:          INR {snap.get("addon_total", "0")}')
-    c.drawString(2 * cm, h - 14.9 * cm, f'CGST + SGST:      INR {snap.get("gst_total", "0")}')
+    c.drawString(2 * cm, h - 14.9 * cm, f'CGST + SGST:      INR {snap.get("gst_amount", "0")}')
     c.drawString(2 * cm, h - 15.5 * cm, f'TOTAL:            INR {snap.get("grand_total", "0")}')
     c.drawString(2 * cm, h - 16.1 * cm, f'Security Deposit: INR {snap.get("security_deposit", "0")}')
  
@@ -92,8 +92,9 @@ def generate_invoice_pdf(booking):
     base    = Decimal(snap.get("base_amount", "0"))
     addon   = Decimal(snap.get("addon_total", "0"))
     one_way = Decimal(snap.get("one_way_fee", "0"))
-    cgst    = Decimal(snap.get("cgst", "0"))
-    sgst    = Decimal(snap.get("sgst", "0"))
+    cgst     = Decimal(snap.get("cgst_amount", "0"))
+    sgst     = Decimal(snap.get("sgst_amount", "0"))
+    discount = Decimal(snap.get("discount_amount", "0"))
     total   = Decimal(snap.get("grand_total", "0"))
  
     invoice_ref = f"INV-{booking.booking_ref}"
@@ -113,11 +114,12 @@ def generate_invoice_pdf(booking):
     c.drawString(2 * cm, h - 5.4 * cm, f'Booking Ref: {booking.booking_ref}')
  
     rows = [
-        ('Base Rental',           f'INR {base}'),
+        ('Base Rental',            f'INR {base}'),
         ('Add-ons',                f'INR {addon}'),
-        ('One-way Logistics Fee', f'INR {one_way}'),
+        ('One-way Logistics Fee',  f'INR {one_way}'),
         ('CGST (9%)',              f'INR {cgst}'),
         ('SGST (9%)',              f'INR {sgst}'),
+        ('Promo Discount',         f'INR {discount}'),
         ('TOTAL',                  f'INR {total}'),
     ]
     y = h - 8 * cm

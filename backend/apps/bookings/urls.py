@@ -5,8 +5,8 @@ from .views import (
     CustomerBookingListView, CustomerBookingDetailView,
     VendorBookingListView, VendorBookingDetailView,
     AdminBookingListView,
-    DummyPaymentView,          # ← NEW: replaces Razorpay for dev
-    PaymentVerifyView, RazorpayWebhookView,
+    PaymentConfigView, PaymentInitiateView, PaymentVerifyView, DummyPaymentView,
+    PaymentOfflineView, RazorpayWebhookView,
     InspectionCreateView, InspectionPhotoUploadView, InspectionSignView,
     DamageClaimView, VendorAnalyticsView, AdminAnalyticsView,
     LoyaltyRedemptionView, LoyaltyBalanceView,
@@ -24,11 +24,12 @@ urlpatterns = [
     path('<int:booking_id>/cancel/',                 BookingCancelView.as_view(),           name='booking-cancel'),
 
     # ── Payment (dev: dummy; prod: razorpay) ──────────────────────────────
-    # Dummy payment — always succeeds, supports advance or full payment
-    path('<int:booking_id>/payment/dummy/',          DummyPaymentView.as_view(),            name='payment-dummy'),
-    # Keep Razorpay endpoint available for future production use
-    path('<int:booking_id>/payment/verify/',         PaymentVerifyView.as_view(),           name='payment-verify'),
-    path('webhook/razorpay/',                        RazorpayWebhookView.as_view(),         name='razorpay-webhook'),
+    path('payments/config/',                         PaymentConfigView.as_view(),    name='payment-config'),
+    path('<int:booking_id>/payment/initiate/',       PaymentInitiateView.as_view(),  name='payment-initiate'),
+    path('<int:booking_id>/payment/verify/',         PaymentVerifyView.as_view(),    name='payment-verify'),
+    path('<int:booking_id>/payment/dummy/',          DummyPaymentView.as_view(),     name='payment-dummy'),
+    path('<int:booking_id>/payment/record-offline/', PaymentOfflineView.as_view(),   name='payment-offline'),
+    path('webhook/razorpay/',                        RazorpayWebhookView.as_view(),  name='razorpay-webhook'),
 
     # Inspection
     path('<int:booking_id>/inspect/<str:inspection_type>/',      InspectionCreateView.as_view(),     name='inspect-create'),

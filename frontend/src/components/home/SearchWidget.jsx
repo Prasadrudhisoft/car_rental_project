@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBooking } from '../../context/BookingContext';
 import { getCities } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import './SearchWidget.css';
 
 const TODAY = new Date().toISOString().split('T')[0];
 const TOMORROW = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
 export default function SearchWidget() {
+    const { user } = useAuth();
     const navigate = useNavigate();
     const { update } = useBooking();
     const [cities, setCities] = useState([]);
@@ -66,6 +68,17 @@ export default function SearchWidget() {
         0,
         Math.round((new Date(form.returnDate) - new Date(form.pickupDate)) / 86400000)
     );
+
+    if (user && user.role !== 'customer') {
+        return (
+            <div className="search-widget">
+                <div className="search-widget__header">
+                    <h2>Bookings are for customers</h2>
+                    <p>Sign in with a customer account to book a vehicle.</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="search-widget">

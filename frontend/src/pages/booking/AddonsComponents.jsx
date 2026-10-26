@@ -1,10 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// AddonsComponents.jsx
-// Three sub-components used exclusively by AddonsPage:
-//   • AddonGrid    — toggle cards for each add-on
-//   • PromoSection — promo code input + apply button
-//   • PriceSummary — sticky right-column price breakdown sidebar
-// ─────────────────────────────────────────────────────────────────────────────
 import React from 'react';
 import { ADDON_CATALOG } from './bookingConstants';
 

@@ -14,6 +14,7 @@ import {
     fixLeafletIcons, makePinIcon, getCityCenter,
     getVehicleCoords, calcNights, segIcon, SEGMENT_ICONS,
 } from './bookingConstants';
+import MapFix from './MapFix';
 import './VendorSelectPage.css';
 import '../BookingWizard.css';
 
@@ -204,10 +205,11 @@ export default function VendorSelectPage() {
                 vehicles: [selectedVehicle],
             },
             pickupLocation: {
-                id:   selectedVehicle.pickup_location?.id ?? null,
-                name: selectedVehicle.vendor_profile?.business_name || 'Vendor Location',
-                lat:  coords[0],
-                lng:  coords[1],
+                id:      selectedVehicle.pickup_point?.id ?? null,
+                name:    selectedVehicle.vendor_profile?.business_name || selectedVehicle.pickup_point?.name || 'Vendor',
+                address: selectedVehicle.pickup_point?.address || selectedVehicle.vendor_profile?.address || '',
+                lat:     coords[0],
+                lng:     coords[1],
             },
             pickupVendor: selectedVehicle.vendor_profile,
             oneWayFee,
@@ -354,6 +356,7 @@ export default function VendorSelectPage() {
                                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     />
                                     <FlyTo center={cityCenter} />
+                                    <MapFix />
                                     {filtered.map((v, idx) => {
                                         const coords     = getVehicleCoords(v, cityCenter, idx);
                                         const p          = prices[v.id];
@@ -412,6 +415,7 @@ export default function VendorSelectPage() {
                                                     </div>
                                                     <div className="vsp__vendor-card__vendor">
                                                         🏪 {v.vendor_profile?.business_name || `Vendor ${idx + 1}`}
+                                                        {v.pickup_point?.address && <div className="vsp__vendor-card__hours">📍 {v.pickup_point.address}</div>}
                                                     </div>
                                                     <div className="vsp__vendor-card__meta">
                                                         {v.vendor_profile?.rating

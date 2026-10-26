@@ -8,9 +8,8 @@ import React from 'react';
 import { segIcon } from './bookingConstants';
 
 // ── BookingReviewCard ─────────────────────────────────────────────────────────
-/**
- * Renders the full left-column booking detail card on the confirm page.
- */
+const fmtPoint = loc => (loc ? [loc.name, loc.address].filter(Boolean).join(', ') || '—' : '—');
+
 export function BookingReviewCard({ booking, vehicle: v, user, nights, pricing }) {
     return (
         <div className="confirm-card">
@@ -43,8 +42,8 @@ export function BookingReviewCard({ booking, vehicle: v, user, nights, pricing }
                         ...(booking.isDifferentReturn
                             ? [['🏁 Drop Point', `${booking.returnLocation?.name || '—'}${booking.returnLocation?.address ? ', ' + booking.returnLocation.address : ''}, ${booking.returnCity?.name || ''}`]]
                             : []),
-                        ['📅 Pickup',  `${booking.pickupDate}${booking.pickupTime ? ' @ ' + booking.pickupTime : ''}`],
-                        ['📅 Return',  `${booking.returnDate}${booking.returnTime ? ' @ ' + booking.returnTime : ''}`],
+                        ['📍 Pickup Point', fmtPoint(booking.pickupLocation)],
+                        ...(booking.isDifferentReturn ? [['🏁 Drop Point', fmtPoint(booking.returnLocation)]] : []),
                         ['⏱ Duration', `${nights} day${nights > 1 ? 's' : ''}`],
                     ].map(([label, value]) => (
                         <div key={label} className="confirm-detail-row">
@@ -92,7 +91,7 @@ export function BookingReviewCard({ booking, vehicle: v, user, nights, pricing }
  */
 export function PaymentSummary({
     pricing, grandTotal, advanceAmount, remainingAmount,
-    paymentType, setPaymentType, paymentMethod, setPaymentMethod,
+    paymentType, setPaymentType, unavailable,
     payableNow, loading, error, onConfirm,
     agreement, agreementError, agreed, setAgreed, onViewAgreement
 }) {
@@ -144,23 +143,7 @@ export function PaymentSummary({
                     </div>
 
                     {/* Payment method */}
-                    <div className="payment-method-section">
-                        <p className="payment-method-label">Payment method:</p>
-                        <div className="payment-method-buttons">
-                            <button
-                                className={`payment-method-btn${paymentMethod === 'online' ? ' active' : ''}`}
-                                onClick={() => setPaymentMethod('online')}
-                            >
-                                💳 Online (UPI/Cards)
-                            </button>
-                            <button
-                                className={`payment-method-btn${paymentMethod === 'cash' ? ' active' : ''}`}
-                                onClick={() => setPaymentMethod('cash')}
-                            >
-                                💵 Cash at Pickup
-                            </button>
-                        </div>
-                    </div>
+                    <div className="confirm-summary__deposit">💳 Online payment only (UPI / Cards / Net Banking)</div>
                 </>
             )}
 
@@ -184,9 +167,11 @@ export function PaymentSummary({
                 <p className="confirm-agreement-hint">Please accept the agreement to enable payment.</p>
             )}
 
+            {unavailable && <div className="wizard-error">This vehicle is not available for the selected dates. Use “Modify booking details”.</div>}            
+
             {error && <div className="wizard-error">{error}</div>}
 
-            <button className="confirm-cta" onClick={onConfirm} disabled={loading || !agreed || !agreement}>
+            <button className="confirm-cta" onClick={onConfirm} disabled={loading || !agreed || !agreement || unavailable}>
                 {loading ? (
                     <span className="confirm-cta__loading"><span className="confirm-cta__spinner" /> Processing Payment...</span>
                 ) : `Pay ₹${payableNow.toLocaleString('en-IN')} & Confirm Booking`}

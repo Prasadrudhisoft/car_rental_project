@@ -20,6 +20,12 @@ class UserManager(BaseUserManager):
         extra.setdefault('is_superuser', True)
         return self.create_user(email, password, **extra)
 
+    def get_by_natural_key(self, email):
+        user = self.filter(email=email).order_by('-is_superuser', 'id').first()
+        if user is None:
+            raise self.model.DoesNotExist
+        return user
+
 
 class User(AbstractBaseUser, PermissionsMixin):
     """
@@ -32,8 +38,8 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('admin',    'Admin'),
     ]
 
-    email              = models.EmailField(unique=True)
-    phone              = models.CharField(max_length=15, unique=True)
+    email              = models.EmailField(unique=False)
+    phone              = models.CharField(max_length=15)
     full_name          = models.CharField(max_length=200)
     role               = models.CharField(max_length=20, choices=ROLES, default='customer')
     is_active          = models.BooleanField(default=True)
@@ -49,6 +55,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         db_table = 'users_user'
+        constraints = [
+            models.UniqueConstraint(fields=['email', 'role'], name='uniq_user_email_role'),
+            models.UniqueConstraint(fields=['phone', 'role'], name='uniq_user_phone_role'),
+        ]
 
     def __str__(self):
         return f'{self.full_name} <{self.email}> [{self.role}]'

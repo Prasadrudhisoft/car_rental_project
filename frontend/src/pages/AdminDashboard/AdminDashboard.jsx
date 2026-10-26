@@ -53,6 +53,7 @@ import ReviewsTab     from "./tabs/ReviewsTab";
 import AssignmentsTab from "./tabs/AssignmentsTab";
 import NotificationsTab from "./tabs/NotificationsTab";
 import PersonalizationTab from "./tabs/PersonalizationTab";
+import { useConfirmDelete } from "../../components/common/ConfirmDeleteModal";
 
 // ── CSS ───────────────────────────────────────────────────────────────────────
 import "./AdminDashboard.css";
@@ -62,7 +63,7 @@ import "../../components/common/DataTable.css";
 const TAB_LABELS = {
     overview: "Overview", vendors: "Vendors", vehicles: "Vehicles",
     bookings: "Bookings", users: "Users",     locations: "Locations",
-    logistics: "Logistics", config: "Config", promos: "Promos",
+    logistics: "Logistics", config: "Configuration", promos: "Promos",
     agreements: "Agreements", reviews: "Reviews", assignments: "Assignments",
     notifications: "Notifications", personalization: "Personalization",
 };
@@ -123,6 +124,8 @@ export default function AdminDashboard() {
 
     const [searchParams, setSearchParams] = useSearchParams();
     const highlightRef = useRef(null);
+
+    const [askDelete, ConfirmEl] = useConfirmDelete();
 
     // ── Fetch admin profile on mount ──────────────────────────────────────────
     useEffect(() => {
@@ -382,15 +385,11 @@ const handleCompleteReverification = async (vehicleId) => {
         }
     };
 
-    const handleDeleteConfigSetting = async (id) => {
-        if (!window.confirm("Permanently delete this setting? This cannot be undone.")) return;
-        try {
-            await deleteConfigSetting(id);
-            setConfigs((p) => p.filter((c) => c.id !== id));
-        } catch (e) {
-            alert(e.response?.data?.detail || "Couldn't delete this setting.");
-        }
-    };
+    const handleDeleteConfigSetting = (id, name) => askDelete({
+        kind: 'setting', name,
+        detail: 'Its full change history is deleted with it.',
+        onConfirm: async () => { await deleteConfigSetting(id); setConfigs((p) => p.filter((c) => c.id !== id)); },
+    });
 
     const handleViewConfigHistory = async (setting) => {
         setConfigHistorySetting(setting);
@@ -406,15 +405,26 @@ const handleCompleteReverification = async (vehicleId) => {
 
     // ── Location actions ──────────────────────────────────────────────────────
     const handleAddCity          = async (v) => { setFormLoading(true); try { await createCity(v); await loadTab("locations"); } catch (e) { alert(JSON.stringify(e.response?.data || "Failed.")); } setFormLoading(false); };
-    const handleDeleteCity       = async (id) => { if (!window.confirm("Delete?")) return; try { await deleteCity(id); setCities((p) => p.filter((c) => c.id !== id)); } catch { alert("Failed."); } };
-    const handleDeleteLocation   = async (id) => { if (!window.confirm("Delete?")) return; try { await deleteLocation(id); setLocations((p) => p.filter((l) => l.id !== id)); } catch { alert("Failed."); } };
+    const handleDeleteCity = (id, name) => askDelete({
+        kind: 'city', name,
+        detail: 'All pickup/drop locations of this city are deleted too. This fails if vehicles still use the city.',
+        onConfirm: async () => { await deleteCity(id); setCities((p) => p.filter((c) => c.id !== id)); },
+    });
+    const handleDeleteLocation = (id, name) => askDelete({
+        kind: 'location', name,
+        onConfirm: async () => { await deleteLocation(id); setLocations((p) => p.filter((l) => l.id !== id)); },
+    });
     const handleAddCityPairFee   = async (v) => { setFormLoading(true); try { await createCityPairFee(v); await loadTab("locations"); } catch { alert("Failed."); } setFormLoading(false); };
-    const handleDeleteCityPairFee= async (id) => { if (!window.confirm("Delete?")) return; try { await deleteCityPairFee(id); setCityPairFees((p) => p.filter((f) => f.id !== id)); } catch { alert("Failed."); } };
-
+    const handleDeleteCityPairFee = (id, name) => askDelete({
+        kind: 'city-pair fee', name,
+        onConfirm: async () => { await deleteCityPairFee(id); setCityPairFees((p) => p.filter((f) => f.id !== id)); },
+    });
     // ── Promo actions ─────────────────────────────────────────────────────────
     const handleAddPromo    = async (v) => { setFormLoading(true); try { await createPromo(v); await loadTab("promos"); } catch (e) { alert(JSON.stringify(e.response?.data || "Failed.")); } setFormLoading(false); };
-    const handleDeletePromo = async (id) => { if (!window.confirm("Delete?")) return; try { await deletePromo(id); setPromos((p) => p.filter((x) => x.id !== id)); } catch { alert("Failed."); } };
-
+    const handleDeletePromo = (id, name) => askDelete({
+        kind: 'promo code', name,
+        onConfirm: async () => { await deletePromo(id); setPromos((p) => p.filter((x) => x.id !== id)); },
+    });
     // ── Return point actions ──────────────────────────────────────────────────
     const handleAddReturnPoint = async (v) => { setFormLoading(true); try { await createReturnPoint(v); const r = await getReturnPoints(); setReturnPoints(r.data.results ?? r.data); } catch (e) { alert(JSON.stringify(e.response?.data || "Failed.")); } setFormLoading(false); };
 
@@ -509,9 +519,9 @@ const handleCompleteReverification = async (vehicleId) => {
                                         [stats.total_users ?? stats.total_customers, "Users",    "#1D4ED8"],
                                         [stats.total_vendors ?? stats.assigned_vendors, "Vendors","#0DB89E"],
                                         [stats.pending_vendors,  "Pending",   "#D97706"],
-                                        [stats.total_vehicles,   "Vehicles",  "#059669"],
-                                        [stats.total_bookings,   "Bookings",  "#6B7280"],
-                                        [stats.active_bookings,  "Active",    "#059669"],
+                                        // [stats.total_vehicles,   "Vehicles",  "#059669"],
+                                        // [stats.total_bookings,   "Bookings",  "#6B7280"],
+                                        // [stats.active_bookings,  "Active",    "#059669"],
                                         ...(myProfile?.scope === "superadmin" && stats.unassigned_vendors != null
                                             ? [[stats.unassigned_vendors, "Unassigned", stats.unassigned_vendors > 0 ? "#EF4444" : "#9CA3AF"]]
                                             : []),
@@ -652,6 +662,7 @@ const handleCompleteReverification = async (vehicleId) => {
                     {!loading && tab === "personalization" && <PersonalizationTab />}
                 </div>
             </div>
+        {ConfirmEl}
         </div>
     );
 }

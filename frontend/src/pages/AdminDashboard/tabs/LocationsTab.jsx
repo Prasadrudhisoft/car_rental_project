@@ -35,7 +35,7 @@ export default function LocationsTab({
                             <span><strong>{c.name}</strong></span>
                             <span>{c.state}</span>
                             <span style={{ fontSize: 11, color: "#9CA3AF" }}>{c.latitude ? `${c.latitude}, ${c.longitude}` : "—"}</span>
-                            <button className="admin-btn admin-btn--xs admin-btn--danger" onClick={() => onDeleteCity(c.id)}>✕</button>
+                            <button className="admin-btn admin-btn--xs admin-btn--danger" onClick={() => onDeleteCity(c.id, c.name)}>✕</button>
                         </div>
                     ))}
                 </div>
@@ -57,7 +57,7 @@ export default function LocationsTab({
                     emptyIcon="📍"
                     emptyMessage="No locations yet."
                     pageSize={15}
-                    extraActions={[{ label: "✕ Delete", className: "dt-action-btn--danger", onClick: (row) => onDeleteLocation(row.id) }]}
+                    extraActions={[{ label: "✕ Delete", className: "dt-action-btn--danger", onClick: (row) => onDeleteLocation(row.id, row.name) }]}
                 />
             </SectionCard>
 
@@ -84,7 +84,7 @@ export default function LocationsTab({
                     emptyIcon="💸"
                     emptyMessage="No city pair fees yet."
                     pageSize={15}
-                    extraActions={[{ label: "✕ Delete", className: "dt-action-btn--danger", onClick: (row) => onDeleteCityPairFee(row.id) }]}
+                    extraActions={[{ label: "✕ Delete", className: "dt-action-btn--danger", onClick: (row) => onDeleteCityPairFee(row.id, `${row.from_city_name} → ${row.to_city_name}`) }]}
                 />
             </SectionCard>
         </div>

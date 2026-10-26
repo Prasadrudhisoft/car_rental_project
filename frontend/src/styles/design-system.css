@@ -264,8 +264,214 @@ textarea:focus-visible {
 
 /* lock page scroll behind any open modal / drawer (no JS needed) */
 html:has(.cd-modal-backdrop, .vd-modal-overlay, .admin-modal-overlay, .agr-backdrop,
-    .am-backdrop, .asgn-modal-overlay, .navbar__booking-overlay, .sidebar--open) {
+    .am-backdrop, .dc-backdrop, .mb-backdrop, .asgn-modal-overlay, .navbar__booking-overlay, .sidebar--open) {
     overflow: hidden;
+}
+
+/* ── Permanent-delete confirmation ── */
+.dc-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 16, 22, .62);
+    backdrop-filter: blur(6px);
+}
+
+.dc-modal {
+    width: 100%;
+    max-width: 460px;
+    max-height: 92vh;
+    overflow-y: auto;
+    background: var(--ds-surface);
+    border-radius: var(--ds-r-xl);
+    box-shadow: var(--ds-shadow-pop);
+    border-top: 4px solid var(--ds-danger);
+}
+
+.dc-head {
+    padding: 18px 20px 6px;
+    font-size: var(--ds-fs-lg);
+    font-weight: 700;
+    color: var(--ds-danger);
+}
+
+.dc-body {
+    padding: 8px 20px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--ds-text-2);
+}
+
+.dc-warn {
+    background: var(--ds-danger-bg);
+    border: 1px solid var(--ds-danger-bd);
+    color: #991B1B;
+    border-radius: var(--ds-r-md);
+    padding: 10px 12px;
+    font-weight: 600;
+}
+
+.dc-word {
+    font-family: var(--ds-font-mono);
+    font-weight: 700;
+    color: var(--ds-text);
+    overflow-wrap: anywhere;
+    background: var(--ds-surface-2);
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.dc-err {
+    color: var(--ds-danger);
+    font-weight: 600;
+}
+
+.dc-foot {
+    padding: 14px 20px 18px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.dc-btn {
+    min-height: 40px;
+    padding: 0 16px;
+    border-radius: var(--ds-r-md);
+    font: 600 13px/1 var(--ds-font);
+    border: 1px solid var(--ds-border-2);
+    background: var(--ds-surface-2);
+    color: var(--ds-text-2);
+}
+
+.dc-btn--danger {
+    background: var(--ds-danger);
+    border-color: #B91C1C;
+    color: #fff;
+}
+
+.dc-btn--danger:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+    .dc-backdrop {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .dc-modal {
+        max-width: 100%;
+        border-radius: var(--ds-r-xl) var(--ds-r-xl) 0 0;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .dc-foot .dc-btn {
+        flex: 1;
+        min-height: 44px;
+    }
+}
+
+/* ── Login role picker + modify-booking modal ── */
+.am-role-pick {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+
+.am-role-pick button {
+    min-height: 36px;
+    border: 1px solid var(--ds-border-2);
+    border-radius: var(--ds-r-md);
+    background: var(--ds-surface-2);
+    font: 600 12px var(--ds-font);
+    color: var(--ds-text-2);
+}
+
+.am-role-pick button.active {
+    background: var(--ds-teal-light);
+    border-color: var(--ds-teal-dark);
+    color: var(--ds-teal-text);
+}
+
+.mb-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 16, 22, .62);
+    backdrop-filter: blur(6px);
+}
+
+.mb-modal {
+    width: 100%;
+    max-width: 560px;
+    max-height: 92vh;
+    overflow-y: auto;
+    background: var(--ds-surface);
+    border-radius: var(--ds-r-xl);
+    box-shadow: var(--ds-shadow-pop);
+}
+
+.mb-head,
+.mb-foot {
+    padding: 16px 20px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.mb-head {
+    justify-content: space-between;
+    border-bottom: 1px solid var(--ds-border);
+    font-weight: 700;
+    font-size: var(--ds-fs-lg);
+}
+
+.mb-foot {
+    border-top: 1px solid var(--ds-border);
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.mb-body {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.mb-links {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+@media (max-width: 640px) {
+    .mb-backdrop {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .mb-modal {
+        max-width: 100%;
+        border-radius: var(--ds-r-xl) var(--ds-r-xl) 0 0;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .mb-foot .wizard-btn--back,
+    .mb-foot .wizard-btn--next {
+        flex: 1;
+    }
 }
 
 /* long text must wrap instead of widening the page */
@@ -295,14 +501,40 @@ html:has(.cd-modal-backdrop, .vd-modal-overlay, .admin-modal-overlay, .agr-backd
     min-width: 0;
 }
 
-.vsp__map-layout {
-    grid-template-columns: minmax(0, 1fr) 380px;
+@media (min-width: 961px) {
+    .vsp__map-layout {
+        grid-template-columns: minmax(0, 1fr) 380px;
+    }
 }
 
-.vcard-v2__body {
-    grid-template-columns: minmax(0, 1fr) 300px;
+@media (min-width: 769px) {
+    .vcard-v2__body {
+        grid-template-columns: minmax(0, 1fr) 300px;
+    }
 }
 
+@media (max-width: 960px) {
+    .vsp__map-layout {
+        grid-template-columns: minmax(0, 1fr);
+        min-height: 0;
+    }
+
+    .vsp__map-container {
+        width: 100%;
+        height: min(55vh, 380px);
+        min-height: 280px;
+    }
+
+    .vsp__vendor-list {
+        height: auto;
+        max-height: 420px;
+    }
+}
+
+.vsp__map-container .leaflet-container {
+    width: 100%;
+    height: 100%;
+}
 /* leaflet must not paint above navbar / sidebar / modals */
 .leaflet-container {
     position: relative;
@@ -623,7 +855,7 @@ html:has(.cd-modal-backdrop, .vd-modal-overlay, .admin-modal-overlay, .agr-backd
 
 .admin-btn--xs {
     min-height: 30px;
-    padding: 0;
+    padding: 0 30px;
 }
 
 .vd-btn--primary,

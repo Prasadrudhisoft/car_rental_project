@@ -28,6 +28,10 @@ from car_rent.async_utils import enqueue
 from apps.personalization.tasks import run_event_rules_task
 from . import tasks as booking_tasks
 import datetime
+from decimal import InvalidOperation
+from apps.promotions.service import PromoError, redeem_promo
+from .pricing import build_quote, one_way_fee_for
+from .payments import PaymentService, PaymentError, payment_schedule
  
 
 logger = logging.getLogger(__name__)
@@ -44,136 +48,127 @@ class IsAdminRole(permissions.BasePermission):
     def has_permission(self, r, v):
         return r.user.is_authenticated and r.user.role == 'admin'
 
-class DateConflict(Exception):
-    """Another booking / manual block already holds one of the requested dates."""
-
-
-def _block_vehicle_dates(booking):
-    """
-    Authoritative availability guard. Row-locks the vehicle so two customers paying for
-    the same car/dates at the same instant are serialised: the second gets DateConflict.
-    (The old get_or_create silently ignored an existing block from ANOTHER booking.)
-    """
-    days  = (booking.return_date - booking.pickup_date).days
-    dates = [booking.pickup_date + datetime.timedelta(days=i) for i in range(days + 1)]
-    with transaction.atomic():
-        Vehicle.objects.select_for_update().only('id').get(pk=booking.vehicle_id)
-        existing = list(VehicleAvailability.objects.filter(
-            vehicle_id=booking.vehicle_id, blocked_date__in=dates))
-        if any(r.booking_ref != booking.booking_ref for r in existing):
-            raise DateConflict()
-        have = {r.blocked_date for r in existing}
-        VehicleAvailability.objects.bulk_create([
-            VehicleAvailability(vehicle_id=booking.vehicle_id, blocked_date=d,
-                                reason='booking', booking_ref=booking.booking_ref)
-            for d in dates if d not in have
-        ])
-
-
-def _conflict_message(exc):
-    if isinstance(exc, ReturnCapacityConflict):
-        return str(exc) or 'The selected drop point is no longer available.'
-    return 'This vehicle was just booked for those dates by another customer.'
-
-
-def _cancel_on_conflict(booking, payment_id='', reason='Vehicle was booked by another customer before payment completed.'):
-    """Lost the race (vehicle dates or drop-point slot): cancel, and refund if money was captured."""
-    Booking.objects.filter(pk=booking.pk, status='PENDING').update(
-        status='CANCELLED',
-        cancellation_reason=reason,
-        razorpay_payment_id=payment_id or booking.razorpay_payment_id,
-    )
-    if payment_id:
-        enqueue(booking_tasks.issue_razorpay_refund, booking.id, str(booking.total_amount))
-
-
-def _confirm_booking_payment(booking, payment_id=''):
-    """Idempotent PENDING -> CONFIRMED. Shared by verify + webhook. Raises DateConflict."""
-    with transaction.atomic():
-        booking = Booking.objects.select_for_update().get(pk=booking.pk)
-        if booking.status != 'PENDING':
-            return booking, False
-        _block_vehicle_dates(booking)
-        booking.razorpay_payment_id = payment_id or booking.razorpay_payment_id
-        booking.payment_captured    = True
-        booking.payment_captured_at = dj_timezone.now()
-        booking.status              = 'CONFIRMED'
-        booking.deposit_held        = True
-        booking.save(update_fields=['razorpay_payment_id', 'payment_captured',
-                                    'payment_captured_at', 'status', 'deposit_held', 'updated_at'])
-        if booking.is_one_way:
-            from apps.logistics.views import auto_match_return_partner
-            auto_match_return_partner(booking)
-        enqueue(booking_tasks.generate_agreement_pdf_task, booking.id)
-        enqueue(booking_tasks.send_booking_confirmation, booking.id)
-    return booking, True
- 
  
 # ════════════════════════════════════════════════════════════════════════
 # PRICING PREVIEW (called on each step change in booking wizard)
 # ════════════════════════════════════════════════════════════════════════
  
+def _pickup_city_id(vehicle):
+    loc = vehicle.pickup_location or getattr(getattr(vehicle.vendor, 'vendor_profile', None), 'pickup_location', None)
+    return loc.city_id if loc else vehicle.city_id
+
+
 class PricePreviewView(APIView):
     """
     POST /api/bookings/price-preview/
-    Called by the frontend on every step of the booking wizard to show
-    the live price breakdown without creating a booking.
- 
-    Body: { vehicle_id, pickup_date, return_date, addons: [], one_way_fee: 0 }
-    Returns: complete itemised pricing breakdown
+    Body: { vehicle_id, pickup_date, return_date, pickup_time?, return_time?, addons?,
+            return_city_id?, promo_code? }
+    The ONLY pricing the UI shows. one_way_fee is computed here, any client value is ignored.
+    A bad promo does not fail the call: the quote comes back undiscounted with `promo_error`.
     """
-    # permission_classes = [IsCustomerRole]
     permission_classes = [permissions.AllowAny]
- 
+
     def post(self, request):
-
         if request.user.is_authenticated and getattr(request.user, 'role', None) != 'customer':
-            return Response({'error': 'Bookings are available to customer accounts only.'}, status=403)        
-        
-        vehicle_id   = request.data.get("vehicle_id")
-        pickup_date  = request.data.get("pickup_date")
-        return_date  = request.data.get("return_date")
-        pickup_time  = request.data.get("pickup_time")   # "HH:MM" or None
-        return_time  = request.data.get("return_time")   # "HH:MM" or None
-        addons       = request.data.get("addons", [])
-        one_way_fee  = Decimal(str(request.data.get('one_way_fee', '0')))
+            return Response({'error': 'Bookings are available to customer accounts only.'}, status=403)
 
-        if not all([vehicle_id, pickup_date, return_date]):
+        d = request.data
+        if not all([d.get('vehicle_id'), d.get('pickup_date'), d.get('return_date')]):
             return Response({'error': 'vehicle_id, pickup_date, return_date required.'}, status=400)
-
-        vehicle = get_object_or_404(Vehicle, pk=vehicle_id, status="LIVE")
-        p_date  = datetime.date.fromisoformat(pickup_date)
-        r_date  = datetime.date.fromisoformat(return_date)
-        days    = (r_date - p_date).days
-
+        vehicle = get_object_or_404(Vehicle, pk=d['vehicle_id'], status="LIVE")
+        try:
+            p_date = datetime.date.fromisoformat(d['pickup_date'])
+            r_date = datetime.date.fromisoformat(d['return_date'])
+        except (TypeError, ValueError):
+            return Response({'error': 'Invalid date.'}, status=400)
+        days = (r_date - p_date).days
         if days < 0:
             return Response({'error': 'Return date cannot be before pickup date.'}, status=400)
 
-        # Also expose vendor shop hours so frontend can validate time selection
-        try:
-            opening = str(vehicle.vendor.vendor_profile.shop_opening_time or '')
-            closing = str(vehicle.vendor.vendor_profile.shop_closing_time or '')
-        except Exception:
-            opening = ''
-            closing = ''
-
-        breakdown = calculate_price(
-            vehicle_segment = vehicle.segment,
-            daily_rate      = vehicle.daily_rate,
-            rental_days     = days,
-            selected_addons = addons,
-            one_way_fee     = one_way_fee,
-            pickup_time     = pickup_time,
-            return_time     = return_time,
-        )
+        fee = one_way_fee_for(_pickup_city_id(vehicle), d.get('return_city_id') or None)
+        quote, promo_error = build_quote(
+            vehicle, p_date, r_date, d.get('addons', []), fee,
+            d.get('pickup_time'), d.get('return_time'), d.get('promo_code'), request.user)
 
         date_range = [p_date + datetime.timedelta(days=i) for i in range(days + 1)]
-        breakdown['available'] = not VehicleAvailability.objects.filter(
-            vehicle=vehicle, blocked_date__in=date_range).exists()      
-          
-        breakdown['vendor_opening_time'] = opening
-        breakdown['vendor_closing_time'] = closing
-        return Response(breakdown)
+        quote['available']   = not VehicleAvailability.objects.filter(
+            vehicle=vehicle, blocked_date__in=date_range).exists()
+        quote['promo_error'] = promo_error
+        try:
+            prof = vehicle.vendor.vendor_profile
+            quote['vendor_opening_time'] = str(prof.shop_opening_time or '')
+            quote['vendor_closing_time'] = str(prof.shop_closing_time or '')
+        except Exception:
+            quote['vendor_opening_time'] = quote['vendor_closing_time'] = ''
+        return Response(quote)
+
+def _run(fn):
+    try:
+        return Response(fn())
+    except PaymentError as exc:
+        return Response({'error': str(exc), 'code': exc.code}, status=exc.status)
+
+
+def _own_booking(request, booking_id):
+    return get_object_or_404(Booking, pk=booking_id, customer=request.user)
+
+
+class PaymentConfigView(APIView):
+    """GET /api/bookings/payments/config/ -> { mode: dummy|razorpay|unavailable, key_id, ... }"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response(PaymentService.public_config())
+
+
+class PaymentInitiateView(APIView):
+    """POST /api/bookings/{id}/payment/initiate/  { payment_type } -> Razorpay order"""
+    permission_classes = [IsCustomerRole]
+
+    def post(self, request, booking_id):
+        booking = _own_booking(request, booking_id)
+        return _run(lambda: PaymentService.initiate(booking, request.data.get('payment_type', 'advance')))
+
+
+class PaymentVerifyView(APIView):
+    """POST /api/bookings/{id}/payment/verify/  { razorpay_order_id, razorpay_payment_id, razorpay_signature }"""
+    permission_classes = [IsCustomerRole]
+
+    def post(self, request, booking_id):
+        booking = _own_booking(request, booking_id)
+        d = request.data
+        return _run(lambda: PaymentService.verify(
+            booking, d.get('razorpay_order_id'), d.get('razorpay_payment_id'), d.get('razorpay_signature')))
+
+
+class DummyPaymentView(APIView):
+    """DEV ONLY. 404 unless PaymentService.dummy_enabled()."""
+    permission_classes = [IsCustomerRole]
+
+    def post(self, request, booking_id):
+        booking = _own_booking(request, booking_id)
+        return _run(lambda: PaymentService.pay_dummy(booking, request.data.get('payment_type', 'advance')))
+
+
+class PaymentOfflineView(APIView):
+    """POST /api/bookings/{id}/payment/record-offline/ { method: cash|upi } — vendor/admin, balance only."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, booking_id):
+        booking = get_object_or_404(Booking, pk=booking_id)
+        return _run(lambda: PaymentService.record_offline(booking, request.user, request.data.get('method')))
+
+
+class RazorpayWebhookView(APIView):
+    """POST /api/bookings/webhook/razorpay/ — signed with RAZORPAY_WEBHOOK_SECRET."""
+    permission_classes     = [permissions.AllowAny]
+    authentication_classes = []
+    throttle_classes       = []
+
+    def post(self, request):
+        return _run(lambda: PaymentService.handle_webhook(
+            request.body, request.headers.get('X-Razorpay-Signature', ''),
+            request.headers.get('X-Razorpay-Event-Id', '')))
  
 # ════════════════════════════════════════════════════════════════════════
 # BOOKING CREATION
@@ -182,11 +177,11 @@ class PricePreviewView(APIView):
 class BookingCreateView(APIView):
     """
     POST /api/bookings/create/
-    Creates a booking in PENDING status and creates a Razorpay order.
+    Creates a booking in PENDING status.
     Payment must be completed separately.
     """
     permission_classes = [IsCustomerRole]
- 
+
     def post(self, request):
         from apps.notifications.utils import notify
 
@@ -198,33 +193,44 @@ class BookingCreateView(APIView):
         pickup_loc_id  = request.data.get('pickup_location')   # fallback only; server resolves from vehicle
         return_loc_id  = request.data.get('return_location')
         addons         = request.data.get('addons', [])
-        one_way_fee    = Decimal(str(request.data.get('one_way_fee', '0')))
 
         if not all([vehicle_id, pickup_date_s, return_date_s]):
-            return Response({'error': 'vehicle_id, pickup_date, return_date required.'}, status=400)
+            return Response(
+                {'error': 'vehicle_id, pickup_date, return_date required.'},
+                status=400
+            )
 
         # ── Rental agreement must be accepted before payment ──────────────
         from apps.agreements.models import AgreementVersion, AgreementAcceptance
         from apps.agreements.views import _get_client_ip, _get_user_agent
+
         active_version = AgreementVersion.get_active()
         if not active_version:
-            return Response({'error': 'No active rental agreement found. Contact support.'}, status=503)
+            return Response(
+                {'error': 'No active rental agreement found. Contact support.'},
+                status=503
+            )
+
         if request.data.get('agreement_accepted') not in (True, 'true', 'True', 1, '1'):
-            return Response({'error': 'You must accept the Rental Agreement to continue.'}, status=400)
+            return Response(
+                {'error': 'You must accept the Rental Agreement to continue.'},
+                status=400
+            )
+
         if str(request.data.get('agreement_version_id')) != str(active_version.id):
             return Response({
                 'error': 'The Rental Agreement was updated. Please review the latest version and accept again.',
-                'code':  'agreement_outdated',
+                'code': 'agreement_outdated',
             }, status=409)
 
-        vehicle   = get_object_or_404(Vehicle, pk=vehicle_id, status="LIVE")
-        p_date    = datetime.date.fromisoformat(pickup_date_s)
-        r_date    = datetime.date.fromisoformat(return_date_s)
-        days      = (r_date - p_date).days
+        vehicle = get_object_or_404(Vehicle, pk=vehicle_id, status="LIVE")
+        p_date = datetime.date.fromisoformat(pickup_date_s)
+        r_date = datetime.date.fromisoformat(return_date_s)
+        days = (r_date - p_date).days
 
-        seg_cfg         = get_segment_config(vehicle.segment)
+        seg_cfg = get_segment_config(vehicle.segment)
         min_rental_days = seg_cfg.get('min_rental_days', 1)
-        min_driver_age  = seg_cfg.get('min_driver_age', 21)
+        min_driver_age = seg_cfg.get('min_driver_age', 21)
 
         effective_days = max(days, 1)
         if effective_days < min_rental_days:
@@ -236,10 +242,16 @@ class BookingCreateView(APIView):
                 )
             }, status=400)
 
-        dob = getattr(getattr(request.user, 'customer_profile', None), 'date_of_birth', None)
+        dob = getattr(
+            getattr(request.user, 'customer_profile', None),
+            'date_of_birth',
+            None
+        )
         if dob:
             today = datetime.date.today()
-            age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+            age = today.year - dob.year - (
+                (today.month, today.day) < (dob.month, dob.day)
+            )
             if age < min_driver_age:
                 return Response({
                     'error': (
@@ -250,7 +262,10 @@ class BookingCreateView(APIView):
                 }, status=400)
 
         if days < 0:
-            return Response({'error': 'Return date cannot be before pickup date.'}, status=400)
+            return Response(
+                {'error': 'Return date cannot be before pickup date.'},
+                status=400
+            )
 
         # Validate times against vendor shop hours
         if pickup_time_s or return_time_s:
@@ -278,16 +293,13 @@ class BookingCreateView(APIView):
                                 f'DEBUG Pickup time {pt} outside vendor hours '
                                 f'{opening}-{closing}'
                             )
-                            return Response(
-                                {
-                                    'error': (
-                                        f'Pickup time must be between '
-                                        f'{opening.strftime("%H:%M")} and '
-                                        f'{closing.strftime("%H:%M")}.'
-                                    )
-                                },
-                                status=400
-                            )
+                            return Response({
+                                'error': (
+                                    f'Pickup time must be between '
+                                    f'{opening.strftime("%H:%M")} and '
+                                    f'{closing.strftime("%H:%M")}.'
+                                )
+                            }, status=400)
 
                     if return_time_s:
                         rt = datetime.time(
@@ -299,108 +311,159 @@ class BookingCreateView(APIView):
                                 f'DEBUG Return time {rt} outside vendor hours '
                                 f'{opening}-{closing}'
                             )
-                            return Response(
-                                {
-                                    'error': (
-                                        f'Return time must be between '
-                                        f'{opening.strftime("%H:%M")} and '
-                                        f'{closing.strftime("%H:%M")}.'
-                                    )
-                                },
-                                status=400
-                            )
+                            return Response({
+                                'error': (
+                                    f'Return time must be between '
+                                    f'{opening.strftime("%H:%M")} and '
+                                    f'{closing.strftime("%H:%M")}.'
+                                )
+                            }, status=400)
 
             except Exception:
                 pass
 
         # Check date availability — reject if any date in range is blocked
-        date_range = [p_date + datetime.timedelta(days=i) for i in range(days + 1)]
-        conflicts  = VehicleAvailability.objects.filter(
-            vehicle=vehicle, blocked_date__in=date_range).count()
-        if conflicts:
-            return Response({'error': 'Vehicle is not available for the selected dates.'}, status=409)
+        date_range = [
+            p_date + datetime.timedelta(days=i)
+            for i in range(days + 1)
+        ]
+        conflicts = VehicleAvailability.objects.filter(
+            vehicle=vehicle,
+            blocked_date__in=date_range
+        ).count()
 
-        # Calculate price
-        breakdown = calculate_price(
-            vehicle_segment = vehicle.segment,
-            daily_rate      = vehicle.daily_rate,
-            rental_days     = days,
-            selected_addons = addons,
-            one_way_fee     = one_way_fee,
-            pickup_time     = pickup_time_s,
-            return_time     = return_time_s,
-        )
+        if conflicts:
+            return Response(
+                {'error': 'Vehicle is not available for the selected dates.'},
+                status=409
+            )
 
         # Parse time strings to time objects for storage
         def parse_time(t):
-            if not t: return None
-            try: return datetime.time(*[int(x) for x in t.split(':')])
-            except: return None
+            if not t:
+                return None
+            try:
+                return datetime.time(*[int(x) for x in t.split(':')])
+            except:
+                return None
 
         # Resolve locations server-side (never trust a client-sent id for the pickup)
         from apps.locations.models import Location
         from django.db import transaction
+
         pickup_location = (
             vehicle.pickup_location
-            or getattr(getattr(vehicle.vendor, 'vendor_profile', None), 'pickup_location', None)
-            or (get_object_or_404(Location, pk=pickup_loc_id) if pickup_loc_id else None)
+            or getattr(
+                getattr(vehicle.vendor, 'vendor_profile', None),
+                'pickup_location',
+                None
+            )
+            or (
+                get_object_or_404(Location, pk=pickup_loc_id)
+                if pickup_loc_id else None
+            )
         )
+
         if pickup_location is None:
-            return Response({'error': 'This vehicle has no pickup location configured.'}, status=400)
-        return_location = get_object_or_404(Location, pk=return_loc_id) if return_loc_id else None
+            return Response(
+                {'error': 'This vehicle has no pickup location configured.'},
+                status=400
+            )
+
+        return_location = (
+            get_object_or_404(Location, pk=return_loc_id)
+            if return_loc_id else None
+        )
 
         if return_location and return_location.id != pickup_location.id:
             err = validate_return_location(return_location, vehicle.vendor_id)
             if err:
-                return Response({'error': err}, status=409)        
+                return Response({'error': err}, status=409)
 
-        with transaction.atomic():
-            booking = Booking.objects.create(
-                customer            = request.user,
-                vehicle             = vehicle,
-                vendor              = vehicle.vendor,
-                pickup_date         = p_date,
-                pickup_time         = parse_time(pickup_time_s),
-                return_date         = r_date,
-                return_time         = parse_time(return_time_s),
-                pickup_location     = pickup_location,
-                return_location     = return_location,
-                is_one_way          = bool(return_location and return_location.id != pickup_location.id),
-                pricing_snapshot    = breakdown,
-                total_amount        = Decimal(breakdown['grand_total']),
-                deposit_amount      = Decimal(breakdown['security_deposit']),
-                agreement_signed    = True,
-                agreement_signed_at = dj_timezone.now(),
-            )
+        # Calculate price using server-side fees and promo validation
+        raw_promo = (request.data.get('promo_code') or '').strip().upper()
+        breakdown, promo_error = build_quote(
+            vehicle,
+            p_date,
+            r_date,
+            addons,
+            one_way_fee_for(
+                pickup_location.city_id,
+                return_location.city_id if return_location else None
+            ),
+            pickup_time_s,
+            return_time_s,
+            raw_promo,
+            request.user
+        )
 
-            for addon_type in addons:
-                AddOn.objects.create(
-                    booking    = booking,
-                    addon_type = addon_type,
-                    price      = get_addon_price(addon_type),
+        if promo_error:  # never silently charge a different price
+            return Response({
+                'error': promo_error,
+                'code': 'promo_invalid'
+            }, status=400)
+
+        try:
+            with transaction.atomic():
+                booking = Booking.objects.create(
+                    customer=request.user,
+                    vehicle=vehicle,
+                    vendor=vehicle.vendor,
+                    pickup_date=p_date,
+                    pickup_time=parse_time(pickup_time_s),
+                    return_date=r_date,
+                    return_time=parse_time(return_time_s),
+                    pickup_location=pickup_location,
+                    return_location=return_location,
+                    is_one_way=bool(
+                        return_location
+                        and return_location.id != pickup_location.id
+                    ),
+                    pricing_snapshot=breakdown,
+                    total_amount=Decimal(breakdown['grand_total']),
+                    deposit_amount=Decimal(breakdown['security_deposit']),
+                    agreement_signed=True,
+                    agreement_signed_at=dj_timezone.now(),
                 )
 
-            AgreementAcceptance.objects.create(
-                user              = request.user,
-                agreement_version = active_version,
-                booking           = booking,
-                ip_address        = _get_client_ip(request),
-                user_agent        = _get_user_agent(request),
-                otp_verified      = False,
-                acceptance_method = 'checkbox',
-            )
+                for addon_type in breakdown['selected_addons']:
+                    AddOn.objects.create(
+                        booking=booking,
+                        addon_type=addon_type,
+                        price=get_addon_price(addon_type),
+                    )
 
-        # Create Razorpay order
-        razorpay_order = _create_razorpay_order(booking)
-        booking.razorpay_order_id = razorpay_order.get("id", "")
-        booking.save(update_fields=['razorpay_order_id'])
+                if breakdown.get('promo_code'):
+                    redeem_promo(
+                        breakdown['promo_code'],
+                        request.user,
+                        booking,
+                        Decimal(breakdown['subtotal']),
+                        Decimal(breakdown['discount_amount'])
+                    )
+
+                AgreementAcceptance.objects.create(
+                    user=request.user,
+                    agreement_version=active_version,
+                    booking=booking,
+                    ip_address=_get_client_ip(request),
+                    user_agent=_get_user_agent(request),
+                    otp_verified=False,
+                    acceptance_method='checkbox',
+                )
+
+        except PromoError as exc:
+            return Response({
+                'error': str(exc),
+                'code': 'promo_invalid'
+            }, status=400)
 
         notify(
             booking.vendor,
             title="New booking received",
             message=(
-                f"{request.user.full_name} booked your {vehicle.year} {vehicle.make} {vehicle.model} "
-                f"from {p_date} to {r_date}."
+                f"{request.user.full_name} booked your {vehicle.year} "
+                f"{vehicle.make} {vehicle.model} from {p_date} to {r_date}."
             ),
             notification_type='booking_created',
             link_url=f'/vendor?tab=bookings&highlight={booking.id}',
@@ -409,13 +472,10 @@ class BookingCreateView(APIView):
         enqueue(run_event_rules_task, request.user.id, 'payment_pending')
 
         return Response({
-            'booking_id':     booking.id,
-            'booking_ref':    booking.booking_ref,
-            'pricing':        breakdown,
-            'razorpay_order': razorpay_order,
+            'booking_id': booking.id,
+            'booking_ref': booking.booking_ref,
+            'pricing': breakdown,
         }, status=201)
-
-
 
 # ════════════════════════════════════════════════════════════════════════
 # CANCELLATION
@@ -469,7 +529,7 @@ def _calculate_cancellation_refund(booking) -> dict:
                          datetime.time.min, tzinfo=timezone.utc)
     hours_to_pickup = (pickup_dt - datetime.datetime.now(timezone.utc)).total_seconds() / 3600
  
-    total = booking.total_amount
+    total = PaymentService.amount_paid(booking)
     if hours_to_pickup >= free_hours:
         return {
             'refund_amount': total,
@@ -477,7 +537,7 @@ def _calculate_cancellation_refund(booking) -> dict:
         }
     elif hours_to_pickup >= half_hours:
         return {
-            'refund_amount': total / 2,
+            'refund_amount': (total / 2).quantize(Decimal('0.01')),
             'policy': f'50% refund (cancelled {half_hours}–{free_hours}h before pickup)',
         }
     else:
@@ -566,115 +626,6 @@ class AdminBookingListView(generics.ListAPIView):
                        'agreement_acceptances__agreement_version')
 
 
-
-def _create_razorpay_order(booking) -> dict:
-    import uuid
-    stub = {
-        'id':        f'order_DEV_{uuid.uuid4().hex[:12]}',
-        'amount':    int(booking.total_amount * 100),
-        'currency':  'INR', 'status': 'created', '_dev_stub': True,
-    }
-    if 'placeholder' in (settings.RAZORPAY_KEY_ID or 'placeholder') \
-            or 'placeholder' in (settings.RAZORPAY_KEY_SECRET or 'placeholder'):
-        return stub                      # no real keys: skip the network round-trip
-    try:
-        client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-        return client.order.create({
-            "amount":   int(booking.total_amount * 100),
-            "currency": "INR",
-            "receipt":  booking.booking_ref,
-            "notes":    {"booking_id": str(booking.id), "customer": booking.customer.email},
-        })
-    except Exception:
-        logger.exception('Razorpay order creation failed for booking %s', booking.id)
-        return stub
- 
-class PaymentVerifyView(APIView):
-    """POST /api/bookings/{booking_id}/payment/verify/"""
-    permission_classes = [IsCustomerRole]
-
-    def post(self, request, booking_id):
-        booking    = get_object_or_404(Booking, pk=booking_id, customer=request.user)
-        order_id   = request.data.get('razorpay_order_id') or ''
-        payment_id = request.data.get('razorpay_payment_id') or ''
-        signature  = request.data.get('razorpay_signature') or ''
-
-        if order_id != booking.razorpay_order_id:
-            return Response({'error': 'Order does not belong to this booking.'}, status=400)
-
-        is_dev_stub = settings.DEBUG and order_id.startswith('order_DEV_')
-        if not is_dev_stub:
-            expected = hmac.new(
-                settings.RAZORPAY_KEY_SECRET.encode('utf-8'),
-                f"{order_id}|{payment_id}".encode('utf-8'),
-                hashlib.sha256,
-            ).hexdigest()
-            if not hmac.compare_digest(expected, signature):
-                return Response({'error': 'Payment signature invalid.'}, status=400)
-
-        try:
-            _confirm_booking_payment(booking, payment_id)
-        except (DateConflict, ReturnCapacityConflict) as exc:
-            msg = _conflict_message(exc)
-            _cancel_on_conflict(booking, '' if is_dev_stub else payment_id, msg)
-            return Response({'error': f'{msg} Any payment taken will be refunded.'}, status=409)
-
-        return Response({'message': 'Payment verified. Booking confirmed.',
-                         'booking_ref': booking.booking_ref})
-
-
- 
-class RazorpayWebhookView(APIView):
-    """POST /api/bookings/webhook/razorpay/ — HMAC-verified, idempotent, concurrency-safe."""
-    permission_classes     = [permissions.AllowAny]
-    authentication_classes = []
-    throttle_classes       = []          # never rate-limit the payment provider
-
-    def post(self, request):
-        sig      = request.headers.get('X-Razorpay-Signature', '')
-        body_raw = request.body
-        expected = hmac.new(settings.RAZORPAY_KEY_SECRET.encode('utf-8'), body_raw, hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(expected, sig):
-            return Response({'error': 'Invalid signature.'}, status=400)
-
-        try:
-            payload = json.loads(body_raw)
-        except ValueError:
-            return Response({'error': 'Bad payload.'}, status=400)
-
-        event_type = payload.get('event', '')
-        body       = payload.get('payload', {}) or {}
-        entity     = ((body.get('payment') or body.get('refund') or {}).get('entity')) or {}
-        event_id   = request.headers.get('X-Razorpay-Event-Id') or f"{event_type}:{entity.get('id', '')}"
-
-        booking = None
-        if entity.get('order_id'):
-            booking = Booking.objects.filter(razorpay_order_id=entity['order_id']).first()
-        if not booking and entity.get('payment_id'):
-            booking = Booking.objects.filter(razorpay_payment_id=entity['payment_id']).first()
-        if not booking:
-            return Response({'status': 'no_booking_found'})
-
-        # Unique event_id => concurrent duplicate deliveries: exactly one proceeds.
-        try:
-            with transaction.atomic():
-                PaymentEvent.objects.create(booking=booking, razorpay_event_id=event_id,
-                                            event_type=event_type, payload=payload)
-        except IntegrityError:
-            return Response({'status': 'already_processed'})
-
-        if event_type == 'payment.captured':
-            try:
-                _confirm_booking_payment(booking, entity.get('id', ''))
-            except (DateConflict, ReturnCapacityConflict) as exc:
-                _cancel_on_conflict(booking, entity.get('id', ''), _conflict_message(exc))
-        elif event_type == 'payment.failed':
-            Booking.objects.filter(pk=booking.pk, status='PENDING').update(
-                status='CANCELLED', cancellation_reason='Payment failed.')
-        elif event_type == 'refund.processed':
-            Booking.objects.filter(pk=booking.pk).update(deposit_released=True)
-
-        return Response({'status': 'ok'})
 
 class InspectionCreateView(APIView):
     """
@@ -1177,130 +1128,6 @@ class DeletePushSubscriptionView(APIView):
         return Response({'message': 'Unsubscribed.'})
 
 
-
-
-
-
-
-
-
-# Dummy views for payment flows still in development, to be replaced later.
-
-class DummyPaymentView(APIView):
-    """POST /api/bookings/{booking_id}/payment/dummy/ — same contract/response as before."""
-    permission_classes = [permissions.IsAuthenticated]
-    ADVANCE_PCT = Decimal('0.30')
-
-    def post(self, request, booking_id):
-        payment_type    = request.data.get('payment_type', 'advance')
-        method          = request.data.get('method', 'online')
-        amount_override = request.data.get('amount')
-        if payment_type not in ('advance', 'full', 'remaining'):
-            return Response({'error': 'payment_type must be advance, full, or remaining.'}, status=400)
-
-        try:
-            with transaction.atomic():
-                booking = get_object_or_404(Booking.objects.select_for_update(), pk=booking_id)
-
-                if request.user != booking.customer and request.user != booking.vendor \
-                        and getattr(request.user, 'role', None) != 'admin':
-                    return Response({'error': 'Not authorised.'}, status=403)
-                
-                if request.user == booking.customer and method != 'online':
-                    return Response({'error': 'Only online payment is accepted.'}, status=400)
-                
-                if booking.status in ('CANCELLED', 'COMPLETED'):
-                    return Response({'error': f'Cannot take payment on a {booking.status.lower()} booking.'}, status=400)
-
-                snapshot = dict(booking.pricing_snapshot or {})
-                if payment_type == 'advance' and (snapshot.get('advance_paid') or snapshot.get('full_payment_paid')):
-                    return Response({'error': 'Advance is already paid.'}, status=400)
-                if payment_type == 'remaining' and (snapshot.get('remaining_paid') or snapshot.get('full_payment_paid')):
-                    return Response({'error': 'Remaining balance is already paid.'}, status=400)
-                if payment_type == 'full' and snapshot.get('full_payment_paid'):
-                    return Response({'error': 'Booking is already fully paid.'}, status=400)
-
-                grand_total      = booking.total_amount
-                advance_amount   = (grand_total * self.ADVANCE_PCT).quantize(Decimal('0.01'))
-                remaining_amount = grand_total - advance_amount
-
-                if amount_override:
-                    amount_paid = Decimal(str(amount_override)).quantize(Decimal('0.01'))
-                elif payment_type == 'full':
-                    amount_paid = grand_total
-                elif payment_type == 'remaining':
-                    amount_paid = remaining_amount
-                else:
-                    amount_paid = advance_amount
-
-                snapshot['advance_amount']   = str(advance_amount)
-                snapshot['remaining_amount'] = str(remaining_amount)
-                snapshot['advance_pct']      = 30
-
-                if payment_type == 'full':
-                    snapshot.update(full_payment_paid=True, advance_paid=True, remaining_paid=True,
-                                    last_payment_method=method, last_payment_type='full')
-                    is_fully_paid = True
-                else:
-                    if payment_type == 'advance':
-                        snapshot['advance_paid']        = True
-                        snapshot['advance_paid_method'] = method
-                    else:
-                        snapshot['remaining_paid']        = True
-                        snapshot['remaining_paid_method'] = method
-                    is_fully_paid = bool(snapshot.get('advance_paid') and snapshot.get('remaining_paid'))
-                    snapshot['full_payment_paid']  = is_fully_paid
-                    snapshot['last_payment_method'] = method
-                    snapshot['last_payment_type']   = payment_type
-
-                just_confirmed = booking.status == 'PENDING'
-                if payment_type in ('advance', 'full'):
-                    _block_vehicle_dates(booking)          # raises DateConflict if someone beat us
-
-                booking.pricing_snapshot    = snapshot
-                booking.payment_captured    = True
-                booking.payment_captured_at = dj_timezone.now()
-                if just_confirmed:
-                    booking.status       = 'CONFIRMED'
-                    booking.deposit_held = True
-                booking.save(update_fields=['pricing_snapshot', 'payment_captured',
-                                            'payment_captured_at', 'status', 'deposit_held', 'updated_at'])
-
-                if payment_type in ('advance', 'full') and booking.is_one_way:
-                    from apps.logistics.views import auto_match_return_partner
-                    auto_match_return_partner(booking)
-                if just_confirmed:
-                    enqueue(booking_tasks.send_booking_confirmation, booking.id)
-
-        except (DateConflict, ReturnCapacityConflict) as exc:
-            msg = _conflict_message(exc)
-            _cancel_on_conflict(booking, '', msg)
-            return Response({'error': f'{msg} Please choose another option.'}, status=409)
-        
-        current_remaining = Decimal('0') if is_fully_paid else (
-            remaining_amount if payment_type == 'advance' else Decimal('0'))
-
-        return Response({
-            'success':          True,
-            'message':          f'Payment of ₹{amount_paid} recorded successfully via {method}.',
-            'payment_type':     payment_type,
-            'amount_paid':      str(amount_paid),
-            'remaining_amount': str(current_remaining),
-            'is_fully_paid':    is_fully_paid,
-            'booking_status':   booking.status,
-            'booking_ref':      booking.booking_ref,
-            'payment_breakdown': {
-                'grand_total':      str(grand_total),
-                'advance_amount':   str(advance_amount),
-                'remaining_amount': str(remaining_amount),
-                'advance_pct':      30,
-                'advance_paid':     snapshot.get('advance_paid', False),
-                'remaining_paid':   snapshot.get('remaining_paid', False),
-                'is_fully_paid':    is_fully_paid,
-            },
-        })
- 
- 
 class VendorBookingDetailView(generics.RetrieveAPIView):
     """
     GET /api/bookings/vendor/{pk}/
