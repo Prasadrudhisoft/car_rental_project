@@ -72,7 +72,7 @@ export default function CustomerDashboard() {
 
     useEffect(() => {
         if (location.state?.toast) {
-            showToast(location.state.toast);
+            showToast(location.state.toast, location.state.toastType || 'success');
             navigate(location.pathname + location.search, { replace: true, state: null });
         }
     }, []); // eslint-disable-line

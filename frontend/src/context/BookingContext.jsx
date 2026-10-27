@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
 const BookingContext = createContext(null);
 
@@ -28,13 +28,10 @@ const initialState = {
 
 export function BookingProvider({ children }) {
     const [booking, setBooking] = useState(initialState);
-    const update = (partial) => setBooking((prev) => ({ ...prev, ...partial }));
-    const reset = () => setBooking(initialState);
-    return (
-        <BookingContext.Provider value={{ booking, update, reset }}>
-            {children}
-        </BookingContext.Provider>
-    );
+    const update = useCallback((partial) => setBooking((prev) => ({ ...prev, ...partial })), []);
+    const reset  = useCallback(() => setBooking(initialState), []);
+    const value  = useMemo(() => ({ booking, update, reset }), [booking, update, reset]);
+    return <BookingContext.Provider value={value}>{children}</BookingContext.Provider>;
 }
 
 export const useBooking = () => useContext(BookingContext);

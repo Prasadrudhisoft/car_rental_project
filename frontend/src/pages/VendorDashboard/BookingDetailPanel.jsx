@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { StatusBadge, InfoRow, Field, FormInput } from './VendorShared';
 import InspectionPanel from './InspectionPanel';
-import { dummyPayment, cancelBooking, raiseDamageClaim } from '../../services/api';
+import { recordOfflinePayment, cancelBooking, raiseDamageClaim } from '../../services/api';
 
 export default function BookingDetailPanel({ booking, onClose, onRefresh, showToast }) {
     const pricing    = booking.pricing_snapshot || {};
@@ -43,7 +43,7 @@ export default function BookingDetailPanel({ booking, onClose, onRefresh, showTo
     const handleRecordPayment = async () => {
         setPayLoading(true);
         try {
-            const { data } = await dummyPayment(booking.id, { payment_type: 'remaining', method: payMethod });
+            const { data } = await recordOfflinePayment(booking.id, payMethod);
             showToast(data.message || 'Payment recorded.');
             setShowPayForm(false);
             onRefresh();

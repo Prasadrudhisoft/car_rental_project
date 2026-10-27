@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { cancelBooking } from '../../../services/api';
 import { AgreementViewModal, AgreementPreviewModal } from '../../../components/agreements/AgreementModal';
@@ -25,18 +26,21 @@ export default function BookingDetailModal({
     const pricing       = detail?.pricing_snapshot || {};
     const v             = detail?.vehicle   || {};
     const vendor        = detail?.vendor    || {};
-    const grandTotal    = parseFloat(pricing.grand_total || detail?.total_amount || 0);
-    const advancePct    = 30;
-    const advanceAmt    = Math.round((grandTotal * advancePct) / 100);
-    const remaining     = grandTotal - advanceAmt;
-    const advancePaid   = pricing.advance_paid   || detail?.payment_captured || false;
-    const remainingPaid = pricing.remaining_paid || false;
-    const fullPaid      = pricing.full_payment_paid || (advancePaid && remainingPaid);
+
+    // Payment values from the server
+    const ps            = detail?.payment_summary || {};
+    const grandTotal    = parseFloat(ps.total || detail?.total_amount || 0);
+    const advancePct    = ps.advance_pct ?? 30;
+    const advanceAmt    = parseFloat(ps.advance_amount || 0);
+    const remaining     = parseFloat(ps.remaining_amount || 0);
+    const advancePaid   = !!ps.advance_paid;
+    const remainingPaid = !!ps.remaining_paid;
+    const fullPaid      = !!ps.fully_paid;
     const deposit       = parseFloat(pricing.security_deposit || detail?.deposit_amount || 0);
 
     const fmtLoc  = l => (l ? [l.name, l.address].filter(Boolean).join(', ') : '');
     const hasDrop = !!(detail?.is_one_way && detail?.return_location_detail);
-    const canPayNow  = !fullPaid && advancePaid && !remainingPaid;
+    const canPayNow     = !!ps.next_type;
     const canCancel  = ['PENDING', 'CONFIRMED'].includes(booking.status);
 
     const canCreatePickupInsp =
@@ -159,9 +163,10 @@ export default function BookingDetailModal({
                                         value={`${detail.return_date}${detail.return_time ? ' @ ' + detail.return_time : ''}`}
                                     />
                                     <InfoRow label="Duration" value={`${detail.rental_days} day(s)`} />
-                                    <InfoRow label="Pickup At"  value={detail.pickup_location_detail?.name || '—'} />
-                                        {detail.is_one_way && (
-                                        <InfoRow label="Return At" value={detail.return_location_detail?.name || '—'} />)}
+                                    <InfoRow label="Pickup At" value={detail.pickup_location_detail?.name || '—'} />
+                                    {detail.is_one_way && (
+                                        <InfoRow label="Return At" value={detail.return_location_detail?.name || '—'} />
+                                    )}
                                 </div>
 
                                 {/* Payment status */}
@@ -179,7 +184,7 @@ export default function BookingDetailModal({
                                             : `Due — ₹${advanceAmt.toLocaleString('en-IN')}`}
                                     />
                                     <InfoRow
-                                        label="Remaining (70%)"
+                                        label={`Remaining (${100 - advancePct}%)`}
                                         value={(fullPaid || remainingPaid)
                                             ? `Paid — ₹${remaining.toLocaleString('en-IN')}`
                                             : `Due — ₹${remaining.toLocaleString('en-IN')}`}
@@ -220,19 +225,14 @@ export default function BookingDetailModal({
                                 {/* Pricing breakdown */}
                                 <div className="cd-info-group">
                                     <div className="cd-info-group__title">Pricing Breakdown</div>
-                                    <InfoRow
-                                        label="Daily Rate"
-                                        value={`₹${parseFloat(pricing.daily_rate || 0).toLocaleString('en-IN')}/day`}
-                                    />
-                                    <InfoRow
-                                        label="Base Rental"
-                                        value={`₹${parseFloat(pricing.base_amount || 0).toLocaleString('en-IN')}`}
-                                    />
-                                    <InfoRow
-                                        label="GST (18%)"
-                                        value={`₹${parseFloat(pricing.gst_amount || 0).toLocaleString('en-IN')}`}
-                                    />
+                                    <InfoRow label="Daily Rate" value={`₹${parseFloat(pricing.daily_rate || 0).toLocaleString('en-IN')}/day`} />
+                                    <InfoRow label="Base Rental" value={`₹${parseFloat(pricing.base_amount || 0).toLocaleString('en-IN')}`} />
+                                    {parseFloat(pricing.addon_total || 0) > 0 && <InfoRow label="Add-ons" value={`₹${parseFloat(pricing.addon_total).toLocaleString('en-IN')}`} />}
+                                    {parseFloat(pricing.one_way_fee || 0) > 0 && <InfoRow label="One-way fee" value={`₹${parseFloat(pricing.one_way_fee).toLocaleString('en-IN')}`} />}
+                                    {parseFloat(pricing.discount_amount || 0) > 0 && <InfoRow label={`Promo ${pricing.promo_code || ''}`} value={`−₹${parseFloat(pricing.discount_amount).toLocaleString('en-IN')}`} />}
+                                    <InfoRow label={`GST (${Math.round(parseFloat(pricing.gst_rate || 0) * 100)}%)`} value={`₹${parseFloat(pricing.gst_amount || 0).toLocaleString('en-IN')}`} />
                                 </div>
+
                                 <div className="cd-info-group">
                                     <div className="cd-info-group__title">
                                         {hasDrop ? 'Pickup & Drop Points' : 'Pickup & Return Point'}
@@ -288,7 +288,7 @@ export default function BookingDetailModal({
                                             className="cd-btn cd-btn--primary cd-btn--sm"
                                             onClick={() => setShowPayment(true)}
                                         >
-                                            Pay Remaining ₹{remaining.toLocaleString('en-IN')}
+                                            {ps.next_type === 'advance' ? 'Complete Payment' : 'Pay Remaining'} ₹{parseFloat(ps.amount_due_now || 0).toLocaleString('en-IN')}
                                         </button>
                                     </div>
                                 )}
@@ -341,10 +341,10 @@ export default function BookingDetailModal({
                             booking={booking}
                             acceptance={detail.agreement_acceptance || {
                                 agreement_version_id: null,
-                                accepted_at:  detail.agreement_signed_at,
+                                accepted_at: detail.agreement_signed_at,
                                 otp_verified: true,
-                                booking_ref:  booking.booking_ref,
-                                user_email:   null,
+                                booking_ref: booking.booking_ref,
+                                user_email: null,
                             }}
                             onClose={() => setShowViewModal(false)}
                         />

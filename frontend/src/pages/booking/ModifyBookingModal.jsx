@@ -51,7 +51,9 @@ export default function ModifyBookingModal({ onClose }) {
                 const { data } = await calculatePrice({
                     vehicle_id: v.id, pickup_date: form.pickupDate, return_date: form.returnDate,
                     pickup_time: form.pickupTime || null, return_time: form.returnTime || null,
-                    addons: booking.selectedAddons || [], one_way_fee: oneWayFee,
+                    addons: booking.selectedAddons || [],
+                    return_city_id: form.diff ? returnCity?.id : undefined,
+                    promo_code: booking.promoCode || undefined,
                 });
                 if (data.available === false) {
                     setUnavailable(true);
@@ -73,6 +75,7 @@ export default function ModifyBookingModal({ onClose }) {
                 pickupDate: form.pickupDate, returnDate: form.returnDate,
                 pickupTime: form.pickupTime, returnTime: form.returnTime,
                 isDifferentReturn: form.diff, returnCity, oneWayFee,
+                promoCode: pricing?.promo_code || '',
                 ...(pricing ? { pricingBreakdown: pricing } : {}),
                 ...(!form.diff || returnChanged ? { returnLocation: null, returnVendor: null } : {}),
             });

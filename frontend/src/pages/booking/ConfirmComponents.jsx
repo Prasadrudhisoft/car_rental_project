@@ -85,75 +85,61 @@ export function BookingReviewCard({ booking, vehicle: v, user, nights, pricing }
 }
 
 // ── PaymentSummary ────────────────────────────────────────────────────────────
-/**
- * Renders the right-column sticky payment summary with payment
- * type (advance vs full) and method (online vs cash) selectors.
- */
+const inr = n => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+
 export function PaymentSummary({
     pricing, grandTotal, advanceAmount, remainingAmount,
-    paymentType, setPaymentType, unavailable,
-    payableNow, loading, error, onConfirm,
-    agreement, agreementError, agreed, setAgreed, onViewAgreement
+    paymentType, setPaymentType, payableNow, loading, error, onConfirm,
+    agreement, agreementError, agreed, setAgreed, onViewAgreement, unavailable, mode,
 }) {
+    const discount = parseFloat(pricing?.discount_amount || 0);
+    const blocked  = mode === 'unavailable';
     return (
         <aside className="confirm-summary">
             <h3>Payment Summary</h3>
 
+            {mode === 'dummy' && (
+                <div className="wizard-error" style={{ background: '#FEF3C7', borderColor: '#FCD34D', color: '#92400E' }}>
+                    TEST MODE — no real money is charged.
+                </div>
+            )}
+            {blocked && <div className="wizard-error">Online payments are temporarily unavailable. Please try again later.</div>}
+
             {pricing && (
                 <>
-                    {/* Amounts */}
                     <div className="confirm-summary__lines">
-                        <div className="confirm-summary__line">
-                            <span>Grand Total</span>
-                            <span>₹{grandTotal.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="confirm-summary__line">
-                            <span>Advance (30%)</span>
-                            <span>₹{advanceAmount.toLocaleString('en-IN')}</span>
-                        </div>
-                        <div className="confirm-summary__line">
-                            <span>Remaining (70%)</span>
-                            <span>₹{remainingAmount.toLocaleString('en-IN')}</span>
-                        </div>
+                        {discount > 0 && (
+                            <div className="confirm-summary__line confirm-summary__line--discount">
+                                <span>Promo {pricing.promo_code}</span><span>−{inr(discount)}</span>
+                            </div>
+                        )}
+                        <div className="confirm-summary__line"><span>Grand Total (incl. GST)</span><span>{inr(grandTotal)}</span></div>
+                        <div className="confirm-summary__line"><span>Advance ({pricing.advance_pct}%)</span><span>{inr(advanceAmount)}</span></div>
+                        <div className="confirm-summary__line"><span>Remaining ({100 - pricing.advance_pct}%)</span><span>{inr(remainingAmount)}</span></div>
                         <div className="confirm-summary__deposit">
-                            🔒 Security deposit: ₹{parseFloat(pricing.security_deposit).toLocaleString('en-IN')}
-                            <small> (refundable)</small>
+                            🔒 Security deposit: {inr(pricing.security_deposit)}<small> (refundable)</small>
                         </div>
                     </div>
 
-                    {/* Payment type */}
                     <div className="payment-type-section">
                         <p className="payment-type-label">Pay now:</p>
                         <div className="payment-type-buttons">
-                            <button
-                                className={`payment-type-btn${paymentType === 'advance' ? ' active' : ''}`}
-                                onClick={() => setPaymentType('advance')}
-                            >
-                                Advance (30%)<br />
-                                <small>₹{advanceAmount.toLocaleString('en-IN')}</small>
+                            <button className={`payment-type-btn${paymentType === 'advance' ? ' active' : ''}`}
+                                    onClick={() => setPaymentType('advance')}>
+                                Advance Payment<br /><small>{inr(advanceAmount)}</small>
                             </button>
-                            <button
-                                className={`payment-type-btn${paymentType === 'full' ? ' active' : ''}`}
-                                onClick={() => setPaymentType('full')}
-                            >
-                                Full Payment<br />
-                                <small>₹{grandTotal.toLocaleString('en-IN')}</small>
+                            <button className={`payment-type-btn${paymentType === 'full' ? ' active' : ''}`}
+                                    onClick={() => setPaymentType('full')}>
+                                Full Payment<br /><small>{inr(grandTotal)}</small>
                             </button>
                         </div>
                     </div>
-
-                    {/* Payment method */}
                     <div className="confirm-summary__deposit">💳 Online payment only (UPI / Cards / Net Banking)</div>
                 </>
             )}
 
             <label className="confirm-agreement">
-                <input
-                    type="checkbox"
-                    checked={!!agreed}
-                    disabled={!agreement}
-                    onChange={e => setAgreed(e.target.checked)}
-                />
+                <input type="checkbox" checked={!!agreed} disabled={!agreement} onChange={e => setAgreed(e.target.checked)} />
                 <span>
                     I agree to the{' '}
                     <button type="button" className="confirm-agreement__link" onClick={onViewAgreement} disabled={!agreement}>
@@ -163,23 +149,18 @@ export function PaymentSummary({
                 </span>
             </label>
             {agreementError && <div className="wizard-error">{agreementError}</div>}
-            {!agreed && !agreementError && (
-                <p className="confirm-agreement-hint">Please accept the agreement to enable payment.</p>
-            )}
+            {!agreed && !agreementError && <p className="confirm-agreement-hint">Please accept the agreement to enable payment.</p>}
 
-            {unavailable && <div className="wizard-error">This vehicle is not available for the selected dates. Use “Modify booking details”.</div>}            
-
+            {unavailable && <div className="wizard-error">This vehicle is not available for the selected dates. Use “Modify booking details”.</div>}
             {error && <div className="wizard-error">{error}</div>}
 
-            <button className="confirm-cta" onClick={onConfirm} disabled={loading || !agreed || !agreement || unavailable}>
-                {loading ? (
-                    <span className="confirm-cta__loading"><span className="confirm-cta__spinner" /> Processing Payment...</span>
-                ) : `Pay ₹${payableNow.toLocaleString('en-IN')} & Confirm Booking`}
+            <button className="confirm-cta" onClick={onConfirm}
+                    disabled={loading || !agreed || !agreement || unavailable || blocked}>
+                {loading
+                    ? <span className="confirm-cta__loading"><span className="confirm-cta__spinner" /> Processing…</span>
+                    : `Pay ${inr(payableNow)} & Confirm Booking`}
             </button>
-
-            <p className="confirm-terms">
-                Free cancellation up to {pricing?.cancellation_free_hours ?? 48} hours before pickup.
-            </p>
+            <p className="confirm-terms">Free cancellation up to {pricing?.cancellation_free_hours ?? 48} hours before pickup.</p>
         </aside>
     );
 }

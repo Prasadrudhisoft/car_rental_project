@@ -11,15 +11,18 @@ export default function PromosTab({ promos, formLoading, onAddPromo, onDeletePro
             <SectionCard title="Create Promo Code">
                 <InlineForm
                     fields={[
-                        { key: "code",           label: "Code",       required: true,  placeholder: "FIRST50" },
-                        {
-                            key: "discount_type", label: "Type",       type: "select",  required: true, default: "flat",
-                            options: [{ value: "flat", label: "Flat (₹)" }, { value: "percentage", label: "Percentage (%)" }],
-                        },
-                        { key: "discount_value", label: "Discount",   type: "number",  required: true },
-                        { key: "max_uses",       label: "Max Uses",   type: "number" },
-                        { key: "valid_from",     label: "Valid From", type: "datetime-local", required: true },
-                        { key: "valid_until",    label: "Valid Until",type: "datetime-local", required: true },
+                        { key: "code", label: "Code", required: true, placeholder: "FIRST50" },
+                        { key: "description", label: "Description", placeholder: "Shown to customers" },
+                        { key: "discount_type", label: "Type", type: "select", required: true, default: "percentage",
+                        options: [{ value: "percentage", label: "Percentage (%)" }, { value: "flat", label: "Flat (₹)" }] },
+                        { key: "discount_value", label: "Discount", type: "number", required: true, step: "0.01" },
+                        { key: "max_discount_cap", label: "Max discount ₹ (% type)", type: "number", step: "0.01" },
+                        { key: "min_booking_value", label: "Min subtotal ₹ (pre-tax)", type: "number", step: "0.01", default: "0" },
+                        { key: "is_single_use", label: "One use per customer", type: "select", default: "false",
+                        options: [{ value: "false", label: "No" }, { value: "true", label: "Yes" }] },
+                        { key: "max_redemptions", label: "Total uses (blank = unlimited)", type: "number" },
+                        { key: "valid_from", label: "Valid From", type: "datetime-local", required: true },
+                        { key: "valid_until", label: "Valid Until", type: "datetime-local", required: true },
                     ]}
                     onSubmit={onAddPromo}
                     submitLabel="+ Create Promo"
@@ -36,10 +39,8 @@ export default function PromosTab({ promos, formLoading, onAddPromo, onDeletePro
                             ? `₹${row.discount_value} off`
                             : `${row.discount_value}% off`,
                     },
-                    {
-                        key: "redemption_count", label: "Used", sortable: true, width: 90, align: "center",
-                        render: (v, row) => `${v || row.times_used || 0} / ${row.max_redemptions || row.max_uses || "∞"}`,
-                    },
+                    { key: "redemption_count", label: "Used", sortable: true, width: 90, align: "center",
+                    render: (v, row) => `${v ?? 0} / ${row.max_redemptions ?? "∞"}` },
                     { key: "valid_from",  label: "From",  sortable: true, width: 110, render: (v) => v?.slice(0, 10) || "—" },
                     { key: "valid_until", label: "Until", sortable: true, width: 110, render: (v) => v?.slice(0, 10) || "—" },
                 ]}

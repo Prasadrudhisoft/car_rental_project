@@ -420,7 +420,14 @@ const handleCompleteReverification = async (vehicleId) => {
         onConfirm: async () => { await deleteCityPairFee(id); setCityPairFees((p) => p.filter((f) => f.id !== id)); },
     });
     // ── Promo actions ─────────────────────────────────────────────────────────
-    const handleAddPromo    = async (v) => { setFormLoading(true); try { await createPromo(v); await loadTab("promos"); } catch (e) { alert(JSON.stringify(e.response?.data || "Failed.")); } setFormLoading(false); };
+    const handleAddPromo = async (v) => {
+        setFormLoading(true);
+        try {
+            await createPromo(Object.fromEntries(Object.entries(v).filter(([, x]) => x !== '')));
+            await loadTab("promos");
+        } catch (e) { alert(JSON.stringify(e.response?.data || "Failed.")); }
+        setFormLoading(false);
+    };
     const handleDeletePromo = (id, name) => askDelete({
         kind: 'promo code', name,
         onConfirm: async () => { await deletePromo(id); setPromos((p) => p.filter((x) => x.id !== id)); },
