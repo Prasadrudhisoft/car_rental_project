@@ -82,22 +82,22 @@ def generate_invoice_task(booking_id):
         generate_invoice_pdf(booking)
 
 
-@shared_task(**RETRY_POLICY)
-def issue_razorpay_refund(booking_id, amount):
-    import razorpay
-    booking = _get(booking_id)
-    if not booking:
-        return
-    left = Decimal(str(amount))
-    pays = [p for p in (booking.pricing_snapshot or {}).get('payments', [])
-            if p.get('method') == 'razorpay' and p.get('ref')]
-    if not pays and booking.razorpay_payment_id:           # payment taken but not recorded (conflict case)
-        pays = [{'ref': booking.razorpay_payment_id, 'amount': str(left)}]
-    client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
-    for p in reversed(pays):
-        if left <= 0:
-            break
-        part = min(left, Decimal(p['amount']))
-        client.payment.refund(p['ref'], {'amount': int(part * 100),
-                                         'notes': {'reason': (booking.cancellation_reason or '')[:200]}})
-        left -= part
+# @shared_task(**RETRY_POLICY)
+# def issue_razorpay_refund(booking_id, amount):
+#     import razorpay
+#     booking = _get(booking_id)
+#     if not booking:
+#         return
+#     left = Decimal(str(amount))
+#     pays = [p for p in (booking.pricing_snapshot or {}).get('payments', [])
+#             if p.get('method') == 'razorpay' and p.get('ref')]
+#     if not pays and booking.razorpay_payment_id:           # payment taken but not recorded (conflict case)
+#         pays = [{'ref': booking.razorpay_payment_id, 'amount': str(left)}]
+#     client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+#     for p in reversed(pays):
+#         if left <= 0:
+#             break
+#         part = min(left, Decimal(p['amount']))
+#         client.payment.refund(p['ref'], {'amount': int(part * 100),
+#                                          'notes': {'reason': (booking.cancellation_reason or '')[:200]}})
+#         left -= part
