@@ -28,10 +28,10 @@ DATABASES = {
 # EMAIL_HOST_USER = 'apikey'
 # EMAIL_HOST_PASSWORD = config('SENDGRID_API_KEY')
 # Required in production: the app refuses to start without them (no default => error).
-RAZORPAY_KEY_ID         = config('RAZORPAY_KEY_ID')
-RAZORPAY_KEY_SECRET     = config('RAZORPAY_KEY_SECRET')
-RAZORPAY_WEBHOOK_SECRET = config('RAZORPAY_WEBHOOK_SECRET')
-PAYMENT_DUMMY_ENABLED   = True      # hard-coded; cannot be turned on from the environment
+# RAZORPAY_KEY_ID         = config('RAZORPAY_KEY_ID')
+# RAZORPAY_KEY_SECRET     = config('RAZORPAY_KEY_SECRET')
+# RAZORPAY_WEBHOOK_SECRET = config('RAZORPAY_WEBHOOK_SECRET')
+# PAYMENT_DUMMY_ENABLED   = True      # hard-coded; cannot be turned on from the environment
 
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
