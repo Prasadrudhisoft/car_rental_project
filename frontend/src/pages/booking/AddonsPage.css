@@ -70,9 +70,9 @@
 }
 
 .addons-recap__change {
-    background: var(--wz-surf2);
+    background: var(--ds-teal-dark);
     border: 1px solid var(--wz-bdr2);
-    color: var(--wz-muted);
+    color: white;
     font-size: 12px;
     font-weight: 600;
     padding: 7px 14px;
@@ -84,8 +84,9 @@
 }
 
 .addons-recap__change:hover {
+    background: white;
     border-color: var(--wz-teal);
-    color: var(--wz-teal);
+    color: var(--ds-teal-dark);
 }
 
 /* ── Trip recap strip ── */
