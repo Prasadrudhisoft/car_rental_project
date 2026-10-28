@@ -124,7 +124,7 @@ class Migration(migrations.Migration):
             name='PushSubscription',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('endpoint', models.TextField(unique=True)),
+                ('endpoint', models.CharField(max_length=255, db_index=True)),
                 ('p256dh', models.TextField()),
                 ('auth', models.TextField()),
                 ('is_active', models.BooleanField(default=True)),

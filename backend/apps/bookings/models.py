@@ -242,7 +242,7 @@ class PushSubscription(models.Model):
     """
     user       = models.ForeignKey(User, on_delete=models.CASCADE,
                                     related_name='push_subscriptions')
-    endpoint   = models.TextField(unique=True)
+    endpoint   = models.CharField(max_length=255, db_index=True)
     p256dh     = models.TextField()
     auth       = models.TextField()
     is_active  = models.BooleanField(default=True)
