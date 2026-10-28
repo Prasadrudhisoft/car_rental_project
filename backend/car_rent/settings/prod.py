@@ -21,12 +21,12 @@ DATABASES = {
 }
 
 # SendGrid Email
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.sendgrid.net'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'apikey'
-EMAIL_HOST_PASSWORD = config('SENDGRID_API_KEY')
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.sendgrid.net'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'apikey'
+# EMAIL_HOST_PASSWORD = config('SENDGRID_API_KEY')
 # Required in production: the app refuses to start without them (no default => error).
 RAZORPAY_KEY_ID         = config('RAZORPAY_KEY_ID')
 RAZORPAY_KEY_SECRET     = config('RAZORPAY_KEY_SECRET')
