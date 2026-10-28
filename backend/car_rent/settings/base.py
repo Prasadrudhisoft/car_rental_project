@@ -185,9 +185,9 @@ MEDIA_URL   = '/media/'
 MEDIA_ROOT  = BASE_DIR / 'media'
 
 # ── Payments (single source of config; logic lives in apps/bookings/payments.py) ──
-RAZORPAY_KEY_ID         = config('RAZORPAY_KEY_ID', default='')
-RAZORPAY_KEY_SECRET     = config('RAZORPAY_KEY_SECRET', default='')
-RAZORPAY_WEBHOOK_SECRET = config('RAZORPAY_WEBHOOK_SECRET', default='')
+# RAZORPAY_KEY_ID         = config('RAZORPAY_KEY_ID', default='')
+# RAZORPAY_KEY_SECRET     = config('RAZORPAY_KEY_SECRET', default='')
+# RAZORPAY_WEBHOOK_SECRET = config('RAZORPAY_WEBHOOK_SECRET', default='')
 PAYMENT_ADVANCE_PCT     = 30
 PAYMENT_DUMMY_ENABLED   = True      # off by default; only dev.py may switch it on
 
