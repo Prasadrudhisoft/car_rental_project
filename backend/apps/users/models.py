@@ -18,7 +18,9 @@ class UserManager(BaseUserManager):
         extra.setdefault('role', 'admin')
         extra.setdefault('is_staff', True)
         extra.setdefault('is_superuser', True)
-        return self.create_user(email, password, **extra)
+        user = self.create_user(email, password, **extra)
+        AdminProfile.objects.update_or_create(user=user, defaults={'scope': 'superadmin'})
+        return user
 
     def get_by_natural_key(self, email):
         user = self.filter(email=email).order_by('-is_superuser', 'id').first()

@@ -281,19 +281,18 @@ from rest_framework.views import APIView
  
 def _get_admin_profile(user):
     """
-    Returns the AdminProfile for a given admin user, or None.
-    Creates one (assigned_admin scope) if it doesn't exist yet,
-    so legacy admins without a profile still work.
+    Superuser  -> always 'superadmin'.
+    Anyone else -> 'assigned_admin' unless a superadmin explicitly changed it.
     """
-    try:
-        return user.admin_profile
-    except Exception:
-        from apps.users.models import AdminProfile
-        profile, _ = AdminProfile.objects.get_or_create(
-            user=user,
-            defaults={'scope': 'assigned_admin'},
-        )
-        return profile
+    from apps.users.models import AdminProfile
+    profile, _ = AdminProfile.objects.get_or_create(
+        user=user,
+        defaults={'scope': 'superadmin' if user.is_superuser else 'assigned_admin'},
+    )
+    if user.is_superuser and profile.scope != 'superadmin':
+        profile.scope = 'superadmin'
+        profile.save(update_fields=['scope', 'updated_at'])
+    return profile
  
  
 def _is_superadmin(user):
@@ -368,6 +367,21 @@ class IsAdminRole(permissions.BasePermission):
 class IsSuperAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and _is_superadmin(request.user)
+
+class CreateAdminView(APIView):
+    """
+    POST /api/users/admin/create-admin/   (superadmin only)
+    Body: { full_name, email, phone, password, display_name?, notes? }
+    Always creates an ASSIGNED admin: not staff, not superuser, scope='assigned_admin'.
+    """
+    permission_classes = [IsSuperAdmin]
+
+    def post(self, request):
+        from apps.users.serializers import CreateAdminSerializer, AdminProfileSerializer
+        s = CreateAdminSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        user = s.save()
+        return Response(AdminProfileSerializer(user.admin_profile).data, status=201)
  
  
 # ── Admin Profile ─────────────────────────────────────────────────────────

@@ -24,6 +24,7 @@ class OTPRecord(models.Model):
         ('email_verify',    'Email Verification'),
         ('agreement_sign',  'Agreement Sign-Off'),
         ('inspection_sign', 'Inspection Sign-Off'),
+        ('password_reset',  'Password Reset'),        
     ]
  
     user       = models.ForeignKey(User, on_delete=models.CASCADE,

@@ -54,10 +54,11 @@ export const ADDON_LABELS = {
 };
 
 export const REQUIRED_DOCS = [
-    { key: "rc",        label: "RC Book",         required: true  },
-    { key: "insurance", label: "Insurance",        required: true  },
-    { key: "puc",       label: "PUC Certificate",  required: true  },
-    { key: "fitness",   label: "Fitness Cert",     required: false },
+    { key: "rc",            label: "RC Book",               required: true },
+    { key: "insurance",     label: "Insurance",             required: true },
+    { key: "puc",           label: "PUC Certificate",       required: true },
+    { key: "fitness",       label: "Fitness Certificate",   required: true },
+    { key: "mechanic_cert", label: "Mechanic Certificate",  required: true },
 ];
 
 export const PIPELINE_STEPS = [

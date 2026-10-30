@@ -4,7 +4,7 @@ import {
     getAdminStats, getAdminAnalytics,
     getAdminVendors, adminVendorAction,
     getAdminVehicles, getAdminVehicleStats,
-    reviewDoc, certifyVehicle, blacklistVehicle, vahanCheck, setVehicleStatus,
+    reviewDoc, blacklistVehicle, vahanCheck, setVehicleStatus,
     getAdminBookings,
     getAdminUsers,
     getConfigSettings, updateConfigSetting,
@@ -255,24 +255,26 @@ export default function AdminDashboard() {
     // ── Vehicle actions ───────────────────────────────────────────────────────
     const handleDocReview = async (docId, action) => {
         try {
-            await reviewDoc(docId, action, docNotes[docId] || "");
-            const updater = (docs) => (docs || []).map((d) => d.id === docId ? { ...d, status: action } : d);
-            setVehicles((p) => p.map((v) => ({ ...v, documents: updater(v.documents) })));
-            setSelectedVehicle((prev) => prev ? { ...prev, documents: updater(prev.documents) } : prev);
+            const { data } = await reviewDoc(docId, action, docNotes[docId] || "");
+            if (data.vehicle) {
+                setVehicles((p) => p.map((v) => v.id === data.vehicle.id ? data.vehicle : v));
+                setSelectedVehicle((prev) => prev?.id === data.vehicle.id ? data.vehicle : prev);
+            }
             setDocNotes((p) => ({ ...p, [docId]: "" }));
-        } catch { alert("Review failed."); }
+            if (data.advanced) alert("All documents approved — the vehicle is now LIVE.");
+        } catch (e) { alert(e.response?.data?.error || "Review failed."); }
     };
 
-    const handleCertify = async (vehicleId) => {
-        const f = certifyForms[vehicleId] || {};
-        if (!f.cert_date || !f.odometer_at_cert) { alert("Cert date and odometer required."); return; }
-        const fd = new FormData();
-        fd.append("cert_date", f.cert_date);
-        fd.append("odometer_at_cert", f.odometer_at_cert);
-        if (f.file) fd.append("file", f.file);
-        try { await certifyVehicle(vehicleId, fd); await loadTab("vehicles"); alert("Vehicle certified → LIVE!"); }
-        catch (e) { alert(e.response?.data?.error || "Certification failed."); }
-    };
+    // const handleCertify = async (vehicleId) => {
+    //     const f = certifyForms[vehicleId] || {};
+    //     if (!f.cert_date || !f.odometer_at_cert) { alert("Cert date and odometer required."); return; }
+    //     const fd = new FormData();
+    //     fd.append("cert_date", f.cert_date);
+    //     fd.append("odometer_at_cert", f.odometer_at_cert);
+    //     if (f.file) fd.append("file", f.file);
+    //     try { await certifyVehicle(vehicleId, fd); await loadTab("vehicles"); alert("Vehicle certified → LIVE!"); }
+    //     catch (e) { alert(e.response?.data?.error || "Certification failed."); }
+    // };
 
     const handleBlacklist = async (vehicleId) => {
         const reason = blacklistReasons[vehicleId];
@@ -468,10 +470,10 @@ const handleCompleteReverification = async (vehicleId) => {
                     vehicle={selectedVehicle}
                     onClose={() => setSelectedVehicle(null)}
                     docNotes={docNotes}           setDocNotes={setDocNotes}
-                    certifyForms={certifyForms}   setCertifyForms={setCertifyForms}
+                    
                     blacklistReasons={blacklistReasons} setBlacklistReasons={setBlacklistReasons}
                     onDocReview={handleDocReview}
-                    onCertify={handleCertify}
+                    
                     onBlacklist={handleBlacklist}
                     onSetStatus={handleSetVehicleStatus}
                     onVahanCheck={handleVahanCheck}

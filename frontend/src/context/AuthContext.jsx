@@ -44,10 +44,16 @@ export function AuthProvider({ children }) {
         const { data } = await apiLogin(email, password, role);
         localStorage.setItem('access_token', data.access);
         localStorage.setItem('refresh_token', data.refresh);
-        const me = await getMe();
-        setUser(me.data);
-        redirectUser(me.data);
-        return me.data;
+        try {
+            const me = await getMe();
+            setUser(me.data);
+            redirectUser(me.data);
+            return me.data;
+        } catch (e) {                       // signed in but profile failed: never leave half-logged-in tokens
+            localStorage.clear();
+            setUser(null);
+            throw e;
+        }
     };
 
     const logout = async () => {

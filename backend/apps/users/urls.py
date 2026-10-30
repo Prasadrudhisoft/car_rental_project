@@ -13,7 +13,7 @@ from .views import (
     AssignVendorView, UnassignVendorView, BulkAssignVendorsView,
     VendorAssignmentHistoryView, AllAssignmentsView, MyAssignedVendorsView,
     # Scoped views (replace old AdminVendorListView, AdminUserListView, AdminDashboardStatsView)
-    ScopedAdminVendorListView, ScopedAdminUserListView, ScopedAdminDashboardStatsView,
+    ScopedAdminVendorListView, ScopedAdminUserListView, ScopedAdminDashboardStatsView, CreateAdminView
 )
 from .token import CarRentTokenView
  
@@ -51,6 +51,7 @@ urlpatterns = [
     path('admin/vendors/',              ScopedAdminVendorListView.as_view(),   name='admin-vendors'),
     path('admin/vendors/<int:pk>/action/', AdminVendorActionView.as_view(),    name='admin-vendor-action'),
     path('admin/stats/',                ScopedAdminDashboardStatsView.as_view(), name='admin-stats'),
+    path('admin/create-admin/',         CreateAdminView.as_view(), name='create-admin'),
  
     # ── Customer / Vendor profiles ────────────────────────────────────
     path('profile/',           CustomerProfileView.as_view(),   name='customer-profile'),

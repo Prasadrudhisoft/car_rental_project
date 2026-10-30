@@ -16,13 +16,16 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
-    const original = err.config;
-    if (err.response?.status === 401 && !original._retry) {
+    const original = err.config || {};
+    const isAuthCall = /users\/(login|token\/refresh|register)|password-reset/.test(original.url || "");
+    const refresh = localStorage.getItem("refresh_token");
+    // only an expired session of a logged-in user is refreshed; login/reset failures just reject
+    if (err.response?.status === 401 && !original._retry && !isAuthCall && refresh) {
       original._retry = true;
       try {
-        const refresh = localStorage.getItem("refresh_token");
         const { data } = await axios.post(`${BASE_URL}/users/token/refresh/`, { refresh });
         localStorage.setItem("access_token", data.access);
+        if (data.refresh) localStorage.setItem("refresh_token", data.refresh);   // rotation
         original.headers.Authorization = `Bearer ${data.access}`;
         return api(original);
       } catch {
@@ -48,11 +51,17 @@ export const getMe = () =>
 export const updateMe = (data) =>
   api.patch("/users/me/", data);
 
+export const createAdminAccount = (data) => api.post('/users/admin/create-admin/', data);
+
 // ── OTP ───────────────────────────────────────────────────────────────────
 export const sendOTP = (email, purpose) =>
   api.post("/otp/send/", { email, purpose });
 export const verifyOTP = (email, code, purpose) =>
   api.post("/otp/verify/", { email, code, purpose });
+export const requestPasswordReset = (email, role) =>
+  api.post("/otp/password-reset/request/", { email, ...(role ? { role } : {}) });
+export const confirmPasswordReset = (data) =>
+  api.post("/otp/password-reset/confirm/", data);
 
 // ── Cities ────────────────────────────────────────────────────────────────
 export const getCities = () =>
@@ -131,10 +140,8 @@ export const getAdminVehicleStats = () =>
   api.get("/vehicles/admin/stats/");
 export const reviewDoc = (docId, action, note) =>
   api.post(`/vehicles/admin/docs/${docId}/review/`, { action, note });
-export const certifyVehicle = (vehicleId, formData) =>
-  api.post(`/vehicles/admin/${vehicleId}/certify/`, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
+export const submitVehicleDocs = (vehicleId) => 
+  api.post(`/vehicles/vendor/${vehicleId}/submit-docs/`);
 export const blacklistVehicle = (vehicleId, reason) =>
   api.post(`/vehicles/admin/${vehicleId}/blacklist/`, { reason });
 export const vahanCheck = (vehicleId) =>

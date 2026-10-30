@@ -632,7 +632,41 @@ class VendorAdminAssignmentSerializer(serializers.ModelSerializer):
             return obj.assigned_by.full_name or obj.assigned_by.email
         return None
  
- 
+
+class CreateAdminSerializer(serializers.Serializer):
+    full_name    = serializers.CharField(max_length=200)
+    email        = serializers.EmailField()
+    phone        = serializers.CharField(max_length=15)
+    password     = serializers.CharField(write_only=True)
+    display_name = serializers.CharField(required=False, allow_blank=True, default='')
+    notes        = serializers.CharField(required=False, allow_blank=True, default='')
+
+    def validate_email(self, v):
+        if User.objects.filter(email__iexact=v, role='admin').exists():
+            raise serializers.ValidationError('An admin with this email already exists.')
+        return v
+
+    def validate_phone(self, v):
+        if User.objects.filter(phone=v, role='admin').exists():
+            raise serializers.ValidationError('An admin with this phone number already exists.')
+        return v
+
+    def validate_password(self, v):
+        validate_password(v)
+        return v
+
+    def create(self, d):
+        from django.db import transaction
+        with transaction.atomic():
+            user = User.objects.create_user(
+                email=d['email'], password=d['password'], phone=d['phone'],
+                full_name=d['full_name'], role='admin', is_staff=False, is_superuser=False)
+            AdminProfile.objects.create(
+                user=user, scope='assigned_admin',
+                display_name=d['display_name'], notes=d['notes'])
+        return user
+    
+     
 # ── AssignVendorSerializer (input validation) ─────────────────────────────────
 class AssignVendorSerializer(serializers.Serializer):
     vendor_id = serializers.IntegerField()

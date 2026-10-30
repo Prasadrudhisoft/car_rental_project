@@ -17,6 +17,7 @@ import {
     bulkAssignVendors,
     unassignVendor,
     getAssignmentHistory,
+    createAdminAccount,
 } from "../../../services/api";
 import DataTable from "../../../components/common/DataTable";
 import AdminAssignmentCard from "../AdminAssignmentCard";
@@ -52,6 +53,10 @@ export default function AssignmentsTab({ myProfile }) {
     const [viewMode,   setViewMode]   = useState("matrix");
 
     const selectedCount = Object.keys(selectedMap).length;
+
+    const [showCreate, setShowCreate] = useState(false);
+    const [newAdmin, setNewAdmin] = useState({ full_name: "", email: "", phone: "", password: "", display_name: "" });
+    const [createErr, setCreateErr] = useState("");
 
     // ── Load ──────────────────────────────────────────────────────────────────
     const load = useCallback(async () => {
@@ -173,6 +178,21 @@ export default function AssignmentsTab({ myProfile }) {
         } catch { setHistoryData([]); }
     };
 
+    const handleCreateAdmin = async (e) => {
+        e.preventDefault();
+        setBusy(true); setCreateErr("");
+        try {
+            await createAdminAccount(newAdmin);
+            setNewAdmin({ full_name: "", email: "", phone: "", password: "", display_name: "" });
+            setShowCreate(false);
+            await load();
+        } catch (err) {
+            const d = err.response?.data;
+            setCreateErr(d ? Object.values(d).flat().join(" ") : "Could not create the admin.");
+        }
+        setBusy(false);
+    };
+
     // ── Table view columns ────────────────────────────────────────────────────
     const asgCols = [
         {
@@ -269,11 +289,45 @@ export default function AssignmentsTab({ myProfile }) {
                     <button onClick={load} disabled={busy} style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, border: "1px solid var(--vbdr2)", background: "var(--vs2)", color: "var(--vt2)", cursor: "pointer", fontFamily: 'inherit' }}>
                         ↺ Refresh
                     </button>
+                    <button onClick={() => setShowCreate(v => !v)} style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700, border: "1px solid var(--teal-dark)", background: "var(--teal-primary)", color: "#fff", cursor: "pointer" }}>
+                        {showCreate ? "✕ Cancel" : "+ New Admin"}
+                    </button>
                 </div>
             </div>
 
             {error && (
                 <div style={{ background: "#FEE2E2", border: "1px solid #FCA5A5", color: "#B91C1C", padding: "10px 16px", borderRadius: 10, fontSize: 13 }}>⚠ {error}</div>
+            )}
+
+            {showCreate && (
+                <form onSubmit={handleCreateAdmin} className="admin-section-card">
+                    <div className="admin-section-card__header">
+                        <div>
+                            <h3>Create a new admin</h3>
+                            <p>New admins are always created as <strong>🎯 Assigned Admin</strong>. They only see the vendors you assign to them.</p>
+                        </div>
+                    </div>
+                    {createErr && <div className="admin-error"><span>⚠ {createErr}</span></div>}
+                    <div className="admin-inline-form">
+                        {[
+                            ["full_name", "Full name", "text", true],
+                            ["email", "Email", "email", true],
+                            ["phone", "Phone", "tel", true],
+                            ["password", "Temporary password", "password", true],
+                            ["display_name", "Display name (optional)", "text", false],
+                        ].map(([k, label, type, req]) => (
+                            <div key={k} className="admin-form-field">
+                                <label>{label}</label>
+                                <input type={type} required={req} value={newAdmin[k]}
+                                    autoComplete={k === "password" ? "new-password" : "off"}
+                                    onChange={(e) => setNewAdmin((p) => ({ ...p, [k]: e.target.value }))} />
+                            </div>
+                        ))}
+                        <button type="submit" className="admin-form-submit" disabled={busy}>
+                            {busy ? "Creating…" : "+ Create Assigned Admin"}
+                        </button>
+                    </div>
+                </form>
             )}
 
             {/* KPI strip */}

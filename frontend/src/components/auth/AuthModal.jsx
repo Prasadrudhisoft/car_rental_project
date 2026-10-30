@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { registerCustomer, registerVendor } from '../../services/api';
+import { registerCustomer, registerVendor, requestPasswordReset, confirmPasswordReset } from '../../services/api';
 import './AuthModal.css';
 
 // ── Mini components ────────────────────────────────────────
@@ -61,6 +61,8 @@ export default function AuthModal({ onClose, onSuccess }) {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [loginRole, setLoginRole] = useState('');
+    const [resetStep, setResetStep] = useState('request');
+    const [resetForm, setResetForm] = useState({ code: '', password: '', password2: '' });
 
     const [form, setForm] = useState({
         email: '',
@@ -93,29 +95,29 @@ export default function AuthModal({ onClose, onSuccess }) {
         setSuccess('');
     }, [view]);
 
+    const loginErrorMessage = (err) => {
+        if (!err.response) return 'Cannot reach the server. Check your internet connection and try again.';
+        const { status, data = {} } = err.response;
+        if (data.code === 'role_required') return data.detail;             // pick Customer/Vendor/Admin below
+        if (status === 401) return 'Invalid username/email or password.';
+        if (status === 429) return 'Too many attempts. Please wait a minute and try again.';
+        if (status === 403) return 'This account is not allowed to sign in.';
+        if (status >= 500) return 'Something went wrong on our side. Please try again shortly.';
+        return data.detail || data.error || 'Sign-in failed. Please try again.';
+    };    
+
     // ── Login ──────────────────────────────────────────────
     const handleLogin = async e => {
         e.preventDefault();
-        setLoading(true);
-        setError('');
-
+        if (!form.email.trim() || !form.password) { setError('Please enter your email and password.'); return; }
+        setLoading(true); setError('');
         try {
-            await login(form.email, form.password, loginRole);
-
+            await login(form.email.trim(), form.password, loginRole);
             setSuccess('Signed in!');
-
-            setTimeout(() => {
-                onSuccess?.();
-                onClose();
-            }, 500);
+            setTimeout(() => { onSuccess?.(); onClose(); }, 500);
         } catch (err) {
-            setError(
-                err.response?.data?.detail ||
-                'Invalid email or password.'
-            );
-        } finally {
-            setLoading(false);
-        }
+            setError(loginErrorMessage(err));          // stays on the form; nothing closes
+        } finally { setLoading(false); }
     };
 
     // ── Customer registration ──────────────────────────────
@@ -203,6 +205,39 @@ export default function AuthModal({ onClose, onSuccess }) {
         }
     };
 
+    const handleResetRequest = async e => {
+        e.preventDefault();
+        if (!form.email.trim()) { setError('Enter the email address of your account.'); return; }
+        setLoading(true); setError('');
+        try {
+            await requestPasswordReset(form.email.trim(), loginRole);
+            setResetStep('confirm');
+            setSuccess('If an account exists for this email, a 6-digit code has been sent.');
+        } catch (err) {
+            setError(err.response?.status === 429
+                ? 'Too many requests. Please wait a minute.'
+                : err.response?.data?.error || 'Could not send the code. Please try again.');
+        } finally { setLoading(false); }
+    };
+
+    const handleResetConfirm = async e => {
+        e.preventDefault();
+        if (resetForm.password !== resetForm.password2) { setError('Passwords do not match.'); return; }
+        setLoading(true); setError('');
+        try {
+            await confirmPasswordReset({
+                email: form.email.trim(), code: resetForm.code, new_password: resetForm.password,
+                ...(loginRole ? { role: loginRole } : {}),
+            });
+            setResetForm({ code: '', password: '', password2: '' });
+            setResetStep('request');
+            setView('login');
+            setTimeout(() => setSuccess('Password updated. Sign in with your new password.'), 50);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Could not reset the password. Please try again.');
+        } finally { setLoading(false); }
+    };    
+
     // ── Panel copy ─────────────────────────────────────────
     const PANEL_COPY = {
         login: {
@@ -223,6 +258,11 @@ export default function AuthModal({ onClose, onSuccess }) {
             cta: 'Already a vendor? Sign in →',
             cta_view: 'login',
         },
+        forgot: { 
+            title: 'Forgot your password?', 
+            sub: 'We email you a 6-digit code so you can set a new password.', 
+            cta: 'Back to sign in →', 
+            cta_view: 'login' },        
     };
 
     const copy = PANEL_COPY[view];
@@ -334,11 +374,12 @@ export default function AuthModal({ onClose, onSuccess }) {
                     {/* Header */}
                     <div className="am-form-header">
                         <h3 className="am-form-title">
-                            {view === 'login'
-                                ? 'Sign in to continue'
-                                : view === 'customer'
-                                    ? 'Create your account'
-                                    : 'Register as vendor'}
+                            {view === 'login' 
+                                ? 'Sign in to continue' 
+                                    : view === 'forgot' ? 'Reset your password' 
+                                    : view === 'customer' 
+                                        ? 'Create your account' 
+                                        : 'Register as vendor'}
                         </h3>
                     </div>
 
@@ -383,6 +424,12 @@ export default function AuthModal({ onClose, onSuccess }) {
                                 required
                                 autoComplete="current-password"
                             />
+                            <div style={{ textAlign: 'right', marginTop: -4 }}>
+                                <button type="button" className="am-link"
+                                        onClick={() => { setView('forgot'); setResetStep('request'); }}>
+                                    Forgot password?
+                                </button>
+                            </div>
 
                             {/* Role selector */}
                             <div
@@ -432,7 +479,7 @@ export default function AuthModal({ onClose, onSuccess }) {
                                     className="am-link"
                                     onClick={() => setView('customer')}
                                 >
-                                    Create one free
+                                    Create Account
                                 </button>
                             </p>
                         </form>
@@ -632,6 +679,45 @@ export default function AuthModal({ onClose, onSuccess }) {
                             </p>
                         </form>
                     )}
+
+                    {view === 'forgot' && (
+                        resetStep === 'request' ? (
+                            <form onSubmit={handleResetRequest} className="am-form">
+                                <InputField label="Email address" icon={mailIcon} type="email"
+                                    value={form.email} onChange={s('email')} placeholder="you@example.com" required autoComplete="email" />
+                                <div className="am-role-pick" role="group" aria-label="Account type">
+                                    {[['', 'Auto'], ['customer', 'Customer'], ['vendor', 'Vendor'], ['admin', 'Admin']].map(([v, l]) => (
+                                        <button key={v || 'auto'} type="button" className={loginRole === v ? 'active' : ''}
+                                                onClick={() => setLoginRole(v)}>{l}</button>
+                                    ))}
+                                </div>
+                                <button type="submit" className="am-submit" disabled={loading}>
+                                    {loading ? <><span className="am-spinner" /> Sending…</> : 'Send reset code →'}
+                                </button>
+                                <p className="am-form-footer">
+                                    <button type="button" className="am-link" onClick={() => setView('login')}>Back to sign in</button>
+                                </p>
+                            </form>
+                        ) : (
+                            <form onSubmit={handleResetConfirm} className="am-form">
+                                <InputField label="6-digit code" icon={lockIcon} value={resetForm.code}
+                                    onChange={e => setResetForm(p => ({ ...p, code: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                                    placeholder="123456" required autoComplete="one-time-code" />
+                                <InputField label="New password" icon={lockIcon} type="password" value={resetForm.password}
+                                    onChange={e => setResetForm(p => ({ ...p, password: e.target.value }))}
+                                    placeholder="Min. 8 characters" required autoComplete="new-password" />
+                                <InputField label="Confirm new password" icon={lockIcon} type="password" value={resetForm.password2}
+                                    onChange={e => setResetForm(p => ({ ...p, password2: e.target.value }))}
+                                    placeholder="Repeat password" required autoComplete="new-password" />
+                                <button type="submit" className="am-submit" disabled={loading || resetForm.code.length !== 6}>
+                                    {loading ? <><span className="am-spinner" /> Updating…</> : 'Set new password →'}
+                                </button>
+                                <p className="am-form-footer">
+                                    <button type="button" className="am-link" onClick={() => { setResetStep('request'); setError(''); }}>Use a different email</button>
+                                </p>
+                            </form>
+                        )
+                    )}                    
                 </div>
             </div>
         </div>

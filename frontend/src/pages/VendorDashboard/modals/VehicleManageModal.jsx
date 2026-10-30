@@ -17,7 +17,7 @@
 import React, { useState } from 'react';
 import { PhotoLightbox } from '../VendorMediaComponents';
 import { VEHICLE_STATUS_CLR, DOC_TYPES, ANGLES, fmtDatetime } from '../vendorConstants';
-import { uploadVehicleDoc, uploadVehiclePhoto } from '../../../services/api';
+import { uploadVehicleDoc, uploadVehiclePhoto, submitVehicleDocs } from '../../../services/api';
 
 const PIPELINE = ['PENDING_DOCS', 'DOCS_SUBMITTED', 'ADMIN_APPROVED', 'CERTIFIED', 'LIVE'];
 
@@ -264,6 +264,8 @@ export default function VehicleManageModal({
         const fd = new FormData();
         fd.append('doc_type', docType);
         fd.append('file', file);
+        const exp = docUploads[`${v.id}-${docType}-exp`];
+        if (exp) fd.append('expiry_date', exp);
         try {
             await uploadVehicleDoc(v.id, fd);
             showToast(`${docType.toUpperCase()} uploaded!`);
@@ -289,6 +291,23 @@ export default function VehicleManageModal({
             showToast('Photo upload failed.', 'error');
         }
     };
+
+    const [submitting, setSubmitting] = useState(false);
+    const have     = new Set((v.documents || []).map(d => d.doc_type));
+    const missing  = DOC_TYPES.filter(d => !have.has(d));
+    const canSubmit = v.status === 'PENDING_DOCS' && missing.length === 0 && photoCount >= 10;
+
+    const handleSubmitDocs = async () => {
+        setSubmitting(true);
+        try {
+            await submitVehicleDocs(v.id);
+            showToast('Submitted for admin approval!');
+            onRefresh();
+        } catch (e) {
+            showToast(e.response?.data?.error || 'Could not submit.', 'error');
+        }
+        setSubmitting(false);
+    };    
 
     // ── Edit details save ──────────────────────────────────────────────────────
     const handleSaveDetails = async (form) => {
@@ -442,7 +461,7 @@ export default function VehicleManageModal({
                     {subTab === 'docs' && (
                         <div>
                             <p className="vd-hint">
-                                Required: RC, Insurance, PUC — all must be admin-approved before LIVE.
+                                All five documents (RC, Insurance, PUC, Fitness, Mechanic Certificate) and 10 photos are required, then submit for admin approval.
                             </p>
                             <div className="vd-doc-grid">
                                 {DOC_TYPES.map(dt => {
@@ -526,6 +545,18 @@ export default function VehicleManageModal({
                                                 )
                                             )}
 
+                                            {existing?.status === 'rejected' && existing.admin_note && (
+                                                <div style={{ fontSize: 11, color: '#B91C1C' }}>Rejected: {existing.admin_note}</div>
+                                            )}
+                                            {['insurance', 'puc', 'fitness', 'mechanic_cert'].includes(dt) && (
+                                                <div className="vd-form-field">
+                                                    <label>Expiry date</label>
+                                                    <input type="date" className="vd-input"
+                                                           value={docUploads[`${key}-exp`] || ''}
+                                                           onChange={e => setDocUploads(p => ({ ...p, [`${key}-exp`]: e.target.value }))} />
+                                                </div>
+                                            )}
+
                                             <input
                                                 type="file"
                                                 accept=".pdf,.jpg,.png"
@@ -539,6 +570,28 @@ export default function VehicleManageModal({
                                     );
                                 })}
                             </div>
+
+                            {v.status === 'PENDING_DOCS' && (
+                                <div className="vd-info-group" style={{ marginTop: 14 }}>
+                                    <div className="vd-info-group__title">Submit for admin approval</div>
+                                    <div style={{ fontSize: 12, color: 'var(--vt2)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                        {DOC_TYPES.map(d => (
+                                            <span key={d}>{have.has(d) ? '✅' : '⬜'} {d.replace(/_/g, ' ').toUpperCase()}</span>
+                                        ))}
+                                        <span>{photoCount >= 10 ? '✅' : '⬜'} Photos {photoCount}/10</span>
+                                    </div>
+                                    <button className="vd-btn vd-btn--primary" style={{ marginTop: 10 }}
+                                            disabled={!canSubmit || submitting} onClick={handleSubmitDocs}>
+                                        {submitting ? 'Submitting…' : 'Submit all for approval →'}
+                                    </button>
+                                </div>
+                            )}
+                            {v.status === 'DOCS_SUBMITTED' && (
+                                <p className="vd-hint" style={{ marginTop: 12 }}>
+                                    ⏳ Submitted. The admin is reviewing your documents. You can re-upload any rejected one.
+                                </p>
+                            )}
+                                                        
                         </div>
                     )}
 

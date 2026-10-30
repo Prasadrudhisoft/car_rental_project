@@ -46,71 +46,6 @@ def _generate_qr(vehicle):
 # VENDOR VIEWS
 # ════════════════════════════════════════════════════════════════════════
  
-# class VendorVehicleViewSet(viewsets.ModelViewSet):
-#     """
-#     CRUD for a vendor's own vehicles.
-#     GET  /api/vehicles/vendor/             -> list my vehicles
-#     POST /api/vehicles/vendor/             -> create a new listing
-#     GET  /api/vehicles/vendor/{id}/        -> single vehicle detail
-#     PATCH /api/vehicles/vendor/{id}/       -> edit vehicle info
-#     POST /api/vehicles/vendor/{id}/toggle/ -> activate or deactivate listing
-#     """
-#     permission_classes = [IsVendorRole]
-#     parser_classes     = [MultiPartParser, FormParser]
- 
-#     def get_serializer_class(self):
-#         if self.action in ['create', 'update', 'partial_update']:
-#             return VehicleCreateSerializer
-#         return VehicleDetailSerializer
- 
-#     def get_queryset(self):
-#         return Vehicle.objects.filter(vendor=self.request.user).select_related(
-#             'city', 'pickup_location').prefetch_related('photos', 'documents')
- 
-#     def perform_create(self, serializer):
-#         # 1. Save the vehicle first (existing line)
-#         vehicle = serializer.save(vendor=self.request.user)
-
-#         # 2. Handle suggested location from the map picker
-#         #    Only runs when the vendor dropped a pin that didn't match
-#         #    any existing Location record within 30 km.
-#         suggested_name    = self.request.data.get('suggested_location_name')
-#         suggested_address = self.request.data.get('suggested_location_address')
-#         suggested_lat     = self.request.data.get('suggested_location_lat')
-#         suggested_lng     = self.request.data.get('suggested_location_lng')
-
-#         if suggested_name and not vehicle.pickup_location:
-#             # Resolve the City object from the vehicle's city FK
-#             city = vehicle.city  # already a City instance after serializer.save()
-
-#             Location.objects.get_or_create(
-#                 city=city,
-#                 name=suggested_name,
-#                 defaults={
-#                     'location_type': 'vendor_lot',
-#                     'address':       suggested_address or '',
-#                     'latitude':      suggested_lat or None,
-#                     'longitude':     suggested_lng or None,
-#                     'is_active':     False,   # Admin must review and activate
-#                 }
-#             )
- 
-#     @action(detail=True, methods=['post'], url_path='toggle')
-#     def toggle_active(self, request, pk=None):
-#         """Vendor can toggle between LIVE and INACTIVE."""
-#         vehicle = self.get_object()
-#         if vehicle.status == 'LIVE':
-#             vehicle.status = 'INACTIVE'
-#         elif vehicle.status in ['INACTIVE', 'CERTIFIED']:
-#             vehicle.status = 'LIVE'
-#         else:
-#             return Response(
-#                 {'error': 'Vehicle must be CERTIFIED or LIVE to toggle.'},
-#                 status=400,
-#             )
-#         vehicle.save()
-#         return Response({'status': vehicle.status})
- 
  
 class VehicleDocUploadView(APIView):
     """
@@ -132,8 +67,7 @@ class VehicleDocUploadView(APIView):
                       'expiry_date': s.validated_data.get('expiry_date'),
                       'status': 'pending'},
         )
-        # After upload, check if all required docs are present -> advance status
-        _check_and_advance_status(vehicle)
+
         return Response(VehicleDocumentSerializer(doc).data, status=201)
  
  
@@ -158,21 +92,58 @@ class VehiclePhotoUploadView(APIView):
  
  
 # ── Internal helper: auto-advance status ─────────────────────────────────
-def _check_and_advance_status(vehicle):
-    """
-    After each document upload, check if vehicle has all required docs.
-    If yes, advance status to DOCS_SUBMITTED automatically.
-    """
-    required_docs = ['rc', 'insurance', 'puc']
-    uploaded_types = list(
-        vehicle.documents.values_list("doc_type", flat=True)
-    )
-    photo_count = vehicle.photos.count()
-    if vehicle.status == 'PENDING_DOCS':
-        all_docs_present = all(d in uploaded_types for d in required_docs)
-        if all_docs_present and photo_count >= 10:
-            vehicle.status = 'DOCS_SUBMITTED'
-            vehicle.save(update_fields=["status"])
+REQUIRED_DOCS = ['rc', 'insurance', 'puc', 'fitness', 'mechanic_cert']
+MIN_PHOTOS = 10
+
+
+def _all_docs_approved(vehicle):
+    approved = set(vehicle.documents.filter(
+        doc_type__in=REQUIRED_DOCS, status='approved').values_list('doc_type', flat=True))
+    return set(REQUIRED_DOCS) <= approved
+
+
+def _finalize_certification(vehicle):
+    """Everything the admin 'Certify' form used to do, driven by the vendor's Mechanic Certificate."""
+    import datetime
+    from dateutil.relativedelta import relativedelta
+    from apps.configuration.utils import get_config
+    from apps.notifications.utils import notify
+
+    cert   = vehicle.documents.filter(doc_type='mechanic_cert').first()
+    today  = datetime.date.today()
+    months = int(get_config('certification_validity_months', 6))
+    km     = int(get_config('certification_validity_km', 10000))
+    expiry = cert.expiry_date if (cert and cert.expiry_date and cert.expiry_date > today) \
+             else today + relativedelta(months=months)
+    odo    = int(vehicle.current_odometer or vehicle.odometer_at_listing or 0)
+
+    if not vehicle.vehicle_id_code:
+        state_code = vehicle.city.state[:2].upper() if vehicle.city_id else 'XX'
+        vehicle.vehicle_id_code = f"CSI-{state_code}-{vehicle.id:05d}"
+
+    vehicle.cert_expiry_date       = expiry
+    vehicle.cert_expiry_km         = odo + km
+    vehicle.is_certified           = True
+    vehicle.last_verified_odometer = odo
+    vehicle.needs_reverification   = False
+    vehicle.status                 = 'LIVE'          # passes through ADMIN_APPROVED automatically
+    vehicle.admin_note             = f'All documents approved. Certified until {expiry}.'
+    _generate_qr(vehicle)
+    vehicle.save()
+
+    notify(vehicle.vendor, title="Vehicle approved — now LIVE",
+           message=f"{vehicle.year} {vehicle.make} {vehicle.model} ({vehicle.plate_number}) passed all document checks and is now live.",
+           notification_type='vehicle_edit_decided', link_url=f'/vendor?tab=fleet&highlight={vehicle.id}')
+
+
+def _check_admin_approved(vehicle):
+    """Auto-advance once every required document is approved. Returns True if it advanced."""
+    if vehicle.status != 'DOCS_SUBMITTED' or vehicle.is_blacklisted:
+        return False
+    if not _all_docs_approved(vehicle):
+        return False
+    _finalize_certification(vehicle)
+    return True
  
  
 # ════════════════════════════════════════════════════════════════════════
@@ -200,28 +171,44 @@ class AdminVehicleListView(generics.ListAPIView):
  
 class AdminDocReviewView(APIView):
     """
-    POST /api/vehicles/admin/docs/{doc_id}/review/
-    Body: { "action": "approve" | "reject", "note": "..." }
-    Admin approves or rejects one document.
-    After all 3 required docs approved -> vehicle status -> ADMIN_APPROVED.
+    POST /api/vehicles/admin/docs/{doc_id}/review/   { action: approve|reject, note }
+    Approve/reject one document. When all 5 are approved the vehicle advances automatically.
     """
     permission_classes = [IsAdminRole]
- 
+
     def post(self, request, doc_id):
-        doc    = get_object_or_404(VehicleDocument, pk=doc_id)
+        from apps.notifications.utils import notify
+        doc    = get_object_or_404(VehicleDocument.objects.select_related('vehicle__vendor', 'vehicle__city'), pk=doc_id)
         action = request.data.get("action")
-        if action not in ['approve', 'reject']:
+        note   = (request.data.get("note") or '').strip()
+        if action not in ('approve', 'reject'):
             return Response({'error': 'action must be approve or reject.'}, status=400)
- 
+        if action == 'reject' and not note:
+            return Response({'error': 'Please add a reason so the vendor knows what to fix.'}, status=400)
+        if doc.vehicle.status == 'PENDING_DOCS':
+            return Response({'error': 'The vendor has not submitted this vehicle for approval yet.'}, status=400)
+
         doc.status      = 'approved' if action == 'approve' else 'rejected'
-        doc.admin_note  = request.data.get("note", "")
+        doc.admin_note  = note
         doc.reviewed_at = timezone.now()
         doc.reviewed_by = request.user
         doc.save()
- 
-        vehicle = doc.vehicle
-        _check_admin_approved(vehicle)
-        return Response({'message': f'Document {doc.status}.', 'vehicle_status': vehicle.status})
+
+        vehicle  = doc.vehicle
+        advanced = _check_admin_approved(vehicle) if action == 'approve' else False
+
+        if action == 'reject':
+            notify(vehicle.vendor, title="Document rejected",
+                   message=f"{doc.get_doc_type_display()} for {vehicle.plate_number} was rejected: {note}",
+                   notification_type='vehicle_edit_decided', link_url=f'/vendor?tab=fleet&highlight={vehicle.id}')
+
+        vehicle.refresh_from_db()
+        return Response({
+            'message':        f'Document {doc.status}.',
+            'vehicle_status': vehicle.status,
+            'advanced':       advanced,
+            'vehicle':        VehicleDetailSerializer(vehicle, context={'request': request}).data,
+        })
  
  
 def _check_admin_approved(vehicle):
@@ -252,72 +239,6 @@ class AdminVehicleBlacklistView(APIView):
         vehicle.status          = 'INACTIVE'
         vehicle.save()
         return Response({'message': 'Vehicle blacklisted.'})
-
-
-class AdminMechCertUploadView(APIView):
-    """
-    POST /api/vehicles/admin/{vehicle_id}/certify/
-    Body: multipart/form-data: file (inspection report PDF),
-          cert_date (YYYY-MM-DD), odometer_at_cert (integer)
- 
-    Admin uploads the mechanic certification report.
-    System reads cert validity from config (never hardcoded).
-    Assigns a unique Vehicle ID code and generates QR code.
-    Advances status to CERTIFIED.
-    """
-    permission_classes = [IsAdminRole]
-    parser_classes     = [MultiPartParser, FormParser]
- 
-    def post(self, request, vehicle_id):
-        import datetime
-        from dateutil.relativedelta import relativedelta
-        from apps.configuration.utils import get_config
- 
-        vehicle = get_object_or_404(Vehicle, pk=vehicle_id)
- 
-        cert_file = request.FILES.get("file")
-        cert_date_str = request.data.get("cert_date")
-        odo = request.data.get("odometer_at_cert", 0)
- 
-        if not cert_file or not cert_date_str:
-            return Response({'error': 'file and cert_date are required.'}, status=400)
- 
-        # Save certification report as a document
-        VehicleDocument.objects.update_or_create(
-            vehicle=vehicle,
-            doc_type='mechanic_cert',
-            defaults={'file': cert_file, 'status': 'approved'},
-        )
- 
-        # Read validity from config — admin can change these without code change
-        validity_months = get_config("certification_validity_months", 6)
-        validity_km     = get_config("certification_validity_km", 10000)
- 
-        cert_date = datetime.date.fromisoformat(cert_date_str)
-        expiry_date = cert_date + relativedelta(months=validity_months)
-        expiry_km   = int(odo) + validity_km
- 
-        # Assign unique Vehicle ID code if not already set
-        if not vehicle.vehicle_id_code:
-            state_code = vehicle.city.state[:2].upper() if vehicle.city else 'XX'
-            vehicle.vehicle_id_code = f"CSI-{state_code}-{vehicle.id:05d}"
- 
-        vehicle.cert_expiry_date = expiry_date
-        vehicle.cert_expiry_km   = expiry_km
-        vehicle.is_certified     = True
-        vehicle.status           = 'LIVE'
-        vehicle.admin_note       = f'Certified on {cert_date}. Expires {expiry_date}.'
- 
-        # Generate QR code
-        _generate_qr(vehicle)
-        vehicle.save()
- 
-        return Response({
-            'message':          'Vehicle certified and set to LIVE.',
-            'vehicle_id_code':  vehicle.vehicle_id_code,
-            'cert_expiry_date': str(expiry_date),
-            'cert_expiry_km':   expiry_km,
-        })
 
 
 
@@ -723,131 +644,6 @@ class VehicleSegmentSearchView(APIView):
         return Response({'segments': result, 'city_id': city})
 
 
-# class VendorVehicleViewSet(viewsets.ModelViewSet):
-#     permission_classes = [IsVendorRole]
-#     parser_classes     = [MultiPartParser, FormParser, JSONParser]
-
-#     # Fields that, if changed on an already-reviewed vehicle, must alert admin
-#     FIELDS_THAT_TRIGGER_REVIEW = {
-#         'make', 'model', 'year', 'colour', 'segment', 'fuel_type',
-#         'transmission', 'capacity', 'daily_rate', 'city', 'pickup_location',
-#     }
-#     # Statuses past initial review — an edit here is a change to something admin already signed off on
-#     REVIEWED_STATUSES = {'ADMIN_APPROVED', 'CERTIFIED', 'LIVE', 'INACTIVE'}
-
-#     def get_serializer_class(self):
-#         if self.action == 'create':
-#             return VehicleCreateSerializer
-#         if self.action in ('update', 'partial_update'):
-#             return VehicleVendorUpdateSerializer
-#         return VehicleDetailSerializer
-
-#     def get_queryset(self):
-#         return Vehicle.objects.filter(vendor=self.request.user).select_related(
-#             'city', 'pickup_location').prefetch_related('photos', 'documents')
-
-#     def perform_create(self, serializer):
-#         vehicle = serializer.save(
-#             vendor=self.request.user,
-#             current_odometer=serializer.validated_data.get('odometer_at_listing', 0),
-#             last_verified_odometer=serializer.validated_data.get('odometer_at_listing', 0),
-#         )
-#         # ...existing suggested_location logic stays unchanged...
-#         suggested_name    = self.request.data.get('suggested_location_name')
-#         suggested_address = self.request.data.get('suggested_location_address')
-#         suggested_lat     = self.request.data.get('suggested_location_lat')
-#         suggested_lng     = self.request.data.get('suggested_location_lng')
-#         if suggested_name and not vehicle.pickup_location:
-#             city = vehicle.city
-#             Location.objects.get_or_create(
-#                 city=city, name=suggested_name,
-#                 defaults={
-#                     'location_type': 'vendor_lot',
-#                     'address':       suggested_address or '',
-#                     'latitude':      suggested_lat or None,
-#                     'longitude':     suggested_lng or None,
-#                     'is_active':     False,
-#                 }
-#             )
-
-#     def perform_update(self, serializer):
-#         from apps.configuration.utils import get_config
-#         from django.utils import timezone
-
-#         instance = self.get_object()
-#         before = {f: getattr(instance, f) for f in self.FIELDS_THAT_TRIGGER_REVIEW}
-
-#         vehicle = serializer.save()
-
-#         changed = [f for f in self.FIELDS_THAT_TRIGGER_REVIEW
-#                    if str(before[f]) != str(getattr(vehicle, f))]
-
-#         update_fields = set()
-
-#         # ── 1. Flag vendor edits to already-reviewed vehicles ──────────
-#         if changed and vehicle.status in self.REVIEWED_STATUSES:
-#             vehicle.needs_review = True
-#             vehicle.last_edited_at = timezone.now()
-#             vehicle.last_edit_summary = f"Vendor updated: {', '.join(changed)}."
-#             update_fields |= {'needs_review', 'last_edited_at', 'last_edit_summary'}
-
-#         # ── 2. Odometer-based re-verification ───────────────────────────
-#         if vehicle.current_odometer is not None:
-#             if vehicle.last_verified_odometer is None:
-#                 vehicle.last_verified_odometer = vehicle.odometer_at_listing or 0
-#                 update_fields.add('last_verified_odometer')
-
-#             threshold = get_config('odometer_reverification_km', 10000)
-#             distance_travelled = vehicle.current_odometer - (vehicle.last_verified_odometer or 0)
-#             should_flag = distance_travelled >= threshold
-
-#             if should_flag != vehicle.needs_reverification:
-#                 vehicle.needs_reverification = should_flag
-#                 update_fields.add('needs_reverification')
-
-#             if should_flag and vehicle.status in self.REVIEWED_STATUSES:
-#                 note = (f"Odometer at {vehicle.current_odometer} km — "
-#                          f"{distance_travelled} km since last verification "
-#                          f"(threshold {threshold} km).")
-#                 vehicle.needs_review = True
-#                 vehicle.last_edited_at = timezone.now()
-#                 vehicle.last_edit_summary = (
-#                     f"{vehicle.last_edit_summary} {note}".strip()
-#                     if vehicle.last_edit_summary else note
-#                 )
-#                 update_fields |= {'needs_review', 'last_edited_at', 'last_edit_summary'}
-
-#         if update_fields:
-#             vehicle.save(update_fields=list(update_fields))
-
-#     @action(detail=True, methods=['post'], url_path='toggle')
-#     def toggle_active(self, request, pk=None):
-#         # ...unchanged...
-#         vehicle = self.get_object()
-#         if vehicle.status == 'LIVE':
-#             vehicle.status = 'INACTIVE'
-#         elif vehicle.status in ['INACTIVE', 'CERTIFIED']:
-#             vehicle.status = 'LIVE'
-#         else:
-#             return Response({'error': 'Vehicle must be CERTIFIED or LIVE to toggle.'}, status=400)
-#         vehicle.save()
-#         return Response({'status': vehicle.status})
-
-
-
-# class AdminAcknowledgeEditView(APIView):
-#     """
-#     POST /api/vehicles/admin/{vehicle_id}/acknowledge-edit/
-#     Admin dismisses the "vendor edited this" flag after reviewing the change.
-#     """
-#     permission_classes = [IsAdminRole]
-
-#     def post(self, request, vehicle_id):
-#         vehicle = get_object_or_404(Vehicle, pk=vehicle_id)
-#         vehicle.needs_review = False
-#         vehicle.admin_reviewed_edit_at = timezone.now()
-#         vehicle.save(update_fields=['needs_review', 'admin_reviewed_edit_at'])
-#         return Response({'message': 'Marked as reviewed.'})
 class AdminApproveVehicleEditView(APIView):
     """
     POST /api/vehicles/admin/{vehicle_id}/approve-edit/
@@ -1137,3 +933,29 @@ class VendorVehicleViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Vehicle must be CERTIFIED or LIVE to toggle.'}, status=400)
         vehicle.save()
         return Response({'status': vehicle.status})
+
+
+    @action(detail=True, methods=['post'], url_path='submit-docs')
+    def submit_docs(self, request, pk=None):
+        from apps.notifications.utils import notify_admins_for_vendor
+        vehicle = self.get_object()
+        if vehicle.status != 'PENDING_DOCS':
+            return Response({'error': 'Documents were already submitted for this vehicle.'}, status=400)
+
+        have    = set(vehicle.documents.values_list('doc_type', flat=True))
+        missing = [d for d in REQUIRED_DOCS if d not in have]
+        photos  = vehicle.photos.count()
+        if missing or photos < MIN_PHOTOS:
+            return Response({
+                'error': 'Upload everything before submitting.',
+                'missing_documents': missing,
+                'photos_needed': max(0, MIN_PHOTOS - photos),
+            }, status=400)
+
+        vehicle.status = 'DOCS_SUBMITTED'
+        vehicle.save(update_fields=['status', 'updated_at'])
+        notify_admins_for_vendor(
+            vehicle.vendor, title="Vehicle documents submitted",
+            message=f"{vehicle.year} {vehicle.make} {vehicle.model} ({vehicle.plate_number}) is ready for document review.",
+            notification_type='vehicle_added', link_url=f'/admin?tab=vehicles&highlight={vehicle.id}')
+        return Response(VehicleDetailSerializer(vehicle, context=self.get_serializer_context()).data)

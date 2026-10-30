@@ -73,7 +73,7 @@ export default function AdminAssignmentCard({
                             ? { background: "#FEF3C7", color: "#92400E", border: "1px solid #FCD34D" }
                             : { background: "#EDE9FE", color: "#6D28D9", border: "1px solid #C4B5FD" }),
                     }}>
-                        {admin.scope === "superadmin" ? "👑 Super" : "🎯 Assigned"}
+                        {admin.scope === "superadmin" ? "👑 Super Admin" : "🎯 Assigned Admin"}
                     </span>
                     <span style={{ fontSize: 10, fontWeight: 700, color: "var(--vm)", background: "var(--vs)", padding: "2px 7px", borderRadius: 999, border: "1px solid var(--vbdr)" }}>
                         {myVendors.length} vendor{myVendors.length !== 1 ? "s" : ""}
