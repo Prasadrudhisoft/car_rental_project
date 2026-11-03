@@ -438,13 +438,11 @@ export default function AuthModal({ onClose, onSuccess }) {
                                 aria-label="Sign in as"
                             >
                                 {[
-                                    ['', 'Auto'],
                                     ['customer', 'Customer'],
                                     ['vendor', 'Vendor'],
-                                    ['admin', 'Admin'],
                                 ].map(([v, l]) => (
                                     <button
-                                        key={v || 'auto'}
+                                        key={v}
                                         type="button"
                                         className={
                                             loginRole === v ? 'active' : ''
@@ -479,7 +477,7 @@ export default function AuthModal({ onClose, onSuccess }) {
                                     className="am-link"
                                     onClick={() => setView('customer')}
                                 >
-                                    Create Account
+                                    Create an Account
                                 </button>
                             </p>
                         </form>
@@ -557,7 +555,7 @@ export default function AuthModal({ onClose, onSuccess }) {
                                         {' '}Creating…
                                     </>
                                 ) : (
-                                    'Create Account →'
+                                    'Create an Account →'
                                 )}
                             </button>
 

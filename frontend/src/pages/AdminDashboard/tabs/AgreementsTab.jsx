@@ -222,7 +222,7 @@ export default function AgreementsTab({
                                 {v.summary && <div style={{ fontSize:12, color:"#6B7280", maxWidth:480, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{v.summary}</div>}
                             </div>
                             <div style={{ display:"flex", gap:6 }}>
-                                {!v.is_active && <button className="admin-btn admin-btn--success" onClick={()=>onActivateAgreement(v.id,v.version_tag)}>✓ Activate</button>}
+                                {!v.is_active && <button className="admin-btn admin-btn--success" onClick={()=>onActivateAgreement(v.id,v.version_tag)}>Activate</button>}
                                 <button className="admin-btn admin-btn--ghost" onClick={()=>{ setEditingVersion({...v}); setShowCreate(false); }}>View</button>
                             </div>
                         </div>
