@@ -144,6 +144,7 @@ const SIDEBAR_ITEMS = {
         { id: 'assignments',  icon: ICONS.assignments,  tip: 'Assignments' },
         { id: 'notifications',icon: ICONS.notifications,tip: 'Notifications' },
         { id: 'personalization', icon: ICONS.personalization, tip: 'Personalization' },
+        { id: 'activity',        icon: ICONS.handovers, tip: 'Activity Logs' },
         
     ],
     vendor: [

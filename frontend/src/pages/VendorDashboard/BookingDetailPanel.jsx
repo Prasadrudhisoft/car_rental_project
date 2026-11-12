@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { StatusBadge, InfoRow, Field, FormInput } from './VendorShared';
 import InspectionPanel from './InspectionPanel';
+import VendorBookingActions from './VendorBookingActions';
 import { recordOfflinePayment, cancelBooking, raiseDamageClaim } from '../../services/api';
 
 export default function BookingDetailPanel({ booking, onClose, onRefresh, showToast }) {
@@ -88,6 +89,7 @@ export default function BookingDetailPanel({ booking, onClose, onRefresh, showTo
                             {booking.payment_captured && <span className="vd-flag vd-flag--ok">Payment Captured</span>}
                             {booking.agreement_signed && <span className="vd-flag vd-flag--ok">Agreement Signed</span>}
                             {booking.deposit_held     && <span className="vd-flag vd-flag--warn">Deposit Held</span>}
+                            {booking.vendor_rescheduled && <span className="vd-flag vd-flag--warn">Rescheduled</span>}
                         </div>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
@@ -185,6 +187,7 @@ export default function BookingDetailPanel({ booking, onClose, onRefresh, showTo
 
             {/* Actions */}
             <div className="vd-booking-actions">
+                <VendorBookingActions booking={booking} onRefresh={onRefresh} showToast={showToast} />
                 {booking.status === 'COMPLETED' && (
                     <div className="vd-action-block">
                         <p className="vd-action-label">Raise Damage Claim</p>

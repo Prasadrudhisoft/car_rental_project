@@ -20,6 +20,7 @@ class Booking(models.Model):
         ('ACTIVE',     'Active — Vehicle Picked Up'),
         ('COMPLETED',  'Completed'),
         ('CANCELLED',  'Cancelled'),
+        ('NO_SHOW', 'No-show'),
     ]
  
     # Core relationships
@@ -72,6 +73,12 @@ class Booking(models.Model):
     # Additional driver
     additional_driver = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
                                            blank=True, related_name="additional_driver_bookings")
+
+    no_show_at           = models.DateTimeField(null=True, blank=True)
+    modification_count   = models.PositiveSmallIntegerField(default=0)
+    pending_modification = models.JSONField(null=True, blank=True)
+    reschedule_reason    = models.TextField(blank=True)
+    vendor_rescheduled   = models.BooleanField(default=False)
  
     # Timestamps
     created_at       = models.DateTimeField(auto_now_add=True)

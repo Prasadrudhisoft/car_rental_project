@@ -27,6 +27,7 @@ export const BOOKING_STATUS_CLR = {
     ACTIVE:    { bg: "#D1FAE5", color: "#059669" },
     COMPLETED: { bg: "#F3F4F6", color: "#6B7280" },
     CANCELLED: { bg: "#FEE2E2", color: "#EF4444" },
+    NO_SHOW:   { bg: "#FFEDD5", color: "#C2410C" },
 };
 
 export const HANDOVER_STATUS_CLR = {

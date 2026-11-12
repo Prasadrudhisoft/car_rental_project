@@ -502,4 +502,16 @@ export const runRuleNow         = (id)     => api.post(`/personalization/rules/$
 export const getRuleExecutionLogs = (params) => api.get('/personalization/logs/', { params });
 export const runScheduledSweep    = ()       => api.post('/personalization/run-scheduled-sweep/');
 
+
+// ── Activity logs (admin, read-only) ──────────────────────────────────────
+export const getActivityLogs    = (params) => api.get('/activity/', { params });
+export const getActivityLogMeta = ()       => api.get('/activity/meta/');
+
+// ── Booking modification / no-show ────────────────────────────────────────
+export const quoteBookingModification = (id, data) => api.post(`/bookings/${id}/modify/quote/`, data);
+export const applyBookingModification = (id, data) => api.post(`/bookings/${id}/modify/`, data);
+export const payBookingModification   = (id, data) => api.post(`/bookings/${id}/modify/pay/`, data);
+export const vendorRescheduleBooking  = (id, data) => api.post(`/bookings/vendor/${id}/reschedule/`, data);
+export const vendorMarkNoShow         = (id)       => api.post(`/bookings/vendor/${id}/no-show/`);
+
 export default api;

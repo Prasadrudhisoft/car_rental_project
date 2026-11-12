@@ -33,6 +33,7 @@ urlpatterns = [
     path('api/agreements/', include('apps.agreements.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
     path('api/personalization/', include('apps.personalization.urls')),
+    path('api/activity/', include('apps.activity.urls')),
 ]
 
 # Serve uploaded media files in development

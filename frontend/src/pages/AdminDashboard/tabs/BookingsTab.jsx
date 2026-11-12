@@ -14,6 +14,7 @@ const STATUS_OPTIONS = [
     { value: "ACTIVE",    label: "Active"    },
     { value: "COMPLETED", label: "Completed" },
     { value: "CANCELLED", label: "Cancelled" },
+    { value: "NO_SHOW",   label: "No-show"   },
 ];
 
 function MobileBookingCard({ booking: b, onSelect }) {

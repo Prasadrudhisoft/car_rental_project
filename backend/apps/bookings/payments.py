@@ -214,6 +214,10 @@ class PaymentService:
             booking.save(update_fields=['pricing_snapshot', 'payment_captured', 'payment_captured_at',
                                         'razorpay_payment_id', 'status', 'deposit_held', 'updated_at'])
 
+            from .lifecycle import finalize_pending_modification
+            if booking.pending_modification:
+                finalize_pending_modification(booking)
+
             if payment_type in ('advance', 'full') and booking.is_one_way:
                 from apps.logistics.views import auto_match_return_partner
                 auto_match_return_partner(booking)               # may raise ReturnCapacityConflict

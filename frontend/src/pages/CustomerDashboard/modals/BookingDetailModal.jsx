@@ -7,6 +7,7 @@ import { StatusBadge, InfoRow } from '../cdShared';
 import { fmtDatetime } from '../cdConstants';
 import InspectionPanel from '../InspectionPanel';
 import PaymentModal    from './PaymentModal';
+import ChangeBookingModal from './ChangeBookingModal';
 import InvoiceModal    from './InvoiceModal';
 
 const SEG_ICON = seg =>
@@ -22,6 +23,7 @@ export default function BookingDetailModal({
     const [cancelConfirm, setCancelConfirm] = useState(false);
     const [cancelReason,  setCancelReason]  = useState('');
     const [cancelLoading, setCancelLoading] = useState(false);
+    const [showChange,   setShowChange]   = useState(false);
 
     const pricing       = detail?.pricing_snapshot || {};
     const v             = detail?.vehicle   || {};
@@ -42,6 +44,8 @@ export default function BookingDetailModal({
     const hasDrop = !!(detail?.is_one_way && detail?.return_location_detail);
     const canPayNow     = !!ps.next_type;
     const canCancel  = ['PENDING', 'CONFIRMED'].includes(booking.status);
+    const canChange  = booking.status === 'CONFIRMED' &&
+       !(detail?.inspections || []).find(i => i.inspection_type === 'PICKUP');
 
     const canCreatePickupInsp =
         ['CONFIRMED'].includes(booking.status) &&
@@ -292,6 +296,11 @@ export default function BookingDetailModal({
                                         </button>
                                     </div>
                                 )}
+                                {canChange && !cancelConfirm && (
+                                    <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => setShowChange(true)}>
+                                        ✎ Change dates
+                                    </button>
+                                )}
                                 {canCancel && !cancelConfirm && (
                                     <button
                                         className="cd-btn cd-btn--danger-outline cd-btn--sm"
@@ -358,6 +367,15 @@ export default function BookingDetailModal({
                         detail={detail}
                         onClose={() => setShowPayment(false)}
                         onSuccess={onRefresh}
+                        showToast={showToast}
+                    />
+                )}
+                {showChange && (
+                    <ChangeBookingModal
+                        booking={booking}
+                        detail={detail}
+                        onClose={() => setShowChange(false)}
+                        onRefresh={onRefresh}
                         showToast={showToast}
                     />
                 )}

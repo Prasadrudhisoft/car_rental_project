@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'apps.agreements',
     'apps.notifications',
     'apps.personalization',
+    'apps.activity',
 
 ]
 
@@ -67,6 +68,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.activity.middleware.AuditMiddleware',
 ]
 
 ROOT_URLCONF = 'car_rent.urls'
@@ -253,4 +255,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.users.tasks.flush_expired_tokens',
         'schedule': crontab(hour=4, minute=0),
     },
+
+    **globals().get('CELERY_BEAT_SCHEDULE', {}),
+    'purge-activity-logs': {'task': 'apps.activity.tasks.purge_old_activity_logs',
+                            'schedule': crontab(hour=3, minute=0)},
+    'detect-no-shows': {'task': 'apps.bookings.lifecycle_tasks.detect_no_shows',
+                        'schedule': crontab(minute='*/30')},
 }

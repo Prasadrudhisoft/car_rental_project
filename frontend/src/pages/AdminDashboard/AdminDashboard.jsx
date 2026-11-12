@@ -53,6 +53,7 @@ import ReviewsTab     from "./tabs/ReviewsTab";
 import AssignmentsTab from "./tabs/AssignmentsTab";
 import NotificationsTab from "./tabs/NotificationsTab";
 import PersonalizationTab from "./tabs/PersonalizationTab";
+import ActivityLogsTab from './tabs/ActivityLogsTab';
 import { useConfirmDelete } from "../../components/common/ConfirmDeleteModal";
 
 // ── CSS ───────────────────────────────────────────────────────────────────────
@@ -65,7 +66,7 @@ const TAB_LABELS = {
     bookings: "Bookings", users: "Users",     locations: "Locations",
     logistics: "Logistics", config: "Configuration", promos: "Promos",
     agreements: "Agreements", reviews: "Reviews", assignments: "Assignments",
-    notifications: "Notifications", personalization: "Personalization",
+    notifications: "Notifications", personalization: "Personalization", activity: "Activity_Logs",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -669,6 +670,8 @@ const handleCompleteReverification = async (vehicleId) => {
                     {!loading && tab === "notifications" && <NotificationsTab />}
 
                     {!loading && tab === "personalization" && <PersonalizationTab />}
+
+                    {!loading && tab === "activity" && <ActivityLogsTab />}
                 </div>
             </div>
         {ConfirmEl}

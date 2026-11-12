@@ -65,6 +65,7 @@ const STATUS_OPTIONS = [
     { value: 'ACTIVE',    label: 'Active'    },
     { value: 'COMPLETED', label: 'Completed' },
     { value: 'CANCELLED', label: 'Cancelled' },
+    { value: 'NO_SHOW',   label: 'No-show'   },
 ];
 
 function MobileBookingList({ bookings, onViewBooking }) {
@@ -240,6 +241,7 @@ export default function BookingsTab({ bookings, onViewBooking }) {
                                 { value: 'ACTIVE',    label: 'Active',    color: '#059669' },
                                 { value: 'COMPLETED', label: 'Completed', color: '#6B7280' },
                                 { value: 'CANCELLED', label: 'Cancelled', color: '#EF4444' },
+                                { value: 'NO_SHOW',   label: 'No-show',   color: '#C2410C' },
                             ],
                             colorMap: STATUS_CLR,
                         },

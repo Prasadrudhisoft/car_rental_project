@@ -522,14 +522,29 @@ def _calculate_cancellation_refund(booking) -> dict:
     Read cancellation windows from config and determine refund amount.
     This is the ONLY place cancellation rules live — never hardcoded.
     """
+
+    # NEW: Full refund if vendor rescheduled the booking
+    if getattr(booking, 'vendor_rescheduled', False):
+        return {
+            'refund_amount': PaymentService.amount_paid(booking),
+            'policy': 'Full refund (vendor rescheduled your booking)',
+        }
+
     free_hours = get_config('cancellation_free_hours', 48)
     half_hours = get_config('cancellation_half_refund_hours', 24)
- 
-    pickup_dt      = datetime.datetime.combine(booking.pickup_date,
-                         datetime.time.min, tzinfo=timezone.utc)
-    hours_to_pickup = (pickup_dt - datetime.datetime.now(timezone.utc)).total_seconds() / 3600
- 
+
+    pickup_dt = datetime.datetime.combine(
+        booking.pickup_date,
+        datetime.time.min,
+        tzinfo=timezone.utc
+    )
+
+    hours_to_pickup = (
+        pickup_dt - datetime.datetime.now(timezone.utc)
+    ).total_seconds() / 3600
+
     total = PaymentService.amount_paid(booking)
+
     if hours_to_pickup >= free_hours:
         return {
             'refund_amount': total,
@@ -1141,4 +1156,14 @@ class VendorBookingDetailView(generics.RetrieveAPIView):
         return Booking.objects.filter(vendor=self.request.user).prefetch_related(
             'addons', 'inspections__photos', 'invoice'
         ).select_related('customer', 'vehicle', 'pickup_location', 'return_location')
- 
+
+
+class ModificationPayView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    def post(self, request, pk):
+        b = get_object_or_404(Booking, pk=pk, customer=request.user)
+        pm = b.pending_modification
+        if not pm:
+            return Response({'detail': 'No pending change.'}, status=400)
+        # Use your existing PaymentService.initiate(...) with amount=Decimal(pm['amount_due']).
+        # When Razorpay verification succeeds, _apply() (step 1.6) finalises the change. 

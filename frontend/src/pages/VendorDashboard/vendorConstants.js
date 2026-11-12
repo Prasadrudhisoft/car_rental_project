@@ -9,6 +9,7 @@ export const STATUS_CLR = {
     ACTIVE:    { bg: '#D1FAE5', color: '#059669', border: '#6EE7B7' },
     COMPLETED: { bg: '#F3F4F6', color: '#6B7280', border: '#D1D5DB' },
     CANCELLED: { bg: '#FEE2E2', color: '#EF4444', border: '#FCA5A5' },
+    NO_SHOW:   { bg: '#FFEDD5', color: '#C2410C', border: '#FDBA74' },
 };
 
 export const VEHICLE_STATUS_CLR = {
