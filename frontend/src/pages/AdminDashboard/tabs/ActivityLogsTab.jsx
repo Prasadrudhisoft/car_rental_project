@@ -133,7 +133,7 @@ export default function ActivityLogsTab() {
                                                 <td style={td}>{r.summary || "—"}{hasDetail ? " ▾" : ""}</td>
                                                 <td style={td}>{r.ip_address || "—"}</td>
                                             </tr>
-                                            {open === r.id && (
+                                            {/* {open === r.id && (
                                                 <tr>
                                                     <td colSpan={8} style={{ ...td, background: "var(--vs2)" }}>
                                                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -148,7 +148,7 @@ export default function ActivityLogsTab() {
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            )}
+                                            )} */}
                                         </React.Fragment>
                                     );
                                 })}

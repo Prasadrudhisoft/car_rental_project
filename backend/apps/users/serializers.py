@@ -76,11 +76,13 @@ class VendorRegisterSerializer(serializers.ModelSerializer):
 # ── User (me) serializer ──────────────────────────────────────────────────
 
 class UserMeSerializer(serializers.ModelSerializer):
+    kyc_status       = serializers.CharField(
+            source='customer_profile.kyc_status', read_only=True, default='pending')
     class Meta:
         model  = User
         fields = ['id', 'email', 'phone', 'full_name', 'role',
-                  'is_phone_verified', 'is_email_verified']
-        read_only_fields = ['role', 'is_phone_verified', 'is_email_verified']
+                  'is_phone_verified', 'is_email_verified', 'kyc_status']
+        read_only_fields = ['role', 'is_phone_verified', 'is_email_verified', 'kyc_status']
 
     def validate_email(self, value):
         qs = User.objects.filter(email__iexact=value, role=self.instance.role).exclude(pk=self.instance.pk)
