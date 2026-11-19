@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     quoteBookingModification, applyBookingModification, getModificationOptions,
     vendorQuoteModification, vendorApplyModification, vendorModificationOptions,
     getCities, getReturnOptions,
 } from '../../services/api';
 import { payBooking, paymentErrorMessage } from '../../services/payments';
+import { getCityCenter } from '../../pages/booking/bookingConstants';
+import LocationMap from './LocationMap';
 
 const inr = n => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 const errMsg = e => e?.response?.data?.detail || e?.response?.data?.error || paymentErrorMessage(e);
@@ -12,64 +14,80 @@ const API = {
     customer: { quote: quoteBookingModification, apply: applyBookingModification, options: getModificationOptions },
     vendor:   { quote: vendorQuoteModification,  apply: vendorApplyModification,  options: vendorModificationOptions },
 };
+const toPt = (p, extra = {}) => ({
+    id: p.id, lat: parseFloat(p.latitude), lng: parseFloat(p.longitude),
+    title: p.name, subtitle: p.address, ...extra,
+});
 
 export default function BookingChangeModal({ role = 'customer', booking, detail, onClose, onRefresh, showToast }) {
     const api = API[role];
     const src = { ...booking, ...(detail || {}) };
     const pending = src.pending_modification;
-    const currentVehicleId = typeof src.vehicle === 'object' ? src.vehicle?.id : src.vehicle;
+    const state = src.modification_state;
+    const blocked = !pending && !!state && (
+        state.can_modify === false || (state.deadline && role === 'customer' && new Date(state.deadline) < new Date()));
+    const blockedMsg = state?.message || 'The modification deadline has passed.';
 
     const [pickup, setPickup] = useState(src.pickup_date || '');
     const [ret, setRet] = useState(src.return_date || '');
-    const [vehicleId, setVehicleId] = useState(null);          // null = keep current
+    const [vehicleId, setVehicleId] = useState(null);           // null = keep current vehicle
+    const [activeLoc, setActiveLoc] = useState(null);           // pickup point highlighted on the map
     const [options, setOptions] = useState([]);
-    const [retMode, setRetMode] = useState('keep');            // keep | same | other
+    const [current, setCurrent] = useState(null);
+    const [retMode, setRetMode] = useState('keep');             // keep | same | other
     const [cities, setCities] = useState([]);
     const [retCity, setRetCity] = useState('');
     const [drops, setDrops] = useState([]);
-    const [dropId, setDropId] = useState('');
+    const [dropId, setDropId] = useState(null);
     const [reason, setReason] = useState('');
     const [quote, setQuote] = useState(null);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
-    const [step, setStep] = useState(pending ? 'pay' : 'edit'); // edit | pay | wait
+    const [step, setStep] = useState(pending ? 'pay' : 'edit');  // edit | pay | wait
     const [due, setDue] = useState(pending ? Number(pending.amount_due) : 0);
 
     const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
     const invalid = !pickup || !ret || ret < pickup || pickup < today;
+    const effVehicleId = vehicleId || current?.vehicle_id;
 
     const body = {
         pickup_date: pickup, return_date: ret, reason,
         ...(vehicleId ? { vehicle_id: vehicleId } : {}),
         ...(retMode === 'same' ? { return_location_id: null } : {}),
-        ...(retMode === 'other' && dropId ? { return_location_id: Number(dropId) } : {}),
+        ...(retMode === 'other' && dropId ? { return_location_id: dropId } : {}),
     };
+
+    // eligible vehicles (+ current points) for the chosen dates
+    useEffect(() => {
+        if (step !== 'edit' || invalid || blocked) return undefined;
+        let live = true;
+        const t = setTimeout(async () => {
+            try {
+                const { data } = await api.options(booking.id, { pickup_date: pickup, return_date: ret });
+                if (!live) return;
+                setOptions(data.vehicles || []);
+                setCurrent(data.current || null);
+                setVehicleId(v => ((data.vehicles || []).some(o => o.id === v) ? v : null));
+            } catch (e) { if (live) { setOptions([]); setError(errMsg(e)); } }
+        }, 400);
+        return () => { live = false; clearTimeout(t); };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pickup, ret, step, blocked]);
 
     useEffect(() => {
         if (retMode === 'other' && !cities.length) getCities().then(({ data }) => setCities(data.results || data)).catch(() => {});
     }, [retMode, cities.length]);
 
+    // drop points follow the SELECTED vehicle (its own vendor is excluded server-side)
     useEffect(() => {
-        setDrops([]); setDropId('');
-        if (retMode !== 'other' || !retCity) return;
-        getReturnOptions(retCity, vehicleId || currentVehicleId).then(({ data }) => setDrops(data)).catch(() => setDrops([]));
-    }, [retMode, retCity, vehicleId, currentVehicleId]);
+        setDrops([]); setDropId(null);
+        if (retMode !== 'other' || !retCity || !effVehicleId) return;
+        getReturnOptions(retCity, effVehicleId).then(({ data }) => setDrops(data)).catch(() => setDrops([]));
+    }, [retMode, retCity, effVehicleId]);
 
-    useEffect(() => {                                            // alternative vehicles for the chosen dates
-        if (step !== 'edit' || invalid) return undefined;
-        let live = true;
-        const t = setTimeout(async () => {
-            try {
-                const { data } = await api.options(booking.id, { pickup_date: pickup, return_date: ret });
-                if (live) { setOptions(data.vehicles || []); setVehicleId(v => (data.vehicles || []).some(o => o.id === v) ? v : null); }
-            } catch { if (live) setOptions([]); }
-        }, 400);
-        return () => { live = false; clearTimeout(t); };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pickup, ret, step]);
-
-    useEffect(() => {                                            // live quote
-        if (step !== 'edit') return undefined;
+    // live quote
+    useEffect(() => {
+        if (step !== 'edit' || blocked) return undefined;
         setQuote(null); setError('');
         if (invalid || (retMode === 'other' && !dropId)) return undefined;
         let live = true;
@@ -81,7 +99,38 @@ export default function BookingChangeModal({ role = 'customer', booking, detail,
         }, 350);
         return () => { live = false; clearTimeout(t); };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pickup, ret, vehicleId, retMode, dropId, step]);
+    }, [pickup, ret, vehicleId, retMode, dropId, step, blocked]);
+
+    // ── pickup map data ──
+    const pickupPoints = useMemo(() => {
+        const m = new Map();
+        if (current?.pickup_point) m.set(current.pickup_point.id, toPt(current.pickup_point, { current: true, meta: 'Your current pickup point' }));
+        const count = {};
+        options.forEach(o => { count[o.pickup_point.id] = (count[o.pickup_point.id] || 0) + 1; });
+        options.forEach(o => {
+            if (!m.has(o.pickup_point.id)) m.set(o.pickup_point.id, toPt(o.pickup_point, { meta: `${count[o.pickup_point.id]} vehicle(s) available` }));
+        });
+        return [...m.values()];
+    }, [current, options]);
+
+    const currentPickupId = current?.pickup_point?.id;
+    const shownVehicles = activeLoc && activeLoc !== currentPickupId
+        ? options.filter(o => o.pickup_point.id === activeLoc) : options;
+    const center = getCityCenter(current?.city_name);
+
+    const onPickupPin = id => {
+        setActiveLoc(id);
+        if (id === currentPickupId) { setVehicleId(null); return; }
+        const here = options.filter(o => o.pickup_point.id === id);
+        if (here.length === 1) setVehicleId(here[0].id);
+    };
+    const pickVehicle = v => { setVehicleId(v ? v.id : null); setActiveLoc(v ? v.pickup_point.id : currentPickupId); };
+
+    const dropPoints = drops.map(d => ({
+        id: d.location_id, lat: parseFloat(d.latitude), lng: parseFloat(d.longitude), title: d.name,
+        subtitle: d.address, meta: `${d.available_slots} slot(s) free${Number(d.rating) > 0 ? ` · ⭐ ${d.rating}` : ''}`,
+    }));
+    const dropCityName = cities.find(c => String(c.id) === String(retCity))?.name;
 
     const ok = quote && quote.available !== false && quote.has_changes;
     const amountDue = Number(quote?.amount_due_now || 0);
@@ -93,9 +142,7 @@ export default function BookingChangeModal({ role = 'customer', booking, detail,
         try {
             const { data } = await api.apply(booking.id, body);
             if (data.status === 'payment_required') {
-                setDue(Number(data.amount_due));
-                setStep(role === 'customer' ? 'pay' : 'wait');
-                onRefresh?.();
+                setDue(Number(data.amount_due)); setStep(role === 'customer' ? 'pay' : 'wait'); onRefresh?.();
             } else {
                 const r = Number(data.refund_due || 0);
                 showToast(r > 0 ? `Booking updated. ${inr(r)} will be refunded.` : 'Booking updated.');
@@ -116,17 +163,26 @@ export default function BookingChangeModal({ role = 'customer', booking, detail,
     };
 
     const Row = ({ l, v, strong }) => <div className="cd-payment-breakdown__row"><span>{l}</span>{strong ? <strong>{v}</strong> : v}</div>;
+    const lbl = { fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.5px', color: 'var(--cd-muted)' };
 
     return (
         <div className="cd-modal-backdrop" onClick={e => e.target === e.currentTarget && !busy && onClose()}>
-            <div className="cd-modal cd-modal--lg" onClick={e => e.stopPropagation()}>
+            <div className="cd-modal cd-modal--lg" style={{ maxWidth: 820 }} onClick={e => e.stopPropagation()}>
                 <div className="cd-modal__head">
                     <h3 className="cd-modal__title">{step === 'edit' ? 'Change booking' : 'Complete your change'}</h3>
                     <button className="cd-modal__close" onClick={onClose} disabled={busy}>&times;</button>
                 </div>
 
                 <div className="cd-modal__body">
-                    {step === 'edit' && (<>
+                    {step === 'edit' && blocked && (
+                        <div className="cd-error" role="alert" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                            <span style={{ fontSize: 22 }}>⚠️</span>
+                            <div><strong>Changes are closed for this booking.</strong><div>{blockedMsg}</div>
+                                <div style={{ marginTop: 4 }}>You can still cancel according to the cancellation policy, or contact the vendor.</div></div>
+                        </div>
+                    )}
+
+                    {step === 'edit' && !blocked && (<>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                             <label style={{ fontSize: 12, fontWeight: 600 }}>Pickup date
                                 <input type="date" className="cd-input" min={today} value={pickup} onChange={e => setPickup(e.target.value)} /></label>
@@ -134,38 +190,78 @@ export default function BookingChangeModal({ role = 'customer', booking, detail,
                                 <input type="date" className="cd-input" min={pickup || today} value={ret} onChange={e => setRet(e.target.value)} /></label>
                         </div>
 
+                        {/* ── PICKUP: map + eligible vehicles ── */}
                         <div>
-                            <p className="cd-review-label">Vehicle (pickup point follows the vehicle)</p>
-                            <select className="cd-input" value={vehicleId || ''} onChange={e => setVehicleId(e.target.value ? Number(e.target.value) : null)}>
-                                <option value="">Keep current vehicle</option>
-                                {options.map(o => (
-                                    <option key={o.id} value={o.id}>
-                                        {o.label} · {o.vendor_name} · {inr(o.daily_rate)}/day
-                                        {o.is_upgrade ? ' · UPGRADE' : ''} · {Number(o.delta) >= 0 ? '+' : '−'}{inr(Math.abs(o.delta))}
-                                    </option>
+                            <p style={lbl}>Pickup point &amp; vehicle</p>
+                            <small style={{ color: 'var(--cd-muted)' }}>Tap a pin to see the vehicles available there, or pick a vehicle from the list. The pickup point is the vehicle's own location.</small>
+                            <div style={{ marginTop: 8 }}>
+                                <LocationMap points={pickupPoints} selectedId={activeLoc || currentPickupId}
+                                             onSelect={onPickupPin} center={center} />
+                            </div>
+                            <div className="vsp__vendor-list" style={{ height: 'auto', maxHeight: 280, marginTop: 10 }}>
+                                <button type="button" className={`vsp__vendor-card${!vehicleId ? ' selected' : ''}`} onClick={() => pickVehicle(null)}>
+                                    <div className="vsp__vendor-card__info">
+                                        <div className="vsp__vendor-card__title">Keep current vehicle</div>
+                                        <div className="vsp__vendor-card__hours">📍 {current?.pickup_point?.name || src.pickup_location_detail?.name}</div>
+                                    </div>
+                                    {!vehicleId && <div className="vsp__vendor-card__check">✓</div>}
+                                </button>
+                                {shownVehicles.map(o => (
+                                    <button type="button" key={o.id} className={`vsp__vendor-card${vehicleId === o.id ? ' selected' : ''}`} onClick={() => pickVehicle(o)}>
+                                        <div className="vsp__vehicle-thumb">{o.cover_photo ? <img src={o.cover_photo} alt={o.label} /> : <span>🚗</span>}</div>
+                                        <div className="vsp__vendor-card__info">
+                                            <div className="vsp__vendor-card__title">{o.label}{o.is_upgrade ? ' · ⬆ Upgrade' : ''}</div>
+                                            <div className="vsp__vendor-card__vendor">🏪 {o.vendor_name}</div>
+                                            <div className="vsp__vendor-card__hours">📍 {o.pickup_point.name}{o.pickup_point.address ? `, ${o.pickup_point.address}` : ''}</div>
+                                            <div className="vsp__vendor-card__meta">
+                                                {Number(o.rating) > 0 && <span>⭐ {o.rating}</span>}
+                                                {o.is_certified && <span className="vsp__cert">🏅 Certified</span>}
+                                                <span>⚙️ {o.transmission}</span><span>⛽ {o.fuel_type}</span><span>💺 {o.capacity}</span>
+                                            </div>
+                                        </div>
+                                        <div className="vsp__vendor-card__price">
+                                            <div className="vsp__rate">{inr(o.daily_rate)}<span>/day</span></div>
+                                            <div className="vsp__total">{Number(o.delta) >= 0 ? '+' : '−'}{inr(Math.abs(o.delta))}</div>
+                                        </div>
+                                        {vehicleId === o.id && <div className="vsp__vendor-card__check">✓</div>}
+                                    </button>
                                 ))}
-                            </select>
-                            {!options.length && <small style={{ color: 'var(--cd-muted)' }}>No other vehicles are free for these dates.</small>}
+                                {!shownVehicles.length && <small style={{ color: 'var(--cd-muted)' }}>No other vehicles are free for these dates{activeLoc && activeLoc !== currentPickupId ? ' at this point' : ''}.</small>}
+                            </div>
                         </div>
 
+                        {/* ── RETURN: map of drop points for the selected vehicle ── */}
                         <div>
-                            <p className="cd-review-label">Return point</p>
+                            <p style={lbl}>Return point</p>
                             <select className="cd-input" value={retMode} onChange={e => setRetMode(e.target.value)}>
                                 <option value="keep">Keep current{src.return_location_detail?.name ? ` (${src.return_location_detail.name})` : ' (same as pickup)'}</option>
                                 <option value="same">Return to the pickup point</option>
-                                <option value="other">Another city / drop point…</option>
+                                <option value="other">Choose a drop point on the map…</option>
                             </select>
                             {retMode === 'other' && (<>
                                 <select className="cd-input" style={{ marginTop: 8 }} value={retCity} onChange={e => setRetCity(e.target.value)}>
                                     <option value="">Select city…</option>
                                     {cities.map(c => <option key={c.id} value={c.id}>{c.name}, {c.state}</option>)}
                                 </select>
-                                {retCity && (
-                                    <select className="cd-input" style={{ marginTop: 8 }} value={dropId} onChange={e => setDropId(e.target.value)}>
-                                        <option value="">{drops.length ? 'Select drop point…' : 'No drop points with free slots'}</option>
-                                        {drops.map(d => <option key={d.location_id} value={d.location_id}>{d.name} — {d.available_slots} slot(s) free</option>)}
-                                    </select>
-                                )}
+                                {retCity && (<>
+                                    <div style={{ marginTop: 8 }}>
+                                        <LocationMap points={dropPoints} selectedId={dropId} onSelect={setDropId} emoji="🏁"
+                                                     center={getCityCenter(dropCityName)} />
+                                    </div>
+                                    <div className="vsp__vendor-list" style={{ height: 'auto', maxHeight: 220, marginTop: 10 }}>
+                                        {dropPoints.map(d => (
+                                            <button type="button" key={d.id} className={`vsp__vendor-card${dropId === d.id ? ' selected' : ''}`} onClick={() => setDropId(d.id)}>
+                                                <div className="vsp__vendor-card__info">
+                                                    <div className="vsp__vendor-card__title">{d.title}</div>
+                                                    <div className="vsp__vendor-card__hours">📍 {d.subtitle || 'Address on file'}</div>
+                                                    <div className="vsp__vendor-card__meta"><span>{d.meta}</span></div>
+                                                </div>
+                                                {dropId === d.id && <div className="vsp__vendor-card__check">✓</div>}
+                                            </button>
+                                        ))}
+                                        {!dropPoints.length && <small style={{ color: 'var(--cd-muted)' }}>No drop points with free slots in this city for the selected vehicle.</small>}
+                                    </div>
+                                </>)}
                             </>)}
                         </div>
 
@@ -207,17 +303,14 @@ export default function BookingChangeModal({ role = 'customer', booking, detail,
                     {step === 'wait' && (
                         <div style={{ textAlign: 'center', padding: '12px 0' }}>
                             <h3>Waiting for the customer to pay {inr(due)}</h3>
-                            <p style={{ color: 'var(--cd-muted)', marginTop: 8 }}>
-                                The customer has been notified. The new dates are held for 30 minutes. If you collected the
-                                money in person, use “Record payment received” in the booking actions.
-                            </p>
+                            <p style={{ color: 'var(--cd-muted)', marginTop: 8 }}>The customer has been notified and the new dates are held for 30 minutes. If you collected the money in person, use “Record payment received”.</p>
                         </div>
                     )}
                 </div>
 
                 <div className="cd-modal__foot">
                     <button className="cd-btn cd-btn--ghost" onClick={onClose} disabled={busy}>{step === 'edit' ? 'Cancel' : 'Close'}</button>
-                    {step === 'edit' && (
+                    {step === 'edit' && !blocked && (
                         <button className="cd-btn cd-btn--primary" onClick={confirm} disabled={busy || !ok || invalid}>
                             {busy && ok ? 'Saving…' : amountDue > 0 ? 'Continue' : 'Confirm change'}
                         </button>
@@ -229,7 +322,6 @@ export default function BookingChangeModal({ role = 'customer', booking, detail,
     );
 }
 
-/** Read-only audit trail: what changed, when, and by whom. */
 export function ModificationHistory({ items = [] }) {
     const applied = items.filter(m => m.status === 'APPLIED');
     if (!applied.length) return null;

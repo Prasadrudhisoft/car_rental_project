@@ -54,6 +54,8 @@ export default function BookingDetailModal({
 
     const pickupInsp = (detail?.inspections || []).find(i => i.inspection_type === 'PICKUP');
     const returnInsp = (detail?.inspections || []).find(i => i.inspection_type === 'RETURN');
+    const mod = detail?.modification_state;
+    const expired = mod && !mod.can_modify && mod.code !== 'not_confirmed';
 
     const handleCancel = async () => {
         setCancelLoading(true);
@@ -310,10 +312,26 @@ export default function BookingDetailModal({
                                         ✎ Change dates
                                     </button>
                                 )} */}
-                                {canChange && !cancelConfirm && (
+                                {/* {canChange && !cancelConfirm && (
                                     <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => setShowChange(true)}>
                                         {detail?.pending_modification ? '💳 Pay to complete change' : '✎ Change booking'}
                                     </button>
+                                )} */}
+                                {canChange && !cancelConfirm && (
+                                    <button className="cd-btn cd-btn--ghost cd-btn--sm"
+                                            disabled={mod && !mod.can_modify}
+                                            title={mod && !mod.can_modify ? mod.message : ''}
+                                            onClick={() => setShowChange(true)}>
+                                        {detail?.pending_modification ? '💳 Pay to complete change' : '✎ Change booking'}
+                                    </button>
+                                )}
+
+                                {/* put this above .cd-booking-actions */}
+                                {canChange && expired && (
+                                    <div className="cd-error" role="alert" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                        <span style={{ fontSize: 18 }}>⚠️</span>
+                                        <div><strong>Changes are closed for this booking.</strong><div>{mod.message}</div></div>
+                                    </div>
                                 )}
                                 {canCancel && !cancelConfirm && (
                                     <button

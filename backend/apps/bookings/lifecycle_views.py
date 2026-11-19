@@ -12,7 +12,7 @@ from apps.vehicles.models import Vehicle
 from .lifecycle import (LifecycleError, mark_no_show, modify_booking,
                         quote_modification, vehicle_options)
 from .models import Booking
-
+from .lifecycle import current_points, vehicle_options
 
 def _d(s):
     return datetime.datetime.strptime(s, '%Y-%m-%d').date() if s else None
@@ -83,7 +83,6 @@ class ModificationApplyView(_Base):
 
 
 class ModificationOptionsView(_Base):
-    """GET /bookings/<id>/modify/options/?pickup_date=&return_date= — priced alternative vehicles."""
     def get(self, request, pk):
         b = self.booking(request, pk)
         try:
@@ -91,8 +90,10 @@ class ModificationOptionsView(_Base):
                                    _d(request.query_params.get('return_date')))
         except (LifecycleError, ValueError) as e:
             return Response({'detail': str(e)}, status=400)
-        return Response({'vehicles': data})
-
+        for d in data:
+            if d['cover_photo']:
+                d['cover_photo'] = request.build_absolute_uri(d['cover_photo'])
+        return Response({'vehicles': data, 'current': current_points(b)})
 
 class VendorModificationQuoteView(ModificationQuoteView):
     owner = 'vendor'

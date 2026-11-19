@@ -32,6 +32,7 @@ from decimal import InvalidOperation
 from apps.promotions.service import PromoError, redeem_promo
 from .pricing import build_quote, one_way_fee_for
 from .payments import PaymentService, PaymentError, payment_schedule
+from .lifecycle import sweep_no_shows
  
 
 logger = logging.getLogger(__name__)
@@ -601,6 +602,7 @@ class CustomerBookingListView(generics.ListAPIView):
     permission_classes = [IsCustomerRole]
  
     def get_queryset(self):
+        sweep_no_shows(Booking.objects.filter(customer=self.request.user), limit=50)
         qs = Booking.objects.filter(
             customer=self.request.user
         ).select_related("vehicle", "pickup_location", "return_location").prefetch_related("addons")
@@ -627,6 +629,7 @@ class VendorBookingListView(generics.ListAPIView):
     permission_classes = [IsVendorRole]
  
     def get_queryset(self):
+        sweep_no_shows(Booking.objects.filter(vendor=self.request.user), limit=50)
         qs = Booking.objects.filter(
             vendor=self.request.user
         ).prefetch_related("customer", "vehicle", "pickup_location", "return_location",'vendor__vendor_profile', 'pickup_location__city', 'return_location__city','agreement_acceptances__agreement_version')
@@ -640,6 +643,7 @@ class AdminBookingListView(generics.ListAPIView):
     permission_classes = [IsAdminRole]
  
     def get_queryset(self):
+        sweep_no_shows(limit=100)
         return Booking.objects.select_related(
         'customer', 'vehicle', 'vendor__vendor_profile',
         'pickup_location__city', 'return_location__city',
@@ -984,7 +988,7 @@ class VendorAnalyticsView(APIView):
         )
  
         counts = dict(qs.order_by().values_list('status').annotate(c=Count('id')))
-        status_counts = {s: counts.get(s, 0) for s in ['CONFIRMED', 'ACTIVE', 'COMPLETED', 'CANCELLED']}
+        status_counts = {s: counts.get(s, 0) for s in ['CONFIRMED', 'ACTIVE', 'COMPLETED', 'CANCELLED', 'NO_SHOW']}
  
         data = {
             'total_revenue':      str(totals['total_revenue'] or 0),

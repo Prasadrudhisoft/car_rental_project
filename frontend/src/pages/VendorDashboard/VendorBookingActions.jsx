@@ -20,6 +20,10 @@ export default function VendorBookingActions({ booking, onRefresh, showToast }) 
         catch (e) { showToast(errMsg(e), 'error'); }
         finally { setBusy(false); }
     };
+    const mod = booking.modification_state;
+        {!mode && mod && !mod.can_modify && mod.code !== 'not_confirmed' && (
+            <p style={{ fontSize: 12, color: '#B45309' }}>⚠ {mod.message}</p>
+        )}
 
     return (
         <div className="vd-action-block">

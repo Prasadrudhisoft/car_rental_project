@@ -110,6 +110,15 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     agreement_acceptance = serializers.SerializerMethodField()
     payment_summary = serializers.SerializerMethodField()
 
+    modification_state = serializers.SerializerMethodField()
+
+    def get_modification_state(self, obj):
+        from .lifecycle import modification_state
+        u = getattr(self.context.get('request'), 'user', None)
+        role = ('customer' if u and u.id == obj.customer_id
+                else 'vendor' if u and u.id == obj.vendor_id else 'admin')
+        return modification_state(obj, role)
+
     def get_payment_summary(self, obj):
         from .payments import PaymentService
         return PaymentService.summary(obj)

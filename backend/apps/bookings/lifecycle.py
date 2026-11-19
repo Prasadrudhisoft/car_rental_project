@@ -152,18 +152,40 @@ def _role(b, actor):
     raise LifecycleError('Not your booking.')
 
 
-def _check_modifiable(b, role):
+def modification_deadline(b):
+    return _pickup_dt(b) - timedelta(hours=float(get_config('modification_cutoff_hours', 2)))
+
+
+def modification_state(b, role='customer'):
+    """Single source of truth for 'can this booking still be changed?' (API, UI and engine)."""
+    def out(ok, code='', msg='', deadline=None):
+        return {'can_modify': ok, 'code': code, 'message': msg,
+                'deadline': deadline.isoformat() if deadline else None}
+
     if b.status != 'CONFIRMED':
-        raise LifecycleError('Only confirmed bookings can be changed.')
+        return out(False, 'not_confirmed', 'Only confirmed bookings can be changed.')
     if b.inspections.filter(inspection_type='PICKUP').exists():
-        raise LifecycleError('Pickup has already started, so this booking can no longer be changed.')
-    if role == 'customer':
-        if _pickup_dt(b) <= timezone.now():
-            raise LifecycleError('Pickup time has passed.')
-        if b.modification_count >= int(get_config('max_modifications', 2)):
-            raise LifecycleError('Modification limit reached.')
-    elif pickup_day_over(b):
-        raise LifecycleError('The pickup date has passed.')
+        return out(False, 'pickup_started', 'Pickup has started, so this booking can no longer be changed.')
+    if role != 'customer':
+        if pickup_day_over(b):
+            return out(False, 'pickup_passed', 'The pickup date has passed.')
+        return out(True)
+
+    deadline = modification_deadline(b)
+    if timezone.now() > deadline:
+        return out(False, 'deadline_passed',
+                   'The modification deadline has passed. Changes were allowed until '
+                   f'{timezone.localtime(deadline):%d %b %Y, %H:%M}.', deadline)
+    limit = int(get_config('max_modifications', 2))
+    if b.modification_count >= limit:
+        return out(False, 'limit_reached', f'You have used all {limit} allowed changes for this booking.', deadline)
+    return out(True, deadline=deadline)
+
+
+def _check_modifiable(b, role):
+    s = modification_state(b, role)
+    if not s['can_modify']:
+        raise LifecycleError(s['message'])
 
 
 def _validate_dates(pd, rd):
@@ -300,34 +322,83 @@ def vehicle_options(b, actor, pickup_date=None, return_date=None, limit=30):
     """Alternative vehicles for the (new) dates, each already priced against this booking."""
     role = _role(b, actor)
     _check_modifiable(b, role)
+
     pd, rd = pickup_date or b.pickup_date, return_date or b.return_date
     _validate_dates(pd, rd)
-    taken = (VehicleAvailability.objects.filter(blocked_date__range=(pd, rd))
-             .exclude(booking_ref__in=[b.booking_ref, _hold_ref(b)]).values_list('vehicle_id', flat=True))
-    qs = (Vehicle.objects.filter(status='LIVE', is_blacklisted=False,
-                                 current_city_id=b.pickup_location.city_id)
-          .exclude(pk=b.vehicle_id).exclude(pk__in=taken)
-          .select_related('vendor__vendor_profile', 'pickup_location').order_by('daily_rate'))
+
+    taken = (
+        VehicleAvailability.objects
+        .filter(blocked_date__range=(pd, rd))
+        .exclude(booking_ref__in=[b.booking_ref, _hold_ref(b)])
+        .values_list('vehicle_id', flat=True)
+    )
+
+    qs = (
+        Vehicle.objects.filter(
+            status='LIVE',
+            is_blacklisted=False,
+            current_city_id=b.pickup_location.city_id
+        )
+        .exclude(pk=b.vehicle_id)
+        .exclude(pk__in=taken)
+        .select_related('vendor__vendor_profile', 'pickup_location')
+        .prefetch_related('photos')
+        .order_by('daily_rate')
+    )
+
     if role == 'vendor':
         qs = qs.filter(vendor_id=b.vendor_id)
+
     out = []
+
     for v in qs[:limit]:
         try:
-            p = _plan(b, role, pickup_date=pd, return_date=rd, vehicle=v)
+            p = _plan(
+                b,
+                role,
+                pickup_date=pd,
+                return_date=rd,
+                vehicle=v
+            )
         except LifecycleError:
             continue
+
+        photos = list(v.photos.all())
+        cover = (
+            next((x for x in photos if x.is_cover), None)
+            or (photos[0] if photos else None)
+        )
+
+        prof = getattr(v.vendor, 'vendor_profile', None)
+
         out.append({
-            'id': v.pk, 'label': f'{v.year} {v.make} {v.model}', 'plate_number': v.plate_number,
-            'segment': v.segment, 'fuel_type': v.fuel_type, 'transmission': v.transmission,
+            'id': v.pk,
+            'label': f'{v.year} {v.make} {v.model}',
+            'plate_number': v.plate_number,
+            'segment': v.segment,
+            'fuel_type': v.fuel_type,
+            'transmission': v.transmission,
+            'capacity': v.capacity,
+            'is_certified': v.is_certified,
             'daily_rate': str(v.daily_rate),
-            'vendor_name': getattr(getattr(v.vendor, 'vendor_profile', None), 'business_name', ''),
-            'pickup_point': p['pickup_loc'].name,
-            'new_total': str(p['new_total']), 'delta': str(p['delta']),
-            'amount_due_now': str(p['due']), 'refund_due': str(p['refund']),
+
+            'vendor_name': getattr(prof, 'business_name', ''),
+            'rating': str(getattr(prof, 'rating', '') or ''),
+
+            'cover_photo': (
+                cover.image.url if cover and cover.image else None
+            ),
+
+            'pickup_point': _pt(p['pickup_loc']),
+            'new_total': str(p['new_total']),
+            'delta': str(p['delta']),
+            'amount_due_now': str(p['due']),
+            'refund_due': str(p['refund']),
+
             'is_upgrade': 'upgrade' in p['kinds'],
         })
-    return out
 
+    return out
 
 # ── pack / unpack (stored on the booking while payment is pending) ──────────
 def _pack(p):
@@ -488,3 +559,31 @@ def expire_pending_modification(booking_id):
 def fail_pending_modification(booking_id):
     b = Booking.objects.select_for_update().get(pk=booking_id)
     discard_pending_modification(b, 'FAILED')
+
+
+def sweep_no_shows(qs=None, limit=None):
+    """Mark every CONFIRMED booking whose pickup DATE has fully passed as NO_SHOW."""
+    qs = (qs if qs is not None else Booking.objects).filter(
+        status='CONFIRMED', pickup_date__lt=timezone.localdate())
+    ids = qs.values_list('id', flat=True)
+    ids = list(ids[:limit] if limit else ids)
+    n = 0
+    for bid in ids:
+        try:
+            mark_no_show(bid, auto=True)
+            n += 1
+        except LifecycleError:
+            pass
+    return n
+
+def _pt(loc):
+    return {'id': loc.id, 'name': loc.name, 'address': loc.address or '',
+            'latitude': str(loc.latitude) if loc.latitude is not None else None,
+            'longitude': str(loc.longitude) if loc.longitude is not None else None}
+
+
+def current_points(b):
+    r = b.return_location
+    return {'vehicle_id': b.vehicle_id, 'city_id': b.pickup_location.city_id,
+            'city_name': b.pickup_location.city.name,
+            'pickup_point': _pt(b.pickup_location), 'return_point': _pt(r) if r else None}
