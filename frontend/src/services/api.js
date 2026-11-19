@@ -334,7 +334,9 @@ export const getPaymentConfig  = () => api.get("/bookings/payments/config/");
 export const initiatePayment   = (bookingId, payment_type) => api.post(`/bookings/${bookingId}/payment/initiate/`, { payment_type });
 export const verifyPayment     = (bookingId, data) => api.post(`/bookings/${bookingId}/payment/verify/`, data);
 export const dummyPay          = (bookingId, payment_type) => api.post(`/bookings/${bookingId}/payment/dummy/`, { payment_type });
-export const recordOfflinePayment = (bookingId, method) => api.post(`/bookings/${bookingId}/payment/record-offline/`, { method });
+// export const recordOfflinePayment = (bookingId, method) => api.post(`/bookings/${bookingId}/payment/record-offline/`, { method });
+export const recordOfflinePayment = (bookingId, method, paymentType = 'remaining') =>
+  api.post(`/bookings/${bookingId}/payment/record-offline/`, { method, payment_type: paymentType });
 
 
 export const getVendorBookingDetail = (id) =>
@@ -507,11 +509,14 @@ export const runScheduledSweep    = ()       => api.post('/personalization/run-s
 export const getActivityLogs    = (params) => api.get('/activity/', { params });
 export const getActivityLogMeta = ()       => api.get('/activity/meta/');
 
-// ── Booking modification / no-show ────────────────────────────────────────
-export const quoteBookingModification = (id, data) => api.post(`/bookings/${id}/modify/quote/`, data);
-export const applyBookingModification = (id, data) => api.post(`/bookings/${id}/modify/`, data);
-export const payBookingModification   = (id, data) => api.post(`/bookings/${id}/modify/pay/`, data);
-export const vendorRescheduleBooking  = (id, data) => api.post(`/bookings/vendor/${id}/reschedule/`, data);
-export const vendorMarkNoShow         = (id)       => api.post(`/bookings/vendor/${id}/no-show/`);
+// ── Booking modification / no-show ──
+export const quoteBookingModification = (id, d) => api.post(`/bookings/${id}/modify/quote/`, d);
+export const applyBookingModification = (id, d) => api.post(`/bookings/${id}/modify/`, d);
+export const getModificationOptions   = (id, params) => api.get(`/bookings/${id}/modify/options/`, { params });
+export const vendorQuoteModification  = (id, d) => api.post(`/bookings/vendor/${id}/modify/quote/`, d);
+export const vendorApplyModification  = (id, d) => api.post(`/bookings/vendor/${id}/modify/`, d);
+export const vendorModificationOptions = (id, params) => api.get(`/bookings/vendor/${id}/modify/options/`, { params });
+export const vendorMarkNoShow         = (id) => api.post(`/bookings/vendor/${id}/no-show/`);
+
 
 export default api;

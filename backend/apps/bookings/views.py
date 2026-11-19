@@ -156,7 +156,8 @@ class PaymentOfflineView(APIView):
 
     def post(self, request, booking_id):
         booking = get_object_or_404(Booking, pk=booking_id)
-        return _run(lambda: PaymentService.record_offline(booking, request.user, request.data.get('method')))
+        return _run(lambda: PaymentService.record_offline(
+            booking, request.user, request.data.get('method'), request.data.get('payment_type', 'remaining')))
 
 
 class RazorpayWebhookView(APIView):
@@ -271,6 +272,8 @@ class BookingCreateView(APIView):
         if pickup_time_s or return_time_s:
             try:
                 opening = vehicle.vendor.vendor_profile.shop_opening_time
+                new = vehicle.vendor.vendor_profile
+                print(f'DEBUG Vendor opening time: {new}')
                 closing = vehicle.vendor.vendor_profile.shop_closing_time
 
                 if opening and closing:
@@ -504,6 +507,9 @@ class BookingCancelView(APIView):
             VehicleAvailability.objects.filter(
                 vehicle=booking.vehicle, reason='booking', booking_ref=booking.booking_ref,
             ).delete()
+            from .lifecycle import discard_pending_modification
+            discard_pending_modification(booking, 'EXPIRED')
+
             release_return_slot(booking)
 
             if booking.payment_captured and refund["refund_amount"] > 0:
@@ -1158,12 +1164,12 @@ class VendorBookingDetailView(generics.RetrieveAPIView):
         ).select_related('customer', 'vehicle', 'pickup_location', 'return_location')
 
 
-class ModificationPayView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def post(self, request, pk):
-        b = get_object_or_404(Booking, pk=pk, customer=request.user)
-        pm = b.pending_modification
-        if not pm:
-            return Response({'detail': 'No pending change.'}, status=400)
-        # Use your existing PaymentService.initiate(...) with amount=Decimal(pm['amount_due']).
-        # When Razorpay verification succeeds, _apply() (step 1.6) finalises the change. 
+# class ModificationPayView(APIView):
+#     permission_classes = [permissions.IsAuthenticated]
+#     def post(self, request, pk):
+#         b = get_object_or_404(Booking, pk=pk, customer=request.user)
+#         pm = b.pending_modification
+#         if not pm:
+#             return Response({'detail': 'No pending change.'}, status=400)
+#         # Use your existing PaymentService.initiate(...) with amount=Decimal(pm['amount_due']).
+#         # When Razorpay verification succeeds, _apply() (step 1.6) finalises the change. 

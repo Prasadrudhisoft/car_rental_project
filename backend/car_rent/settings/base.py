@@ -261,4 +261,9 @@ CELERY_BEAT_SCHEDULE = {
                             'schedule': crontab(hour=3, minute=0)},
     'detect-no-shows': {'task': 'apps.bookings.lifecycle_tasks.detect_no_shows',
                         'schedule': crontab(minute='*/30')},
+
+    'expire-pending-modifications': {
+                        'task': 'apps.bookings.lifecycle_tasks.expire_pending_modifications',
+                        'schedule': crontab(minute='*/15'),
+},
 }

@@ -145,30 +145,40 @@ class PaymentService:
             raise PaymentError('Please pay the advance first.')
         if rem:
             raise PaymentError('Remaining balance is already paid.')
-        return sched['remaining']
+        return cls.balance_due(booking)
 
     @classmethod
     def amount_paid(cls, booking):
         snap = booking.pricing_snapshot or {}
+        refunded = Decimal(str(snap.get('refunded_total', '0')))
         pays = snap.get('payments')
         if pays:
-            return sum((Decimal(p['amount']) for p in pays), Decimal('0'))
-        adv, rem = cls._flags(snap)
-        sched = payment_schedule(booking.total_amount)
-        return (sched['advance'] if adv else Decimal('0')) + (sched['remaining'] if rem else Decimal('0'))
+            gross = sum((Decimal(p['amount']) for p in pays), Decimal('0'))
+        else:
+            adv, rem = cls._flags(snap)
+            sched = payment_schedule(booking.total_amount)
+            gross = (sched['advance'] if adv else Decimal('0')) + (sched['remaining'] if rem else Decimal('0'))
+        return gross - refunded
+
+    @classmethod
+    def balance_due(cls, booking):
+        snap = booking.pricing_snapshot or {}
+        fees = Decimal(str(snap.get('modification_fee_total', '0')))
+        return max(Decimal(booking.total_amount) + fees - cls.amount_paid(booking), Decimal('0'))
 
     @classmethod
     def summary(cls, booking):
+        bal = cls.balance_due(booking)
         snap = booking.pricing_snapshot or {}
         adv, rem = cls._flags(snap)
         sched = payment_schedule(booking.total_amount)
         fully = adv and rem
         open_ = booking.status not in ('CANCELLED', 'COMPLETED')
         nxt = None if (fully or not open_) else ('remaining' if adv else 'advance')
-        due = {'advance': sched['advance'], 'remaining': sched['remaining']}.get(nxt)
+        due = {'advance': sched['advance'], 'remaining': bal}.get(nxt)
         return {
             'total': str(booking.total_amount), 'advance_pct': sched['advance_pct'],
-            'advance_amount': str(sched['advance']), 'remaining_amount': str(sched['remaining']),
+            'advance_amount': str(sched['advance']), 'remaining_amount': str(bal if (adv and not rem) else sched['remaining']),
             'advance_paid': adv, 'remaining_paid': rem, 'fully_paid': fully,
             'next_type': nxt, 'amount_due_now': str(due) if due is not None else None,
             'amount_paid': str(cls.amount_paid(booking)),
@@ -214,10 +224,6 @@ class PaymentService:
             booking.save(update_fields=['pricing_snapshot', 'payment_captured', 'payment_captured_at',
                                         'razorpay_payment_id', 'status', 'deposit_held', 'updated_at'])
 
-            from .lifecycle import finalize_pending_modification
-            if booking.pending_modification:
-                finalize_pending_modification(booking)
-
             if payment_type in ('advance', 'full') and booking.is_one_way:
                 from apps.logistics.views import auto_match_return_partner
                 auto_match_return_partner(booking)               # may raise ReturnCapacityConflict
@@ -228,6 +234,8 @@ class PaymentService:
 
     @classmethod
     def _settle(cls, booking, payment_type, method, ref=''):
+        if payment_type == 'modification':
+            return cls._settle_modification(booking, method, ref)
         try:
             amount_expected = cls.amount_due(booking, payment_type)
         except PaymentError:
@@ -253,7 +261,8 @@ class PaymentService:
         if cls.mode() != 'razorpay':
             raise PaymentError('Online payments are not available right now.', 503, 'unavailable')
         snap = booking.pricing_snapshot or {}
-        amount = cls.amount_due(booking, payment_type, snap)
+        amount = cls._mod_amount(booking) if payment_type == 'modification' \
+                 else cls.amount_due(booking, payment_type, snap)
 
         pending = snap.get('pending_payment') or {}
         reuse = (pending.get('order_id') and pending.get('type') == payment_type
@@ -337,11 +346,13 @@ class PaymentService:
 
     # ── vendor / admin: money received outside the gateway ──────────────────
     @classmethod
-    def record_offline(cls, booking, user, method):
+    def record_offline(cls, booking, user, method, payment_type='remaining'):
         if method not in ('cash', 'upi'):
             raise PaymentError('method must be cash or upi.')
         if not (getattr(user, 'role', None) == 'admin' or user == booking.vendor):
             raise PaymentError('Not authorised.', 403)
+        if payment_type == 'modification':
+            return cls._settle_modification(booking, method, f'offline_{uuid.uuid4().hex[:12]}', actor=user)
         return cls._settle(booking, 'remaining', method, f'offline_{uuid.uuid4().hex[:12]}')
 
     # ── DEV ONLY ────────────────────────────────────────────────────────────
@@ -350,3 +361,59 @@ class PaymentService:
         if not cls.dummy_enabled():
             raise PaymentError('Not found.', 404, 'not_found')
         return cls._settle(booking, payment_type, 'dummy', f'dummy_{uuid.uuid4().hex[:12]}')
+
+    @classmethod
+    def _mod_amount(cls, booking):
+        pm = booking.pending_modification
+        if not pm:
+            raise PaymentError('There is no pending change to pay for.', 400, 'no_pending')
+        if pm.get('expires_at') and timezone.now() > datetime.datetime.fromisoformat(pm['expires_at']):
+            raise PaymentError('This change request has expired. Please request it again.', 409, 'expired')
+        return Decimal(pm['amount_due'])
+
+    @classmethod
+    def _settle_modification(cls, booking, method, ref='', actor=None):
+        from .lifecycle import LifecycleError, fail_pending_modification, finalize_pending_modification
+
+        # Step 1: write the money to the ledger (committed even if step 2 fails)
+        with transaction.atomic():
+            b = Booking.objects.select_for_update().get(pk=booking.pk)
+            pm = b.pending_modification
+            snap = dict(b.pricing_snapshot or {})
+            if ref and any(p.get('ref') == ref for p in snap.get('payments', [])):
+                return {'success': True, 'applied': False, 'payment_type': 'modification',
+                        'message': 'Payment already recorded.', 'booking_ref': b.booking_ref,
+                        'booking_status': b.status, 'payment_summary': cls.summary(b)}
+            if not pm:
+                raise PaymentError('There is no pending change to pay for.', 400, 'no_pending')
+            amount = Decimal(pm['amount_due'])
+            snap['payments'] = list(snap.get('payments', [])) + [{
+                'type': 'modification', 'amount': str(amount), 'method': method,
+                'ref': ref, 'at': timezone.now().isoformat()}]
+            snap.pop('pending_payment', None)
+            b.pricing_snapshot = snap
+            if method == 'razorpay' and ref:
+                b.razorpay_payment_id = ref
+            b.save(update_fields=['pricing_snapshot', 'razorpay_payment_id', 'updated_at'])
+
+        # Step 2: apply the change. On failure the booking stays as it was and the money goes back.
+        try:
+            with transaction.atomic():
+                b = Booking.objects.select_for_update().get(pk=booking.pk)
+                finalize_pending_modification(b, actor=actor, payment_ref=ref)
+        except (LifecycleError, ReturnCapacityConflict) as exc:
+            fail_pending_modification(booking.pk)
+            with transaction.atomic():
+                b = Booking.objects.select_for_update().get(pk=booking.pk)
+                s = dict(b.pricing_snapshot or {})
+                s['refunded_total'] = str(Decimal(str(s.get('refunded_total', '0'))) + amount)
+                b.pricing_snapshot = s
+                b.save(update_fields=['pricing_snapshot', 'updated_at'])
+            enqueue(booking_tasks.issue_razorpay_refund, b.id, str(amount))
+            raise PaymentError(f'{exc} Your booking is unchanged and the payment will be refunded.', 409, 'conflict')
+
+        booking.refresh_from_db()
+        return {'success': True, 'applied': True, 'payment_type': 'modification',
+                'amount_paid': str(amount), 'message': 'Payment received. Your booking has been updated.',
+                'booking_status': booking.status, 'booking_ref': booking.booking_ref,
+                'payment_summary': cls.summary(booking)}

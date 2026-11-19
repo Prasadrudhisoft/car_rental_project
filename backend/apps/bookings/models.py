@@ -79,6 +79,7 @@ class Booking(models.Model):
     pending_modification = models.JSONField(null=True, blank=True)
     reschedule_reason    = models.TextField(blank=True)
     vendor_rescheduled   = models.BooleanField(default=False)
+    no_show_reason = models.CharField(max_length=255, blank=True)
  
     # Timestamps
     created_at       = models.DateTimeField(auto_now_add=True)
@@ -277,3 +278,32 @@ class InspectionOTP(models.Model):
     def is_valid(self):
         from django.utils import timezone
         return not self.is_used and timezone.now() < self.expires_at
+
+
+
+class BookingModification(models.Model):
+    """Immutable-ish history row for every date / vehicle / location change."""
+    STATUS = [('PENDING_PAYMENT', 'Awaiting payment'), ('APPLIED', 'Applied'),
+              ('EXPIRED', 'Expired'), ('FAILED', 'Failed')]
+
+    booking        = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name='modifications')
+    initiated_by   = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+    initiator_role = models.CharField(max_length=10)            # customer | vendor | admin
+    status         = models.CharField(max_length=20, choices=STATUS, default='PENDING_PAYMENT')
+    change_types   = models.JSONField(default=list)              # dates, vehicle, upgrade, pickup_location, return_location
+    reason         = models.TextField(blank=True)
+    old_values     = models.JSONField(default=dict)
+    new_values     = models.JSONField(default=dict)
+    old_total      = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    new_total      = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    price_delta    = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    modification_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    amount_due     = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    refund_due     = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    payment_ref    = models.CharField(max_length=100, blank=True)
+    created_at     = models.DateTimeField(auto_now_add=True)
+    applied_at     = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'bookings_modification'
+        ordering = ['-created_at']    

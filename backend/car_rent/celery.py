@@ -6,3 +6,4 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'car_rent.settings.dev')
 app = Celery('car_rent')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
+app.autodiscover_tasks(related_name='lifecycle_tasks')   # ← NEW: tasks.py is not the only task module

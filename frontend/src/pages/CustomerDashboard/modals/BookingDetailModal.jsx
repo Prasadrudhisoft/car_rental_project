@@ -7,7 +7,7 @@ import { StatusBadge, InfoRow } from '../cdShared';
 import { fmtDatetime } from '../cdConstants';
 import InspectionPanel from '../InspectionPanel';
 import PaymentModal    from './PaymentModal';
-import ChangeBookingModal from './ChangeBookingModal';
+import BookingChangeModal, { ModificationHistory } from '../../../components/common/BookingChangeModal';
 import InvoiceModal    from './InvoiceModal';
 
 const SEG_ICON = seg =>
@@ -226,6 +226,15 @@ export default function BookingDetailModal({
                                     </button>
                                 </div>
 
+                                <ModificationHistory items={detail.modifications} />
+                                {booking.status === 'NO_SHOW' && (
+                                    <div className="cd-info-group">
+                                        <div className="cd-info-group__title">No-show</div>
+                                        <InfoRow label="Marked on" value={fmtDatetime(detail.no_show_at)} />
+                                        <InfoRow label="Reason" value={detail.no_show_reason} />
+                                    </div>
+                                )}
+
                                 {/* Pricing breakdown */}
                                 <div className="cd-info-group">
                                     <div className="cd-info-group__title">Pricing Breakdown</div>
@@ -296,9 +305,14 @@ export default function BookingDetailModal({
                                         </button>
                                     </div>
                                 )}
-                                {canChange && !cancelConfirm && (
+                                {/* {canChange && !cancelConfirm && (
                                     <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => setShowChange(true)}>
                                         ✎ Change dates
+                                    </button>
+                                )} */}
+                                {canChange && !cancelConfirm && (
+                                    <button className="cd-btn cd-btn--ghost cd-btn--sm" onClick={() => setShowChange(true)}>
+                                        {detail?.pending_modification ? '💳 Pay to complete change' : '✎ Change booking'}
                                     </button>
                                 )}
                                 {canCancel && !cancelConfirm && (
@@ -370,7 +384,7 @@ export default function BookingDetailModal({
                         showToast={showToast}
                     />
                 )}
-                {showChange && (
+                {/* {showChange && (
                     <ChangeBookingModal
                         booking={booking}
                         detail={detail}
@@ -378,13 +392,17 @@ export default function BookingDetailModal({
                         onRefresh={onRefresh}
                         showToast={showToast}
                     />
-                )}
+                )} */}
                 {showInvoice && detail?.invoice && (
                     <InvoiceModal
                         invoice={detail.invoice}
                         booking={booking}
                         onClose={() => setShowInvoice(false)}
                     />
+                )}
+                {showChange && (
+                    <BookingChangeModal role="customer" booking={booking} detail={detail}
+                        onClose={() => setShowChange(false)} onRefresh={onRefresh} showToast={showToast} />
                 )}
             </div>
         </div>

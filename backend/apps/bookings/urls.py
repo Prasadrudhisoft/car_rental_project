@@ -10,10 +10,11 @@ from .views import (
     InspectionCreateView, InspectionPhotoUploadView, InspectionSignView,
     DamageClaimView, VendorAnalyticsView, AdminAnalyticsView,
     LoyaltyRedemptionView, LoyaltyBalanceView,
-    SavePushSubscriptionView, DeletePushSubscriptionView, ModificationPayView
+    SavePushSubscriptionView, DeletePushSubscriptionView
 )
-from .lifecycle_views import (ModificationQuoteView, ModificationApplyView,
-                              VendorRescheduleView, VendorMarkNoShowView)
+from .lifecycle_views import (ModificationQuoteView, ModificationApplyView, ModificationOptionsView,
+                              VendorModificationQuoteView, VendorModificationApplyView,
+                              VendorModificationOptionsView, VendorMarkNoShowView)
 
 
 urlpatterns = [
@@ -55,9 +56,13 @@ urlpatterns = [
     path('analytics/admin/',  AdminAnalyticsView.as_view(),    name='admin-analytics'),
     path('push/subscribe/',   SavePushSubscriptionView.as_view(),   name='push-subscribe'),
     path('push/unsubscribe/', DeletePushSubscriptionView.as_view(), name='push-unsubscribe'),
-    path('<int:pk>/modify/quote/',        ModificationQuoteView.as_view()),
-    path('<int:pk>/modify/',              ModificationApplyView.as_view()),
-    path('<int:pk>/modify/pay/',          ModificationPayView.as_view()),
-    path('vendor/<int:pk>/reschedule/',   VendorRescheduleView.as_view()),
-    path('vendor/<int:pk>/no-show/',      VendorMarkNoShowView.as_view()),    
+    path('<int:pk>/modify/quote/',            ModificationQuoteView.as_view()),
+    path('<int:pk>/modify/options/',          ModificationOptionsView.as_view()),
+    path('<int:pk>/modify/',                  ModificationApplyView.as_view()),
+    path('vendor/<int:pk>/modify/quote/',     VendorModificationQuoteView.as_view()),
+    path('vendor/<int:pk>/modify/options/',   VendorModificationOptionsView.as_view()),
+    path('vendor/<int:pk>/modify/',           VendorModificationApplyView.as_view()),
+    path('vendor/<int:pk>/reschedule/',       VendorModificationApplyView.as_view()),   # legacy URL
+    path('vendor/<int:pk>/no-show/',          VendorMarkNoShowView.as_view()),
+    
 ]

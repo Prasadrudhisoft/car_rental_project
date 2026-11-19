@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from apps.locations.serializers import LocationSerializer
-from .models import Booking, AddOn, InspectionRecord, InspectionPhoto, Invoice
+from .models import Booking, AddOn, InspectionRecord, InspectionPhoto, Invoice, BookingModification
  
 
 def _fmt_location(loc):
@@ -29,7 +29,16 @@ class InspectionRecordSerializer(serializers.ModelSerializer):
                   'checklist', 'notes', 'damage_reported', 'damage_notes', 'damage_amount',
                   'customer_signed', 'vendor_signed', 'is_locked', 'photos', 'created_at']
  
- 
+
+class BookingModificationSerializer(serializers.ModelSerializer):
+    initiated_by_name = serializers.CharField(source='initiated_by.full_name', read_only=True, default='')
+
+    class Meta:
+        model  = BookingModification
+        fields = ['id', 'initiator_role', 'initiated_by_name', 'status', 'change_types', 'reason',
+                  'old_values', 'new_values', 'old_total', 'new_total', 'price_delta',
+                  'modification_fee', 'amount_due', 'refund_due', 'created_at', 'applied_at']
+        
 class InvoiceSerializer(serializers.ModelSerializer):
     class Meta:
         model  = Invoice
@@ -51,7 +60,7 @@ class BookingListSerializer(serializers.ModelSerializer):
         fields = ['id', 'booking_ref', 'status', 'status_display',
                 'pickup_date', 'pickup_time', 'return_date', 'return_time',
                 'rental_days', 'total_amount', 'vehicle_display', 'customer_name',
-                'is_one_way', 'pickup_address', 'return_address',
+                'is_one_way', 'pickup_address', 'return_address', 'no_show_reason', 'vendor_rescheduled', 'modification_count',
                 'payment_captured', 'agreement_signed', 'created_at']
  
     def get_vehicle_display(self, obj):
@@ -80,6 +89,7 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     pickup_location_detail = LocationSerializer(source='pickup_location', read_only=True)
     return_location_detail = LocationSerializer(source='return_location', read_only=True)
+    modifications = BookingModificationSerializer(many=True, read_only=True)
  
     # ── Customer identity fields ──────────────────────────────────────────
     customer_name  = serializers.CharField(
@@ -139,3 +149,4 @@ class BookingDetailSerializer(serializers.ModelSerializer):
             'booking_ref':          obj.booking_ref,
             'user_email':           obj.customer.email,
         }
+
